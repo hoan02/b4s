@@ -7,13 +7,19 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-APK = ROOT / "apk-2.14.1" / "extracted" / "com.baseus.intelligent.apk"
+PROJECT_ROOT = ROOT.parent.parent
+LEGACY_APK = ROOT / "apk-2.14.1" / "extracted" / "com.baseus.intelligent.apk"
+ROOT_APK = PROJECT_ROOT / "baseus-2-14-1.apk"
+APK = LEGACY_APK if LEGACY_APK.is_file() else ROOT_APK
 OUT = ROOT / "apk-2.14.1" / "strings"
 
 
 def main() -> None:
     if not APK.is_file():
-        raise SystemExit(f"APK not found: {APK}\nExtract XAPK first (see README.md).")
+        raise SystemExit(
+            f"APK not found: {ROOT_APK} or {LEGACY_APK}\n"
+            "Place baseus-2-14-1.apk at the project root or extract the legacy XAPK."
+        )
 
     OUT.mkdir(parents=True, exist_ok=True)
     ba_cmds: set[str] = set()
@@ -45,7 +51,7 @@ def main() -> None:
     print(f"BA commands: {len(ba_cmds)}")
     print(f"UUIDs:       {len(uuids)}")
     print(f"Model hits:  {len(models)}")
-    print(f"Wrote → {OUT}")
+    print(f"Wrote: {OUT}")
 
 
 if __name__ == "__main__":
