@@ -241,6 +241,7 @@ impl Bp1ProAnc {
         level.min(3)
     }
 
+    #[allow(dead_code)]
     pub fn cmd_set_anc(mode: AncMode, strength_pct: u8) -> Vec<u8> {
         let level = mode.level_from_percent(strength_pct);
         super::encode_command(Command::SetAnc { mode, level })

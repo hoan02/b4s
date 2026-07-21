@@ -175,6 +175,7 @@ pub struct EqBand {
     pub filter: u8,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Command {
     SetAnc { mode: AncMode, level: u8 },

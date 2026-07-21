@@ -1,5 +1,7 @@
 //! Deterministic first-connect state machine extracted from the APK flow.
 
+#![allow(dead_code)]
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Phase {
     Connecting,
