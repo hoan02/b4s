@@ -1,13 +1,43 @@
-# Dependencies
+# ===== Dependencies =====
 node_modules/
 .pnpm-store/
+.yarn/
+.pnp.*
 
-# Build
+# ===== Build / output =====
 dist/
+build/
+out/
 src-tauri/target/
-*.local
+*.tsbuildinfo
 
-# Editor
+# ===== Env / secrets (never commit) =====
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.mobileprovision
+
+# Tauri updater private key
+.tauri/
+!.tauri/.gitkeep
+**/*.key
+!**/*.key.pub
+
+# ===== Logs =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+src-tauri/*.log
+
+# ===== OS / editor =====
+.DS_Store
+Thumbs.db
+Desktop.ini
 .vscode/*
 !.vscode/extensions.json
 .idea/
@@ -16,22 +46,40 @@ src-tauri/target/
 *.njsproj
 *.sln
 *.sw?
+*~
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Env
-.env
-.env.local
-.env.*.local
-
-# Tauri
+# ===== Tauri / packaging junk =====
 src-tauri/WixTools/
-src-tauri/*.log
+src-tauri/gen/schemas/*.json.bak
+
+# ===== Reverse-engineering / third-party binaries (copyright + size) =====
+*.xapk
+*.apk
+*.ipa
+*.aab
+com.baseus.*
+docs/re/apk-*/
+docs/re/**/extracted/
+docs/re/**/jadx-out/
+docs/re/**/jadx*/
+docs/re/tools/
+docs/re/**/*.dex
+docs/re/**/*.jar
+# keep small notes, ignore bulk dumps
+docs/re/**/strings/
+docs/re/**/img-scan/
+
+# ===== Local / session noise =====
+*.local
+.cache/
+.temp/
+.tmp/
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# ===== Optional local assets =====
+*.orig
+*.bak
+*.old

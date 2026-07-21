@@ -1,0 +1,398 @@
+// Home — noise tiles only; rest = list rows
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.home {
+  width: 100%;
+  max-width: 100%;
+  @include flex-column;
+  gap: 0;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+// Sticky device bar — name + status fixed while scrolling
+.home-sticky {
+  position: sticky;
+  top: -12px; // cancel section-scroll padding so bar sits flush
+  z-index: 40;
+  margin: -12px -14px 0;
+  padding: 12px 14px 10px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  border-bottom: 0.5px solid var(--divider);
+}
+
+.home-sticky-inner {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
+.home-sticky-text {
+  min-width: 0;
+  flex: 1;
+  @include flex-column;
+  gap: 3px;
+}
+
+.home-sticky-name {
+  margin: 0;
+  font-size: $fs-md;
+  font-weight: $fw-semibold;
+  letter-spacing: -0.35px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.home-sticky-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $fs-xs;
+  color: var(--text-3);
+  font-weight: $fw-medium;
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-3);
+    flex-shrink: 0;
+    &.live {
+      background: $accent-green;
+      box-shadow: 0 0 0 3px rgba($accent-green, 0.18);
+    }
+    &.wait {
+      background: $brand-yellow;
+    }
+    &.dead {
+      background: $accent-red;
+    }
+  }
+}
+
+.home-body {
+  @include flex-column;
+  gap: $space-4;
+  padding-top: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.home-hero {
+  @include flex-column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+
+  .home-device-img {
+    width: 148px;
+    height: 128px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+}
+
+.home-batt {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+
+  .home-batt-cell {
+    background: var(--bg-card);
+    border-radius: $radius-md;
+    padding: 10px 6px;
+    text-align: center;
+    border: 0.5px solid var(--border);
+    min-width: 0;
+
+    .pct {
+      font-size: $fs-md;
+      font-weight: $fw-semibold;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      &.low {
+        color: $accent-red;
+      }
+      &.mid {
+        color: $brand-yellow-deep;
+      }
+      &.unk {
+        color: var(--text-3);
+      }
+    }
+    .tag {
+      margin-top: 2px;
+      font-size: 10px;
+      font-weight: $fw-medium;
+      color: var(--text-3);
+    }
+  }
+}
+
+.home-section-label {
+  font-size: 11px;
+  font-weight: $fw-semibold;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 0 0 8px 2px;
+}
+
+// Find / battery — pill chips (not list, not square tiles)
+.home-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.action-chip {
+  @include button-base;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: $radius-full;
+  color: var(--text);
+  font-size: $fs-sm;
+  font-weight: $fw-medium;
+
+  svg {
+    flex-shrink: 0;
+    color: var(--text-2);
+  }
+
+  &:active {
+    background: var(--bg-card-hover);
+    transform: scale(0.98);
+  }
+}
+
+// Spatial feature card on home
+.home-feature-card {
+  background: var(--bg-card);
+  border-radius: $radius-xl;
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+  width: 100%;
+
+  .list-row {
+    border-bottom: none;
+  }
+}
+
+.home-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin: 0 12px 12px;
+  padding: 2px;
+  background: var(--bg-fill);
+  border-radius: $radius-md;
+
+  button {
+    @include button-base;
+    padding: 9px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    color: var(--text-2);
+    font-size: $fs-sm;
+    font-weight: $fw-medium;
+
+    &.active {
+      background: var(--bg-elevated);
+      color: var(--text);
+      box-shadow: $shadow-sm;
+    }
+  }
+}
+
+.list-ico-text {
+  font-size: 11px;
+  font-weight: $fw-bold;
+  letter-spacing: -0.3px;
+  color: var(--text-2);
+}
+
+// —— Square tiles: noise only ——
+.noise-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.noise-tile {
+  @include button-base;
+  @include flex-column;
+  gap: 6px;
+  aspect-ratio: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 4px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: $radius-lg;
+  color: var(--text-2);
+  transition: background $transition-fast, box-shadow $transition-fast,
+    color $transition-fast;
+
+  svg {
+    flex-shrink: 0;
+    color: inherit;
+  }
+
+  span {
+    font-size: 11px;
+    font-weight: $fw-medium;
+    line-height: 1.15;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 2px;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &.active {
+    background: var(--brand-soft);
+    box-shadow: inset 0 0 0 1.5px var(--brand);
+    color: var(--text);
+    font-weight: $fw-semibold;
+
+    [data-theme="dark"] & {
+      color: var(--brand);
+      span {
+        color: var(--text);
+      }
+    }
+  }
+}
+
+.home-anc-level {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border-radius: $radius-md;
+  border: 0.5px solid var(--border);
+
+  .row {
+    @include flex-between;
+    font-size: $fs-xs;
+    color: var(--text-2);
+    margin-bottom: 6px;
+    strong {
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: $brand-yellow;
+  }
+}
+
+// —— List rows (not squares) ——
+.home-list {
+  @include flex-column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.home-list-card {
+  background: var(--bg-card);
+  border-radius: $radius-xl;
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+  width: 100%;
+}
+
+.list-row {
+  @include flex-between;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px 14px;
+  gap: 10px;
+  background: none;
+  border: none;
+  border-bottom: 0.5px solid var(--divider);
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.action {
+    cursor: pointer;
+    &:active {
+      background: var(--bg-fill-2);
+    }
+  }
+
+  &.danger .list-title,
+  &.danger .list-ico {
+    color: $accent-red;
+  }
+
+  .list-ico {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    @include flex-center;
+    color: var(--text-2);
+  }
+
+  .list-text {
+    flex: 1;
+    min-width: 0;
+    @include flex-column;
+    gap: 1px;
+  }
+
+  .list-title {
+    font-size: $fs-base;
+    font-weight: $fw-regular;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .list-sub {
+    font-size: $fs-xs;
+    color: var(--text-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .list-chev {
+    flex-shrink: 0;
+    color: var(--text-3);
+    font-size: 18px;
+    line-height: 1;
+  }
+}

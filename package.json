@@ -1,7 +1,7 @@
 {
-  "name": "baseus-app",
+  "name": "b4s",
   "version": "0.1.0",
-  "description": "Baseus Desktop App - Control your Baseus earbuds from PC",
+  "description": "B4S — unofficial desktop companion for multi-model earbuds listening control (BLE)",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,19 +9,21 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "version:bump": "node scripts/bump-version.mjs"
   },
   "dependencies": {
-    "solid-js": "^1.9.3",
     "@tauri-apps/api": "^2.1.1",
-    "@tauri-apps/plugin-shell": "^2.0.1"
+    "@tauri-apps/plugin-shell": "^2.0.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
+    "solid-js": "^1.9.3"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.1.0",
+    "@types/node": "^22.9.0",
     "sass": "^1.81.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
-    "vite-plugin-solid": "^2.10.2",
-    "@types/node": "^22.9.0"
+    "vite-plugin-solid": "^2.10.2"
   }
 }

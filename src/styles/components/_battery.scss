@@ -60,16 +60,16 @@
       transition: width $transition-base, background $transition-base;
 
       &.high {
-        background: linear-gradient(90deg, $battery-high, lighten($battery-high, 10%));
+        background: linear-gradient(90deg, $battery-high, tint($battery-high, 10%));
       }
       &.medium {
-        background: linear-gradient(90deg, $battery-medium, lighten($battery-medium, 10%));
+        background: linear-gradient(90deg, $battery-medium, tint($battery-medium, 10%));
       }
       &.low {
-        background: linear-gradient(90deg, $battery-low, lighten($battery-low, 10%));
+        background: linear-gradient(90deg, $battery-low, tint($battery-low, 10%));
       }
       &.charging {
-        background: linear-gradient(90deg, $battery-charging, lighten($battery-charging, 15%));
+        background: linear-gradient(90deg, $battery-charging, tint($battery-charging, 15%));
         animation: battery-pulse 1.5s ease-in-out infinite;
       }
     }

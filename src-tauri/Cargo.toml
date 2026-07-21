@@ -1,12 +1,12 @@
 [package]
-name = "baseus-app"
+name = "b4s"
 version = "0.1.0"
-description = "Baseus Desktop App - Control your Baseus earbuds"
-authors = ["you"]
+description = "B4S — unofficial desktop companion for multi-model earbuds (BLE listening control)"
+authors = ["hoan02"]
 edition = "2021"
 
 [lib]
-name = "baseus_app_lib"
+name = "b4s_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -15,8 +15,11 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 tokio = { version = "1", features = ["sync", "time", "rt-multi-thread", "macros"] }
 btleplug = "0.11"
 uuid = { version = "1", features = ["v4", "serde"] }

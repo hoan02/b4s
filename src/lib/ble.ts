@@ -3,8 +3,7 @@
  * Talks to Rust backend via Tauri invoke + events
  */
 
-import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { invoke, listen, type UnlistenFn } from "./tauri";
 
 // ---------------------------------------------------------------------------
 // Types (mirror Rust serde)
@@ -21,6 +20,8 @@ export interface BleDevice {
   modelName?: string | null;
   /** verified | experimental | scanOnly */
   support?: string | null;
+  /** Dual-entry / pairing tip from backend */
+  hint?: string | null;
 }
 
 export interface ModelInfo {
@@ -33,16 +34,41 @@ export interface ModelInfo {
   hasEq: boolean;
   hasGameMode: boolean;
   category: string;
+  /** Product family from official app (e.g. Bass BP1 / EP10) */
+  group?: string;
 }
 
 export async function listModels(): Promise<ModelInfo[]> {
   return invoke<ModelInfo[]>("list_models");
 }
 
+/** Proof of real control link — not just "connected" UI flag */
+export type LinkLevel = "live" | "waiting" | "dead" | "demo" | "offline";
+
+export interface LinkHealth {
+  connected: boolean;
+  mock: boolean;
+  peripheralConnected: boolean;
+  hasWriteUuid: boolean;
+  hasNotifyUuid: boolean;
+  handshakeOk: boolean;
+  notifyCount: number;
+  txCount: number;
+  lastNotifyMs: number | null;
+  lastTxMs: number | null;
+  lastRxHex: string | null;
+  lastTxHex: string | null;
+  writeChar: string | null;
+  notifyChar: string | null;
+  level: LinkLevel | string;
+  message: string;
+}
+
 export interface ConnectionState {
   connected: boolean;
   device: BleDevice | null;
   error: string | null;
+  link: LinkHealth;
 }
 
 export interface ScanStatus {
@@ -87,6 +113,10 @@ export async function getConnection(): Promise<ConnectionState> {
   return invoke<ConnectionState>("ble_get_connection");
 }
 
+export async function getLinkHealth(): Promise<LinkHealth> {
+  return invoke<LinkHealth>("ble_get_link_health");
+}
+
 // ---------------------------------------------------------------------------
 // Event listeners
 // ---------------------------------------------------------------------------
@@ -101,6 +131,10 @@ export function onDevice(cb: (device: BleDevice) => void): Promise<UnlistenFn> {
 
 export function onConnection(cb: (state: ConnectionState) => void): Promise<UnlistenFn> {
   return listen<ConnectionState>("ble://connection", (e) => cb(e.payload));
+}
+
+export function onLinkHealth(cb: (link: LinkHealth) => void): Promise<UnlistenFn> {
+  return listen<LinkHealth>("ble://link", (e) => cb(e.payload));
 }
 
 export function onConnected(cb: (device: BleDevice) => void): Promise<UnlistenFn> {
@@ -132,4 +166,25 @@ export function rssiLabel(rssi: number): string {
   if (rssi >= -60) return "Good";
   if (rssi >= -70) return "Fair";
   return "Weak";
+}
+
+export function emptyLink(): LinkHealth {
+  return {
+    connected: false,
+    mock: false,
+    peripheralConnected: false,
+    hasWriteUuid: false,
+    hasNotifyUuid: false,
+    handshakeOk: false,
+    notifyCount: 0,
+    txCount: 0,
+    lastNotifyMs: null,
+    lastTxMs: null,
+    lastRxHex: null,
+    lastTxHex: null,
+    writeChar: null,
+    notifyChar: null,
+    level: "offline",
+    message: "Not connected",
+  };
 }

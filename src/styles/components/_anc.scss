@@ -61,7 +61,7 @@
   }
 
   &:hover:not(.active) {
-    background: lighten($bg-elevated, 5%);
+    background: tint($bg-elevated, 5%);
     color: $text-primary;
   }
 

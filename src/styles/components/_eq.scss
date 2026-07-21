@@ -27,6 +27,13 @@
   }
 }
 
+.eq-grid-4 {
+  grid-template-columns: repeat(2, 1fr) !important;
+  @media (min-width: 400px) {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
 .eq-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

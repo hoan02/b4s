@@ -13,6 +13,14 @@ export default defineConfig(async () => ({
     },
   },
 
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: "modern",
+      },
+    },
+  },
+
   // Vite options tailored for Tauri development
   clearScreen: false,
   server: {

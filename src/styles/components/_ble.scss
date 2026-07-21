@@ -1,85 +1,140 @@
-// ============================================
-// BLE PAIRING SCREEN
-// ============================================
+// BLE pairing — compact, no horizontal overflow
 
 @use "../variables" as *;
 @use "../mixins" as *;
 
-.ble-pairing {
+// Pair shell: scroll middle + fixed footer
+.pair-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   width: 100%;
-  @include flex-column;
-  align-items: center;
-  gap: $space-5;
-  padding: $space-4 0 $space-8;
-  animation: fade-in-up 0.4s ease both;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-// Hero + radar animation
+.pair-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  @include custom-scrollbar;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pair-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 4px 4px;
+  border-top: 0.5px solid var(--divider);
+  background: var(--bg);
+
+  .pair-footer-settings {
+    @include button-base;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: $fs-base;
+    font-weight: $fw-medium;
+    padding: 8px 4px;
+
+    &:active {
+      opacity: 0.65;
+    }
+  }
+
+  .pair-footer-ver {
+    font-size: $fs-xs;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.ble-pairing {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  @include flex-column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 4px 0 16px;
+  overflow-x: hidden;
+  animation: fade-in 0.28s ease both;
+}
+
+.ble-footer-links {
+  display: none; // moved to pair-footer
+}
+
 .ble-hero {
   @include flex-column;
   align-items: center;
   text-align: center;
-  gap: $space-3;
-  padding-top: $space-4;
+  gap: 6px;
+  padding-top: 8px;
 
   h2 {
     font-size: $fs-xl;
     font-weight: $fw-semibold;
-    margin-top: $space-2;
+    letter-spacing: -0.3px;
+    margin: 0;
+    color: var(--text);
   }
 
   .ble-subtitle {
     font-size: $fs-sm;
-    color: $text-secondary;
-    max-width: 280px;
-    line-height: 1.45;
+    color: var(--text-3);
+    max-width: 260px;
+    line-height: 1.35;
+    margin: 0;
+    padding: 0 12px;
   }
 }
 
 .ble-radar {
   position: relative;
-  width: 120px;
-  height: 120px;
+  width: 88px;
+  height: 88px;
   @include flex-center;
-  margin-bottom: $space-2;
+  margin-bottom: 4px;
+
+  &.sm .radar-core {
+    width: 44px;
+    height: 44px;
+  }
 
   .radar-core {
-    width: 56px;
-    height: 56px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    background: $bg-elevated;
-    border: 2px solid $border-color-strong;
-    @include flex-center;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
     z-index: 2;
-    box-shadow: $shadow-md;
-
-    .radar-icon {
-      font-size: 26px;
-    }
   }
 
   .radar-ring {
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    border: 2px solid rgba($accent-blue, 0.35);
+    border: 1px solid var(--border);
     opacity: 0;
-    transform: scale(0.4);
+    transform: scale(0.5);
+  }
 
-    &.active {
-      animation: radar-pulse 2.4s ease-out infinite;
-    }
-
-    &.delay.active {
-      animation-delay: 1.2s;
-    }
+  &.on .radar-ring {
+    animation: radar-pulse 2.4s ease-out infinite;
   }
 }
 
 @keyframes radar-pulse {
   0% {
-    opacity: 0.7;
-    transform: scale(0.45);
+    opacity: 0.5;
+    transform: scale(0.5);
   }
   100% {
     opacity: 0;
@@ -87,31 +142,25 @@
   }
 }
 
-// Controls
 .ble-controls {
   @include flex-center;
-  gap: $space-3;
+  gap: 8px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .ble-btn {
   @include button-base;
   @include focus-ring;
-  padding: $space-3 $space-6;
+  padding: 12px 22px;
   font-size: $fs-sm;
   font-weight: $fw-semibold;
-  gap: $space-2;
   min-height: 44px;
+  max-width: 100%;
 
   &.primary {
-    background: $accent-blue;
-    color: white;
-    box-shadow: 0 0 0 0 rgba($accent-blue, 0.4);
-
-    &:hover:not(:disabled) {
-      background: lighten($accent-blue, 6%);
-      box-shadow: 0 4px 16px rgba($accent-blue, 0.35);
-    }
+    background: $brand-yellow;
+    color: #1d1d1f;
 
     &:active {
       transform: scale(0.98);
@@ -119,114 +168,123 @@
   }
 
   &.secondary {
-    background: $bg-elevated;
-    color: $text-primary;
-    border: 1px solid $border-color;
-
-    &:hover:not(:disabled) {
-      background: $bg-card-hover;
-      border-color: $border-color-strong;
-    }
+    background: var(--bg-card);
+    color: var(--text);
+    border: 0.5px solid var(--border);
   }
 }
 
-.mock-badge {
-  font-size: $fs-xs;
-  font-weight: $fw-medium;
-  color: $accent-yellow;
-  background: rgba($accent-yellow, 0.12);
-  padding: $space-1 $space-3;
-  border-radius: $radius-full;
-  border: 1px solid rgba($accent-yellow, 0.25);
+.ble-bt-off {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  background: var(--brand-soft);
+  border-radius: $radius-md;
+  text-align: center;
+
+  p {
+    font-size: $fs-sm;
+    color: var(--text-2);
+    margin: 0 0 10px;
+    line-height: 1.35;
+  }
+
+  .ble-btn {
+    width: 100%;
+  }
 }
 
-// Error
 .ble-error {
   width: 100%;
-  padding: $space-3 $space-4;
-  background: rgba($accent-red, 0.12);
-  border: 1px solid rgba($accent-red, 0.3);
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: rgba($accent-red, 0.1);
   border-radius: $radius-md;
-  color: lighten($accent-red, 15%);
-  font-size: $fs-sm;
-  text-align: center;
+  color: $accent-red;
+  font-size: $fs-xs;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
-// Device list
+.ble-tip {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 10px;
+  font-size: $fs-xs;
+  color: var(--text-3);
+  line-height: 1.35;
+  background: var(--bg-fill-2);
+  border-radius: $radius-sm;
+}
+
 .ble-list {
   width: 100%;
+  max-width: 100%;
   @include flex-column;
-  gap: $space-2;
+  gap: 8px;
+  min-width: 0;
 }
 
 .ble-group-label {
-  font-size: $fs-xs;
+  font-size: 11px;
   font-weight: $fw-semibold;
-  color: $text-tertiary;
+  color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  padding: $space-3 $space-1 $space-1;
+  letter-spacing: 0.4px;
+  padding: 4px 2px 0;
 }
 
 .ble-device {
-  @include flex-between;
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding: $space-3 $space-4;
-  background: $bg-card;
-  border: 1px solid $border-color;
-  border-radius: $radius-md;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: $radius-lg;
   cursor: pointer;
-  transition: all $transition-fast;
   text-align: left;
-  color: $text-primary;
-  gap: $space-3;
+  color: var(--text);
+  gap: 10px;
+  transition: background $transition-fast;
 
   &:hover:not(:disabled) {
-    background: $bg-card-hover;
-    border-color: $border-color-strong;
-    transform: translateY(-1px);
+    background: var(--bg-card-hover);
   }
 
   &:disabled {
-    opacity: 0.7;
+    opacity: 0.75;
     cursor: wait;
   }
 
-  &.baseus {
-    border-color: rgba($accent-blue, 0.25);
-
-    &:hover:not(:disabled) {
-      border-color: rgba($accent-blue, 0.5);
-      box-shadow: 0 0 20px rgba($accent-blue, 0.1);
-    }
+  &.matched {
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px rgba($brand-yellow, 0.35);
   }
 
   &.connecting {
-    border-color: $accent-blue;
-    background: rgba($accent-blue, 0.08);
+    background: var(--brand-soft);
   }
 
   .device-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: $radius-md;
-    background: $bg-elevated;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--bg-fill-2);
     @include flex-center;
-    font-size: 20px;
     flex-shrink: 0;
     overflow: hidden;
-    border: 1px solid $border-color;
 
-    &.photo {
-      background: #121212;
-      padding: 2px;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        border-radius: $radius-sm;
-      }
+    &.photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
   }
 
@@ -234,136 +292,148 @@
     flex: 1;
     min-width: 0;
     @include flex-column;
-    gap: 3px;
+    gap: 2px;
   }
 
   .device-name-row {
-    @include flex-center;
-    justify-content: flex-start;
-    gap: $space-2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
 
     .name {
       font-size: $fs-base;
       font-weight: $fw-medium;
-      @include text-truncate;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .baseus-tag {
-      font-size: 10px;
+    .tag {
+      flex-shrink: 0;
+      font-size: 9px;
       font-weight: $fw-bold;
-      color: $accent-blue;
-      background: rgba($accent-blue, 0.15);
-      padding: 1px 6px;
-      border-radius: $radius-full;
       text-transform: uppercase;
       letter-spacing: 0.3px;
-      flex-shrink: 0;
+      color: var(--text-3);
+      background: var(--bg-fill);
+      padding: 2px 5px;
+      border-radius: 4px;
 
-      &.verified {
-        color: $accent-green;
-        background: rgba($accent-green, 0.15);
-      }
-      &.experimental {
-        color: $accent-yellow;
-        background: rgba($accent-yellow, 0.12);
+      &.ok {
+        color: #1d1d1f;
+        background: $brand-yellow;
       }
     }
   }
 
   .device-meta {
-    @include flex-center;
-    justify-content: flex-start;
-    gap: $space-3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: $fs-xs;
-    color: $text-tertiary;
+    color: var(--text-3);
+    min-width: 0;
 
     .rssi {
       @include flex-center;
       gap: 4px;
+      flex-shrink: 0;
     }
 
-    .address {
-      font-family: $font-mono;
-      opacity: 0.7;
+    .hint-inline {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 
   .device-action {
     flex-shrink: 0;
-    min-width: 64px;
-    text-align: right;
 
     .connect-label {
       font-size: $fs-sm;
-      font-weight: $fw-semibold;
-      color: $accent-blue;
+      font-weight: $fw-medium;
+      color: var(--text);
+      opacity: 0.85;
     }
   }
 }
 
-// Signal bars
 .signal-bars {
   display: inline-flex;
   align-items: flex-end;
   gap: 1.5px;
-  height: 12px;
+  height: 10px;
 
   .bar {
-    width: 3px;
-    background: $text-tertiary;
+    width: 2.5px;
+    background: var(--bg-fill);
     border-radius: 1px;
-    transition: background $transition-fast;
-
-    &:nth-child(1) { height: 4px; }
-    &:nth-child(2) { height: 6px; }
-    &:nth-child(3) { height: 9px; }
-    &:nth-child(4) { height: 12px; }
-
     &.on {
-      background: $accent-green;
+      background: var(--text-3);
+    }
+    &:nth-child(1) {
+      height: 3px;
+    }
+    &:nth-child(2) {
+      height: 5px;
+    }
+    &:nth-child(3) {
+      height: 7px;
+    }
+    &:nth-child(4) {
+      height: 10px;
     }
   }
 }
 
-// Empty / scanning state
 .ble-empty {
-  @include flex-column;
-  align-items: center;
-  gap: $space-2;
-  padding: $space-10 $space-4;
   text-align: center;
+  padding: 20px 12px;
+  color: var(--text-3);
 
   p {
     font-size: $fs-base;
-    color: $text-secondary;
-    font-weight: $fw-medium;
+    color: var(--text-2);
+    margin: 0 0 4px;
   }
-
   span {
-    font-size: $fs-sm;
-    color: $text-tertiary;
-  }
-
-  &.scanning p {
-    color: $text-tertiary;
+    font-size: $fs-xs;
   }
 }
 
-// Spinner
+.ble-footer-links {
+  @include flex-center;
+  padding-top: 4px;
+
+  .ble-text-link {
+    @include button-base;
+    background: none;
+    border: none;
+    color: var(--text-2);
+    font-size: $fs-sm;
+    padding: 8px 12px;
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+}
+
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-top-color: currentColor;
+  border: 2px solid var(--border);
+  border-top-color: var(--text);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   display: inline-block;
 
   &.small {
-    width: 18px;
-    height: 18px;
-    border-width: 2px;
-    color: $accent-blue;
+    width: 14px;
+    height: 14px;
   }
 }
 

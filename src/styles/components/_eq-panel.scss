@@ -1,0 +1,259 @@
+// Full EQ screen — presets grid + custom vertical sliders
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.eq-panel {
+  width: 100%;
+  padding-bottom: $space-6;
+}
+
+.eq-preview-card {
+  background: var(--bg-card);
+  border-radius: $radius-xl;
+  border: 0.5px solid var(--border);
+  padding: 16px 14px 12px;
+  margin-bottom: 14px;
+}
+
+.eq-preview-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 88px;
+  padding: 0 4px;
+}
+
+.eq-preview-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.eq-preview-track {
+  width: 100%;
+  max-width: 28px;
+  height: 100%;
+  background: var(--bg-fill);
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.eq-preview-fill {
+  width: 100%;
+  min-height: 4px;
+  background: linear-gradient(
+    180deg,
+    $brand-yellow 0%,
+    color-mix(in srgb, $brand-yellow 55%, transparent) 100%
+  );
+  border-radius: 6px 6px 0 0;
+  transition: height $transition-fast;
+}
+
+.eq-preview-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 2px;
+  font-size: 10px;
+  color: var(--text-3);
+  span {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.eq-preview-hint {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: $fs-sm;
+  font-weight: $fw-medium;
+  color: var(--text-2);
+}
+
+.eq-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-fill);
+  border-radius: $radius-md;
+  margin-bottom: 16px;
+
+  button {
+    @include button-base;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    color: var(--text-2);
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+
+    &.active {
+      background: var(--bg-elevated);
+      color: var(--text);
+      box-shadow: $shadow-sm;
+    }
+  }
+}
+
+.eq-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.eq-preset-card {
+  @include button-base;
+  @include flex-column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px 10px 10px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: $radius-lg;
+  text-align: left;
+  color: var(--text);
+  min-width: 0;
+
+  &.active {
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--brand);
+    background: var(--brand-soft);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.eq-mini-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 36px;
+  margin-bottom: 2px;
+
+  span {
+    flex: 1;
+    min-height: 6px;
+    background: var(--text-3);
+    border-radius: 2px 2px 0 0;
+    opacity: 0.55;
+  }
+
+  .eq-preset-card.active & span {
+    background: $brand-yellow;
+    opacity: 1;
+  }
+}
+
+.eq-preset-name {
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eq-preset-sub {
+  font-size: 10px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eq-custom-card {
+  background: var(--bg-card);
+  border-radius: $radius-xl;
+  border: 0.5px solid var(--border);
+  padding: 16px 12px 14px;
+}
+
+.eq-sliders {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 180px;
+}
+
+.eq-slider-col {
+  flex: 1;
+  min-width: 0;
+  @include flex-column;
+  align-items: center;
+  gap: 6px;
+}
+
+.eq-gain {
+  font-size: 10px;
+  font-weight: $fw-semibold;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  min-height: 14px;
+}
+
+// Vertical range (WebView2 / Chromium)
+.eq-vslider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 28px;
+  height: 140px;
+  padding: 0;
+  accent-color: $brand-yellow;
+  cursor: pointer;
+}
+
+.eq-freq {
+  font-size: 11px;
+  font-weight: $fw-semibold;
+  color: var(--text);
+}
+
+.eq-unit {
+  font-size: 9px;
+  color: var(--text-3);
+  margin-top: -4px;
+}
+
+.eq-custom-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.eq-btn {
+  @include button-base;
+  min-height: 42px;
+  border-radius: $radius-full;
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+  border: none;
+
+  &.primary {
+    background: $brand-yellow;
+    color: #1d1d1f;
+  }
+
+  &.ghost {
+    background: var(--bg-fill);
+    color: var(--text);
+  }
+}
+
+.eq-footnote {
+  margin: 10px 2px 0;
+  font-size: $fs-xs;
+  color: var(--text-3);
+  line-height: 1.4;
+}

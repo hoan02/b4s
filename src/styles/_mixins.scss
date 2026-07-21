@@ -1,6 +1,18 @@
 // ============================================
-// MIXINS
+// MIXINS + COLOR HELPERS
 // ============================================
+
+@use "sass:color";
+@use "variables" as *;
+
+// Replaces deprecated global lighten()/darken()
+@function tint($c, $amount) {
+  @return color.adjust($c, $lightness: $amount);
+}
+
+@function shade($c, $amount) {
+  @return color.adjust($c, $lightness: -$amount);
+}
 
 @mixin flex-center {
   display: flex;
@@ -66,16 +78,16 @@
 
 @mixin custom-scrollbar {
   &::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
   }
   &::-webkit-scrollbar-track {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--bg-fill, rgba(120, 120, 128, 0.35));
     border-radius: $radius-full;
     &:hover {
-      background: rgba(255, 255, 255, 0.25);
+      background: var(--text-3, rgba(120, 120, 128, 0.5));
     }
   }
 }

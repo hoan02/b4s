@@ -1,0 +1,415 @@
+// Listening panel — clean iOS Settings groups
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.listen-panel {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+.listen-card {
+  background: $bg-secondary;
+  border-radius: $radius-xl;
+  padding: $space-4;
+  width: 100%;
+  border: none;
+  box-shadow: none;
+}
+
+.listen-card-head {
+  margin-bottom: $space-3;
+
+  h3 {
+    font-size: $fs-md;
+    font-weight: $fw-semibold;
+    margin: 0;
+    letter-spacing: -0.2px;
+  }
+
+  &.row {
+    @include flex-between;
+    gap: $space-3;
+    margin-bottom: $space-2;
+  }
+
+  &.expand {
+    width: 100%;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: $space-2;
+    text-align: left;
+  }
+}
+
+.listen-card-hint {
+  display: block;
+  font-size: $fs-xs;
+  color: $text-tertiary;
+  margin-top: 2px;
+  font-weight: $fw-regular;
+}
+
+// iOS-style segmented control for noise modes
+.noise-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 2px;
+  background: $bg-fill;
+  border-radius: $radius-md;
+}
+
+.noise-btn {
+  @include button-base;
+  @include flex-column;
+  gap: 2px;
+  padding: 10px 6px;
+  background: transparent;
+  border-radius: 10px;
+  border: none;
+  color: $text-secondary;
+  transition: background $transition-fast, color $transition-fast,
+    box-shadow $transition-fast;
+
+  .noise-label {
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+    color: inherit;
+  }
+  .noise-sub {
+    font-size: 10px;
+    color: $text-tertiary;
+    font-weight: $fw-regular;
+  }
+
+  &:active:not(.active) {
+    opacity: 0.7;
+  }
+
+  &.active {
+    background: $bg-elevated;
+    color: $text-primary;
+    box-shadow: $shadow-sm;
+
+    .noise-label {
+      color: $text-primary;
+    }
+    .noise-sub {
+      color: $text-secondary;
+    }
+  }
+
+  // No multi-color active states — single clean selection
+  &.mode-transparency.active,
+  &.mode-off.active,
+  &.mode-anc.active {
+    border: none;
+  }
+}
+
+.anc-level {
+  margin-top: $space-4;
+  padding-top: $space-3;
+  border-top: 0.5px solid $divider;
+
+  .anc-level-row {
+    @include flex-between;
+    font-size: $fs-sm;
+    color: $text-secondary;
+    margin-bottom: $space-2;
+    strong {
+      color: $text-primary;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: $accent-blue;
+    height: 4px;
+  }
+}
+
+.spatial-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin-top: $space-2;
+  padding: 2px;
+  background: $bg-fill;
+  border-radius: $radius-md;
+
+  button {
+    @include button-base;
+    padding: 10px $space-3;
+    background: transparent;
+    border-radius: 10px;
+    border: none;
+    color: $text-secondary;
+    font-size: $fs-sm;
+    font-weight: $fw-medium;
+
+    &.active {
+      background: $bg-elevated;
+      color: $text-primary;
+      box-shadow: $shadow-sm;
+    }
+  }
+}
+
+.eq-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.eq-chip {
+  @include button-base;
+  padding: 8px 14px;
+  border-radius: $radius-full;
+  background: $bg-fill-secondary;
+  border: none;
+  color: $text-secondary;
+  font-size: $fs-xs;
+  font-weight: $fw-medium;
+  transition: background $transition-fast, color $transition-fast;
+
+  &.active {
+    background: $accent-blue;
+    color: white;
+  }
+}
+
+.row-card {
+  @include flex-between;
+  gap: $space-3;
+
+  .row-card-left {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    text-align: left;
+
+    h3 {
+      margin: 0;
+      font-size: $fs-md;
+      font-weight: $fw-regular;
+    }
+    p {
+      margin: 2px 0 0;
+      font-size: $fs-xs;
+      color: $text-tertiary;
+    }
+  }
+  .row-icon {
+    display: none; // no emoji icons
+  }
+  .row-action {
+    @include button-base;
+    padding: 6px 14px;
+    border-radius: $radius-full;
+    background: $bg-fill;
+    color: $accent-blue;
+    font-size: $fs-sm;
+    font-weight: $fw-medium;
+    border: none;
+  }
+}
+
+.sound-block {
+  margin-top: $space-3;
+  padding-top: $space-3;
+  border-top: 0.5px solid $divider;
+
+  h4 {
+    font-size: $fs-xs;
+    color: $text-tertiary;
+    margin: 0 0 $space-3;
+    font-weight: $fw-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+}
+
+.setting-row {
+  @include flex-between;
+  gap: $space-3;
+  margin-bottom: $space-3;
+  min-height: 32px;
+
+  .setting-title {
+    display: block;
+    font-size: $fs-base;
+    color: $text-primary;
+    font-weight: $fw-regular;
+  }
+  .setting-desc {
+    display: block;
+    font-size: $fs-xs;
+    color: $text-tertiary;
+  }
+}
+
+.setting-note {
+  font-size: $fs-xs;
+  color: $text-tertiary;
+  line-height: 1.35;
+  margin: -4px 0 $space-3;
+}
+
+.level-pills {
+  display: flex;
+  gap: 4px;
+  button {
+    @include button-base;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: $radius-sm;
+    background: $bg-fill-secondary;
+    color: $text-secondary;
+    border: none;
+    font-size: $fs-sm;
+    font-weight: $fw-medium;
+    &.active {
+      background: $accent-blue;
+      color: white;
+    }
+  }
+}
+
+// iOS switch
+.toggle.sm {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  flex-shrink: 0;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .slider {
+    position: absolute;
+    inset: 0;
+    background: $bg-fill;
+    border-radius: $radius-full;
+    border: none;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &::before {
+      content: "";
+      position: absolute;
+      width: 27px;
+      height: 27px;
+      left: 2px;
+      top: 2px;
+      background: white;
+      border-radius: 50%;
+      transition: transform $transition-fast;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+  }
+  input:checked + .slider {
+    background: $accent-green;
+    &::before {
+      transform: translateX(20px);
+      background: white;
+    }
+  }
+}
+
+.chev {
+  color: $text-tertiary;
+  font-size: 16px;
+  font-weight: $fw-regular;
+}
+
+// Device header battery strip
+.device-batt-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: $space-2;
+  width: 100%;
+  max-width: 360px;
+  margin: $space-4 0 $space-3;
+
+  .batt-cell {
+    background: $bg-secondary;
+    border-radius: $radius-lg;
+    padding: $space-3 $space-2;
+    text-align: center;
+    border: none;
+
+    .batt-pct {
+      font-size: $fs-xl;
+      font-weight: $fw-semibold;
+      color: $text-primary;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.5px;
+      &.low {
+        color: $battery-low;
+      }
+      &.mid {
+        color: $battery-medium;
+      }
+      &.ok {
+        color: $text-primary;
+      }
+      &.unk {
+        color: $text-tertiary;
+      }
+    }
+    .batt-tag {
+      font-size: 11px;
+      color: $text-tertiary;
+      margin-top: 6px;
+      font-weight: $fw-medium;
+    }
+  }
+}
+
+.device-signal {
+  @include flex-center;
+  gap: $space-2;
+  font-size: $fs-xs;
+  color: $text-secondary;
+  margin-bottom: $space-2;
+
+  .sig-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+    span {
+      width: 3px;
+      background: $bg-fill;
+      border-radius: 1px;
+      &.on {
+        background: $text-secondary;
+      }
+      &:nth-child(1) {
+        height: 4px;
+      }
+      &:nth-child(2) {
+        height: 7px;
+      }
+      &:nth-child(3) {
+        height: 10px;
+      }
+      &:nth-child(4) {
+        height: 12px;
+      }
+    }
+  }
+}

@@ -1,0 +1,105 @@
+# Build B4S for Windows / macOS / Linux and publish GitHub Release
+# with Tauri updater artifacts (latest.json + signed installers).
+#
+# Trigger: push tag v*  (e.g. v0.1.1) or manual workflow_dispatch
+#
+# Required secrets:
+#   TAURI_SIGNING_PRIVATE_KEY          — private updater key (never commit)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — optional
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag without v (e.g. 0.1.1). Leave empty to use package.json"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ""
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+          - platform: ubuntu-22.04
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libgtk-3-dev libssl-dev libdbus-1-dev libudev-dev \
+            pkg-config build-essential curl wget file libayatana-appindicator3-dev
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Sync version from tag
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VER="${GITHUB_REF_NAME#v}"
+          elif [[ -n "${{ inputs.tag }}" ]]; then
+            VER="${{ inputs.tag }}"
+          else
+            VER=$(node -p "require('./package.json').version")
+          fi
+          echo "VERSION=$VER" >> "$GITHUB_ENV"
+          node scripts/bump-version.mjs "$VER"
+
+      - name: Build & release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v${{ env.VERSION }}
+          releaseName: B4S v${{ env.VERSION }}
+          releaseBody: |
+            ## B4S v${{ env.VERSION }}
+
+            Unofficial desktop companion for multi-model earbuds (BLE).
+
+            ### Install
+            - **Windows**: `.msi` / `.exe`
+            - **macOS**: `.dmg` (universal)
+            - **Linux**: `.AppImage` / `.deb`
+
+            Auto-update uses `latest.json` from this release (signed).
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          args: ${{ matrix.args }}

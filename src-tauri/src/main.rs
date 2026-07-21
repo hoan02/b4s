@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    baseus_app_lib::run();
+    b4s_lib::run();
 }

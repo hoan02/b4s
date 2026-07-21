@@ -15,17 +15,19 @@
 mod framing;
 mod types;
 mod bp1_pro;
+mod crc_table;
+pub mod wrap_v2;
 pub mod models;
 
-pub use framing::{Frame, FrameError};
+pub use framing::Frame;
 pub use types::*;
 pub use bp1_pro::Bp1ProAnc;
 pub use models::{
-    catalog_json, identify as identify_model, looks_like_baseus, ModelInfo,
-    ProtocolFamily, SupportLevel,
+    catalog_json, identify as identify_model, looks_like_baseus, ModelInfo, SupportLevel,
 };
+pub use wrap_v2::{needs_v2_wrap, unwrap_notify, wrap_ba_command};
 
-/// Encode a command for writing to the GATT write characteristic.
+/// Encode a bare BA command (no 789C wrap).
 pub fn encode_command(cmd: Command) -> Vec<u8> {
     match cmd {
         Command::SetAnc { mode, level } => {
@@ -37,21 +39,48 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
         Command::QueryEq => {
             Frame::write(0x42, &[]).encode_write()
         }
+        Command::QueryBattery => {
+            // EarphoneFunctionShowFragmentNewUI: companion.c(model, "BA02", sn)
+            Frame::write(0x02, &[]).encode_write()
+        }
         Command::SetGameMode(on) => {
             Frame::write(0x24, &[if on { 0x01 } else { 0x00 }]).encode_write()
         }
+        Command::SetSpatial(mode) => {
+            // PanoramicSoundViewModel.u: "BA43" + "00"|"01"|"02"|…
+            Frame::write(0x43, &[mode.to_byte()]).encode_write()
+        }
+        Command::SetBassBoost(level) => {
+            // Best-effort: reuse EQ bass when level>0 else classic
+            // Real bass-boost level may be model-specific; send BA43 bass/classic
+            let b = if level == 0 { 0u8 } else { 1u8 };
+            Frame::write(0x43, &[b]).encode_write()
+        }
         Command::FindBuds => {
-            // Gesture / find opcode candidate — may need model-specific tweak
-            Frame::write(0x92, &[0x01]).encode_write()
+            // Official app 2.14.1: both buds start = BA100201
+            Frame::write(0x10, &[0x02, 0x01]).encode_write()
         }
     }
 }
 
-/// Decode a notification payload from the device.
+/// Decode a notification payload from the device (bare AA or 789C-wrapped).
+/// Returns the first successfully decoded event (prefer handle_notification
+/// which applies *all* frames when AA02+AA27 arrive together).
+#[allow(dead_code)]
 pub fn decode_notification(
     data: &[u8],
     last_anc: Option<AncMode>,
 ) -> Result<DeviceEvent, DecodeError> {
-    let frame = Frame::decode_notify(data)?;
-    Bp1ProAnc::decode_frame(&frame, last_anc)
+    let frames = unwrap_notify(data);
+    let mut last_err: Option<DecodeError> = None;
+    for f in frames {
+        match Frame::decode_notify(&f) {
+            Ok(fr) => match Bp1ProAnc::decode_frame(&fr, last_anc) {
+                Ok(ev) => return Ok(ev),
+                Err(e) => last_err = Some(e),
+            },
+            Err(e) => last_err = Some(DecodeError::Frame(e)),
+        }
+    }
+    Err(last_err.unwrap_or_else(|| DecodeError::UnknownOpcode(data.get(1).copied().unwrap_or(0))))
 }

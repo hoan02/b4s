@@ -31,25 +31,6 @@ impl Frame {
         Self::decode_with_magic(buf, Self::MAGIC_NOTIFY)
     }
 
-    /// Parse any frame (accepts AA or BA).
-    pub fn decode(buf: &[u8]) -> Result<Self, FrameError> {
-        if buf.len() < 2 {
-            return Err(FrameError::TooShort {
-                need: 2,
-                got: buf.len(),
-            });
-        }
-        let magic = buf[0];
-        if magic != Self::MAGIC_NOTIFY && magic != Self::MAGIC_WRITE {
-            return Err(FrameError::BadMagic { got: magic });
-        }
-        Ok(Self {
-            magic,
-            cmd: buf[1],
-            payload: buf[2..].to_vec(),
-        })
-    }
-
     fn decode_with_magic(buf: &[u8], expected: u8) -> Result<Self, FrameError> {
         if buf.len() < 2 {
             return Err(FrameError::TooShort {
@@ -79,28 +60,10 @@ impl Frame {
         }
     }
 
-    /// Build a notify-style frame (mostly for tests).
-    pub fn notify(cmd: u8, payload: &[u8]) -> Self {
-        Self {
-            magic: Self::MAGIC_NOTIFY,
-            cmd,
-            payload: payload.to_vec(),
-        }
-    }
-
     /// Encode for GATT write characteristic.
     pub fn encode_write(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(2 + self.payload.len());
         out.push(Self::MAGIC_WRITE);
-        out.push(self.cmd);
-        out.extend_from_slice(&self.payload);
-        out
-    }
-
-    /// Encode as notify-style (0xAA) — some devices accept this on write too.
-    pub fn encode_notify(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(2 + self.payload.len());
-        out.push(Self::MAGIC_NOTIFY);
         out.push(self.cmd);
         out.extend_from_slice(&self.payload);
         out
@@ -127,7 +90,7 @@ mod tests {
     #[test]
     fn reject_bad_magic() {
         assert!(matches!(
-            Frame::decode(&[0x00, 0x30]),
+            Frame::decode_notify(&[0x00, 0x30]),
             Err(FrameError::BadMagic { got: 0x00 })
         ));
     }

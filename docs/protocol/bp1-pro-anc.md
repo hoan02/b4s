@@ -1,62 +1,64 @@
-# Baseus Bass BP1 Pro ANC — Packet Table
+# Reference packet table — Bass BP1 Pro / Ultra family
 
-> Source: reverse-engineered from official Baseus app + live BLE captures  
-> (elaxptr/baseus-desktop, MIT). Integrated into this project.
+> Reference implementation for the **best-documented** Baseus listening path.  
+> **B4S** uses this table for verified BP1-class devices and as a template for other lines.  
+> Other Baseus models may share BA/AA opcodes, use **789C+CRC**, or different GATT UUIDs.
 
-## GATT endpoints
+Sources: live BLE captures + official app analysis (elaxptr/baseus-desktop + APK 2.14.1).
 
-| Role   | UUID |
-|--------|------|
+## Device notes
+
+| App product name | Wire notes |
+|------------------|------------|
+| Bass BP1 Pro | Often bare `BA`/`AA` on BLE |
+| Bass BP1 Ultra | Official app often wraps with **789C+CRC**; may prefer Classic BT in app |
+
+## GATT (BP1-family custom service)
+
+| Role | UUID |
+|------|------|
 | Service | `53527aa4-29f7-ae11-4e74-997334782568` |
-| Write   | `ee684b1a-1e9b-ed3e-ee55-f894667e92ac` |
-| Notify  | `654b749c-e37f-ae1f-ebab-40ca133e3690` |
+| Write | `ee684b1a-1e9b-ed3e-ee55-f894667e92ac` |
+| Notify | `654b749c-e37f-ae1f-ebab-40ca133e3690` |
 
-## Frame format
+## Frame format (bare)
 
 ```
 Notify (device → app):  AA <cmd> <payload...>
 Write  (app → device):  BA <cmd> <payload...>
 ```
 
-No length field, no CRC on BLE path.
+Ultra / N0 models: logical BA command wrapped as `789C | len | … | CRC` (see `protocol/wrap_v2.rs`).
 
-## Commands (app → device)
+## Commands (logical BA)
 
 | Action | Bytes |
 |--------|-------|
+| Handshake | `BA 05 00` (fallback `BA 05 01`) |
+| Battery query | `BA 02` |
 | ANC Off | `BA 34 00 FF` |
-| ANC On (default strength) | `BA 34 01 68` |
-| ANC On (custom 0–100%) | `BA 34 01 <level>` level = 0x10..0xFF |
+| ANC On | `BA 34 01 <level>` |
 | Transparency | `BA 34 02 FF` |
-| EQ Balanced | `BA 43 00` |
-| EQ Bass Boost | `BA 43 01` |
-| EQ Voice | `BA 43 02` |
-| EQ Clear | `BA 43 03` |
-| EQ Query | `BA 42` |
-| Game Mode ON | `BA 24 01` |
-| Game Mode OFF | `BA 24 00` |
-| Find Buds (candidate) | `BA 92 01` |
+| EQ / spatial payload | `BA 43 <byte>` |
+| EQ query | `BA 42` |
+| Game ON/OFF | `BA 24 01` / `BA 24 00` |
+| Game query | `BA 23` |
+| Find both buds | `BA 10 02 01` |
+| Find L / R | `BA 10 00 01` / `BA 10 01 01` |
 
-## Notifications (device → app)
+## Notifications (logical AA)
 
-| Event | Bytes | Notes |
-|-------|-------|-------|
-| Battery L/R | `AA 02 <L%> 00 <R%> 01` | 0% = bud in case |
-| Case battery | `AA 27 <case%> <charging>` | charging: 00/01 |
-| ANC Off ack | `AA 34 00` | |
-| ANC ack (flat) | `AA 34 01` | some firmwares always send this |
-| ANC active | `AA 33 …` | |
-| Transparency | `AA 32 …` | |
-| EQ ack | `AA 43 <preset>` | |
-| EQ query resp | `AA 42 <preset>` | |
-| Game state | `AA 23 <00\|01>` | real state |
-| Game ack | `AA 24 01` | ignore (no state) |
-| Identity | `AA 12 <mac…>` | on connect |
-| Case event | `AA 80 …` | partially decoded |
-| Keepalive | `AA 30 …` | ignore |
+| Event | Bytes |
+|-------|-------|
+| Battery L/R | `AA 02 <L%> 00 <R%> 01` |
+| Case battery | `AA 27 <case%> <charging>` |
+| ANC ack | `AA 34 …` (firmware-dependent) |
+| EQ ack | `AA 43 <preset>` |
+| Game state | `AA 23 <00\|01>` |
+| Identity | `AA 12 …` |
 
-## Implementation
+## Implementation (B4S)
 
-- Rust: `src-tauri/src/protocol/`
-- Wired in: `src-tauri/src/ble.rs` (subscribe + write)
-- Frontend events: `device://battery`, `device://anc`, `device://eq`, `device://game`
+- Rust: `src-tauri/src/protocol/`  
+- BLE: `src-tauri/src/ble.rs`  
+- Multi-model overview: [overview.md](./overview.md)  

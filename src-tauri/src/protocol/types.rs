@@ -9,9 +9,7 @@ use serde::{Deserialize, Serialize};
 pub mod uuids {
     use uuid::Uuid;
 
-    pub fn service() -> Uuid {
-        Uuid::parse_str("53527aa4-29f7-ae11-4e74-997334782568").unwrap()
-    }
+    /// BP1 Pro / Ultra custom control service
     pub fn write() -> Uuid {
         Uuid::parse_str("ee684b1a-1e9b-ed3e-ee55-f894667e92ac").unwrap()
     }
@@ -19,9 +17,13 @@ pub mod uuids {
         Uuid::parse_str("654b749c-e37f-ae1f-ebab-40ca133e3690").unwrap()
     }
 
-    pub const SERVICE_STR: &str = "53527aa4-29f7-ae11-4e74-997334782568";
-    pub const WRITE_STR: &str = "ee684b1a-1e9b-ed3e-ee55-f894667e92ac";
-    pub const NOTIFY_STR: &str = "654b749c-e37f-ae1f-ebab-40ca133e3690";
+    /// Bluetrum CCSDK fallback
+    pub fn ccsdk_write() -> Uuid {
+        Uuid::parse_str("02f00000-0000-0000-0000-00000000ff01").unwrap()
+    }
+    pub fn ccsdk_notify() -> Uuid {
+        Uuid::parse_str("02f00000-0000-0000-0000-00000000ff02").unwrap()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +94,14 @@ pub enum EqPreset {
     BassBoost = 1,
     Voice = 2,
     Clear = 3,
+    // Extended (best-effort indices — server-driven in official app)
+    HifiLive = 4,
+    Pop = 5,
+    JazzRock = 6,
+    Classical = 7,
+    Acoustic = 8,
+    BassReduce = 9,
+    TrebleReduce = 10,
 }
 
 impl EqPreset {
@@ -101,6 +111,13 @@ impl EqPreset {
             1 => Some(Self::BassBoost),
             2 => Some(Self::Voice),
             3 => Some(Self::Clear),
+            4 => Some(Self::HifiLive),
+            5 => Some(Self::Pop),
+            6 => Some(Self::JazzRock),
+            7 => Some(Self::Classical),
+            8 => Some(Self::Acoustic),
+            9 => Some(Self::BassReduce),
+            10 => Some(Self::TrebleReduce),
             _ => None,
         }
     }
@@ -109,13 +126,39 @@ impl EqPreset {
         self as u8
     }
 
+    /// Map UI id / label → preset (Baseus app-style names).
     pub fn from_ui(s: &str) -> Self {
-        match s {
-            "bass" | "bassBoost" | "BassBoost" => Self::BassBoost,
-            "voice" | "Voice" => Self::Voice,
-            "clear" | "Clear" => Self::Clear,
+        let k = s.to_lowercase().replace([' ', '-', '_'], "");
+        match k.as_str() {
+            "bass" | "bassboost" | "powerfulbass" | "powerful" => Self::BassBoost,
+            "voice" => Self::Voice,
+            "clear" | "cleartreble" | "treble" => Self::Clear,
+            "hifi" | "hifilive" | "hi-filive" => Self::HifiLive,
+            "pop" | "popular" => Self::Pop,
+            "jazz" | "jazzrock" | "jazzy" => Self::JazzRock,
+            "classical" | "classicorchestra" => Self::Classical,
+            "acoustic" => Self::Acoustic,
+            "bassreduce" | "reducebass" | "lessbass" => Self::BassReduce,
+            "treblereduce" | "reducetreble" | "lesstreble" => Self::TrebleReduce,
+            // classic / baseusclassic / balanced
             _ => Self::Balanced,
         }
+    }
+}
+
+/// Spatial / panoramic sound (app: BA43 + mode byte; BA5E for capability query).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SpatialMode {
+    Off = 0x00,
+    Music = 0x01,
+    Cinema = 0x02,
+    Game = 0x03,
+}
+
+impl SpatialMode {
+    pub fn to_byte(self) -> u8 {
+        self as u8
     }
 }
 
@@ -128,7 +171,13 @@ pub enum Command {
     SetAnc { mode: AncMode, level: u8 },
     SetEq(EqPreset),
     QueryEq,
+    /// Official app: BA02 → battery report AA02
+    QueryBattery,
     SetGameMode(bool),
+    /// Spatial on → BA43 + mode; off → BA43 00 (common mode)
+    SetSpatial(SpatialMode),
+    /// Bass boost electronic: 0–3 (best-effort BA opcode)
+    SetBassBoost(u8),
     FindBuds,
 }
 

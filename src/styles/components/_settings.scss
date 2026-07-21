@@ -1,0 +1,132 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.settings {
+  width: 100%;
+  padding-bottom: $space-6;
+}
+
+.settings-hero {
+  @include flex-column;
+  align-items: center;
+  text-align: center;
+  margin: $space-4 0 $space-6;
+  gap: 6px;
+
+  .settings-app-mark {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    background: $brand-yellow;
+    color: #1d1d1f;
+    @include flex-center;
+    font-size: 26px;
+    font-weight: $fw-bold;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+    box-shadow: 0 8px 20px rgba(255, 204, 0, 0.25);
+  }
+
+  .settings-app-name {
+    font-size: $fs-xl;
+    font-weight: $fw-semibold;
+    letter-spacing: -0.4px;
+  }
+
+  .settings-app-ver {
+    font-size: $fs-sm;
+    color: var(--text-2);
+  }
+}
+
+.settings-group {
+  margin-bottom: $space-5;
+
+  .settings-group-label {
+    font-size: 11px;
+    font-weight: $fw-semibold;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 0 4px 8px;
+  }
+}
+
+.settings-list {
+  background: var(--bg-card);
+  border-radius: $radius-xl;
+  overflow: hidden;
+  border: 0.5px solid var(--border);
+}
+
+.settings-row {
+  @include flex-between;
+  width: 100%;
+  padding: 14px 16px;
+  min-height: 48px;
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid var(--divider);
+  color: var(--text);
+  font-size: $fs-base;
+  text-align: left;
+  gap: $space-3;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.action {
+    cursor: pointer;
+    color: var(--text);
+    &:active {
+      background: var(--bg-fill-2);
+    }
+    &:disabled {
+      opacity: 0.45;
+    }
+  }
+
+  .settings-row-label {
+    flex: 1;
+  }
+  .settings-row-value {
+    color: var(--text-2);
+    font-size: $fs-base;
+    font-variant-numeric: tabular-nums;
+  }
+  .settings-row-chev {
+    color: var(--text-3);
+    font-size: 18px;
+  }
+}
+
+.settings-status {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: $radius-md;
+  font-size: $fs-sm;
+  line-height: 1.4;
+  background: var(--bg-fill-2);
+  color: var(--text-2);
+
+  &.ok {
+    color: $accent-green;
+    background: rgba($accent-green, 0.12);
+  }
+  &.warn {
+    color: $brand-yellow-deep;
+    background: var(--brand-soft);
+  }
+  &.err {
+    color: $accent-red;
+    background: rgba($accent-red, 0.1);
+  }
+}
+
+.settings-footnote {
+  font-size: $fs-xs;
+  color: var(--text-3);
+  line-height: 1.45;
+  padding: 8px 4px 0;
+}

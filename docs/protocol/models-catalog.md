@@ -1,47 +1,51 @@
-# Baseus model catalog
+# B4S — listening model catalog
 
-Source: Official Baseus app (`com.baseus.intelligent`) supported device list + hardware-verified BP1 Pro protocol.
+**B4S** targets multi-model audio earbuds (TWS, open-ear, headset, neckband), not a single SKU.
+
+Source: public product strings + hardware checks. Names below are for BLE advertisement matching only.
+
+Excluded: chargers, mice, scent/purifier, non-audio.
 
 ## Support levels
 
 | Level | Meaning |
 |-------|---------|
-| **Verified** | Packet table + GATT confirmed on real hardware |
-| **Experimental** | In official app list; app tries BP1-compatible protocol (may fail if UUID/framing differs) |
-| **ScanOnly** | Name looks like Baseus but not in catalog mapping |
+| **Verified** | Packet table + control proven on real hardware |
+| **Experimental** | Catalog match; B4S tries BA/AA (+ 789C wrap when flagged) |
+| **Scan only** | Name looks like Baseus; no control mapping yet |
 
-## Verified (full control)
+## Verified (listening control)
 
-- Baseus Bass BP1 Pro ANC (`Bass BP1 Pro`)
+- Baseus Bass **BP1 Ultra** (often 789C+CRC wrap)  
+- Baseus Bass **BP1 Pro** (often bare BA/AA)  
 
-## Experimental TWS (try BP1 protocol)
+## Groups (~120+ experimental entries)
 
-Bowie MA10 / MA10s / MA10 Pro / MA20 / MA20 Pro  
-Bass BD1 / Bass 1+  
-Bowie M3, M2s Ultra, M2s Pro, M2s, M2+, M2, M1  
-Bowie E13, E12, E10, E8, E5, E5x, E3, E2, EX, Baseus E9  
-Bowie W04 family, WM01–WM05, WX5, MZ10, EZ10  
-Bowie MC1/MC2, MF1, AirGo AS01 / 1 Ring / AG20  
-Eli Sport 1, Eli Fit, Eli 10i Fit  
-AirNora / 2 / 3, Bowie 30 / 35, AeQur G10  
-Storm 1/3, C-Mic CM10  
-Encok W04/W04 Pro/W05 Lite/W11/W12  
-Inspire XP1 / XH1 / XC1  
+| Group | Examples |
+|-------|----------|
+| Bass BP1 / EP10 | BP1 Ultra/Pro/NC, EP10 Ultra/Pro/NC |
+| Bowie MA series | MA10 / MA10s / MA10 Pro / MA20 / MA20 Pro |
+| Bowie M series | M1–M4s, M2s Pro, M2s Ultra |
+| Bowie E series | E3/E5/E10/E12/E13, E9, EX |
+| Open-ear | MC1/MC2/MF1, AirGo AS01/AG20 |
+| Inspire | XP1 / XH1 / XC1 |
+| Bass line | BD1, BC1/2, BF1, BH1, BS1/2, Bass 1+ |
+| Bowie W / WM | W04 family, WM01–05, WX5, MZ10, EZ10 |
+| AirNora | AirNora / 2 / 3 |
+| Eli sport | Eli Sport, Eli Fit… |
+| Headset | H1/H2, 10/30/35 Max, D05, MH1 |
+| Neckband | P1 / P1x / P1 Lite, U2 |
+| AeQur | G10, GH02, N10… |
 
-## Experimental headset / neck
+Registry code: `src-tauri/src/protocol/models.rs`.
 
-Bowie 30 Max, 10 Max, H2, H1 Pro, H1s, H1, D05, AeQur GH02  
-P1 Lite, P1x, P1, Bowie U2 Pro, U2  
+## Promote Experimental → Verified
 
-## How to promote Experimental → Verified
+1. Connect in **B4S** (Bluetooth ON)  
+2. Confirm **Live** link (notifies + battery when possible)  
+3. Exercise noise / EQ / game / battery; note AA notifies in logs
+4. Document differences in `docs/protocol/`  
 
-1. Connect device in app  
-2. Open **Capture Studio** → Start capture  
-3. Run Guided steps (ANC, EQ, Game, Battery)  
-4. Export Markdown/JSON  
-5. Add `docs/protocol/<model>.md` + decoder module if framing differs  
+## Product images
 
-## Notes
-
-- Many Baseus TWS use Bluetrum chips; some share similar control framing with BP1 Pro, others use different GATT UUIDs (e.g. classic `02F0…` CCSDK).  
-- Experimental models are **best-effort** — if control fails, use Capture Studio and contribute captures.  
+Product photos are not bundled per model; B4S uses a generic ear asset.

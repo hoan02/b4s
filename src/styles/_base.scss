@@ -1,6 +1,9 @@
 // ============================================
-// BASE STYLES
+// BASE + THEME TOKENS (CSS variables)
 // ============================================
+
+@use "variables" as *;
+@use "mixins" as *;
 
 *,
 *::before,
@@ -8,6 +11,49 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+// —— Dark (default) ——
+:root,
+[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --bg-elevated: #1c1c1e;
+  --bg-card: #1c1c1e;
+  --bg-card-hover: #2c2c2e;
+  --bg-fill: rgba(120, 120, 128, 0.22);
+  --bg-fill-2: rgba(120, 120, 128, 0.14);
+  --text: #ffffff;
+  --text-2: rgba(235, 235, 245, 0.62);
+  --text-3: rgba(235, 235, 245, 0.34);
+  --border: rgba(84, 84, 88, 0.5);
+  --divider: rgba(84, 84, 88, 0.38);
+  --brand: #{$brand-yellow};
+  --brand-ink: #0a0a0a;
+  --brand-soft: rgba(255, 204, 0, 0.14);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --toast-bg: rgba(28, 28, 30, 0.92);
+  color-scheme: dark;
+}
+
+// —— Light: white + yellow accent ——
+[data-theme="light"] {
+  --bg: #f5f5f7;
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f2f2f7;
+  --bg-fill: rgba(120, 120, 128, 0.12);
+  --bg-fill-2: rgba(120, 120, 128, 0.08);
+  --text: #1d1d1f;
+  --text-2: rgba(60, 60, 67, 0.72);
+  --text-3: rgba(60, 60, 67, 0.42);
+  --border: rgba(60, 60, 67, 0.16);
+  --divider: rgba(60, 60, 67, 0.12);
+  --brand: #{$brand-yellow};
+  --brand-ink: #1d1d1f;
+  --brand-soft: rgba(255, 204, 0, 0.22);
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+  --toast-bg: rgba(255, 255, 255, 0.94);
+  color-scheme: light;
 }
 
 html {
@@ -20,12 +66,13 @@ body {
   font-family: $font-family;
   font-size: $fs-base;
   font-weight: $fw-regular;
-  line-height: 1.5;
-  color: $text-primary;
-  background: $bg-primary;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
   overflow: hidden;
   height: 100vh;
   width: 100vw;
+  transition: background $transition-base, color $transition-base;
 }
 
 #root {
@@ -35,25 +82,19 @@ body {
   flex-direction: column;
 }
 
-// Typography helpers
 h1, h2, h3, h4, h5, h6 {
   font-weight: $fw-semibold;
-  line-height: 1.25;
-  color: $text-primary;
+  line-height: 1.2;
+  color: var(--text);
 }
 
 p {
-  color: $text-secondary;
+  color: var(--text-2);
 }
 
 a {
-  color: $accent-blue;
+  color: var(--brand-ink);
   text-decoration: none;
-  transition: color $transition-fast;
-
-  &:hover {
-    color: lighten($accent-blue, 10%);
-  }
 }
 
 button {
@@ -65,7 +106,6 @@ img {
   display: block;
 }
 
-// Utility classes
 .sr-only {
   position: absolute;
   width: 1px;
@@ -78,8 +118,7 @@ img {
   border: 0;
 }
 
-// Selection
 ::selection {
-  background: rgba($accent-yellow, 0.3);
-  color: $text-primary;
+  background: var(--brand-soft);
+  color: var(--text);
 }

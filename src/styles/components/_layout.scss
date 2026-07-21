@@ -1,6 +1,4 @@
-// ============================================
-// APP LAYOUT
-// ============================================
+// App shell — fixed viewport, scroll content only
 
 @use "../variables" as *;
 @use "../mixins" as *;
@@ -10,91 +8,62 @@
   width: 100vw;
   display: flex;
   flex-direction: column;
-  background: $bg-primary;
+  background: var(--bg);
   overflow: hidden;
+  position: relative;
 }
 
-// Top title bar (for frameless window later)
-.titlebar {
-  height: $header-height;
-  @include flex-between;
-  padding: 0 $space-4;
-  background: $bg-secondary;
-  border-bottom: 1px solid $border-color;
-  -webkit-app-region: drag;
-  flex-shrink: 0;
-
-  .titlebar-left {
-    @include flex-center;
-    gap: $space-3;
-
-    .app-logo {
-      font-size: $fs-sm;
-      font-weight: $fw-bold;
-      color: $text-primary;
-      letter-spacing: 1px;
-      text-transform: lowercase;
-    }
-  }
-
-  .titlebar-right {
-    @include flex-center;
-    gap: $space-2;
-    -webkit-app-region: no-drag;
-  }
-
-  .window-btn {
-    @include button-base;
-    width: 32px;
-    height: 32px;
-    border-radius: $radius-sm;
-    background: transparent;
-    color: $text-secondary;
-    font-size: 14px;
-
-    &:hover {
-      background: $bg-elevated;
-      color: $text-primary;
-    }
-
-    &.close:hover {
-      background: $accent-red;
-      color: white;
-    }
-  }
-}
-
-// Main scrollable content
+// Main: flex column; pair shell fills height; other screens scroll here
 .main-content {
   flex: 1;
-  overflow-y: auto;
-  @include custom-scrollbar;
-  padding: $space-4 $space-5 $space-8;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: $space-5;
-  max-width: $max-content-width;
+  align-items: stretch;
+  gap: 0;
   width: 100%;
+  max-width: 100%;
   margin: 0 auto;
+  box-sizing: border-box;
+  padding: 0;
 }
 
-// Section wrapper
+// Pairing fills viewport (footer fixed inside pair-shell)
+.section.section-pair {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+  animation: fade-in 0.28s ease both;
+}
+
+// Connected / settings / more — scrollable
 .section {
   width: 100%;
-  animation: fade-in-up 0.4s ease both;
-
-  @for $i from 1 through 6 {
-    &:nth-child(#{$i}) {
-      animation-delay: #{$i * 0.06}s;
-    }
-  }
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  animation: fade-in 0.28s ease both;
 }
 
-@keyframes fade-in-up {
+.section.section-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  @include custom-scrollbar;
+  padding: 12px 14px 28px;
+  -webkit-overflow-scrolling: touch;
+}
+
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -102,45 +71,137 @@
   }
 }
 
-// Game mode toggle
-.game-mode-toggle {
-  @include card-base;
+// Sub-screen nav (More / Settings)
+.screen-nav {
   @include flex-between;
-  padding: $space-4 $space-5;
   width: 100%;
+  margin-bottom: $space-2;
+  min-height: 40px;
 
-  .game-info {
-    @include flex-center;
-    gap: $space-3;
+  .screen-back {
+    @include button-base;
+    gap: 2px;
+    padding: 8px 4px;
+    background: none;
+    color: var(--text);
+    font-size: $fs-base;
+    font-weight: $fw-medium;
+    border-radius: $radius-sm;
 
-    .game-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: $radius-md;
-      background: rgba($accent-red, 0.15);
-      @include flex-center;
-      font-size: 20px;
+    &:hover {
+      opacity: 0.7;
     }
 
-    .game-text {
-      h4 {
-        font-size: $fs-base;
-        font-weight: $fw-medium;
-        margin-bottom: 2px;
-      }
-      p {
-        font-size: $fs-xs;
-        color: $text-tertiary;
-      }
+    svg {
+      width: 20px;
+      height: 20px;
     }
+  }
+
+  .screen-title {
+    font-size: $fs-md;
+    font-weight: $fw-semibold;
+    letter-spacing: -0.3px;
+  }
+
+  .screen-nav-spacer {
+    width: 56px;
   }
 }
 
-// Toggle switch
-.toggle {
+// Floating toasts
+.toast-host {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: min(360px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast-item {
+  pointer-events: auto;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: $radius-lg;
+  padding: 12px 14px;
+  background: var(--toast-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  border: 0.5px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  animation: toast-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  transition: opacity $transition-fast, transform $transition-fast;
+
+  &:active {
+    opacity: 0.85;
+  }
+
+  .toast-title {
+    display: block;
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+    margin-bottom: 2px;
+  }
+  .toast-msg {
+    display: block;
+    font-size: $fs-sm;
+    color: var(--text-2);
+    line-height: 1.35;
+  }
+
+  &.toast-success .toast-title {
+    color: $accent-green;
+  }
+  &.toast-warn .toast-title {
+    color: $brand-yellow-deep;
+  }
+  &.toast-error .toast-title {
+    color: $accent-red;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.control-error {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: $radius-md;
+  background: rgba($accent-red, 0.1);
+  border: 0.5px solid rgba($accent-red, 0.28);
+  color: $accent-red;
+  font-size: $fs-sm;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+// Legacy footer hidden — info lives in settings
+.app-footer {
+  display: none;
+}
+
+// Toggle switch (yellow accent when on)
+.toggle,
+.toggle.sm {
   position: relative;
-  width: 48px;
-  height: 28px;
+  width: 51px;
+  height: 31px;
   flex-shrink: 0;
 
   input {
@@ -148,55 +209,32 @@
     width: 0;
     height: 0;
   }
-
   .slider {
     position: absolute;
-    cursor: pointer;
     inset: 0;
-    background: $bg-elevated;
+    background: var(--bg-fill);
     border-radius: $radius-full;
-    transition: $transition-base;
-    border: 1px solid $border-color;
+    border: none;
+    cursor: pointer;
+    transition: background $transition-fast;
 
     &::before {
       content: "";
       position: absolute;
-      height: 20px;
-      width: 20px;
-      left: 3px;
-      bottom: 3px;
-      background: $text-secondary;
+      width: 27px;
+      height: 27px;
+      left: 2px;
+      top: 2px;
+      background: #fff;
       border-radius: 50%;
-      transition: $transition-base;
-      box-shadow: $shadow-sm;
+      transition: transform $transition-fast;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     }
   }
-
   input:checked + .slider {
-    background: $accent-red;
-    border-color: $accent-red;
-
+    background: $brand-yellow;
     &::before {
       transform: translateX(20px);
-      background: white;
-    }
-  }
-}
-
-// Footer
-.app-footer {
-  padding: $space-3 $space-4;
-  text-align: center;
-  font-size: $fs-xs;
-  color: $text-tertiary;
-  border-top: 1px solid $border-color;
-  background: $bg-secondary;
-  flex-shrink: 0;
-
-  a {
-    color: $text-secondary;
-    &:hover {
-      color: $accent-yellow;
     }
   }
 }

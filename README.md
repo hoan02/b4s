@@ -1,72 +1,57 @@
-# Baseus Desktop App
+# B4S
 
-Unofficial desktop client for Baseus earbuds (Windows / macOS / Linux).
+**Unofficial desktop companion** for multi-model earbuds listening control (Windows · macOS · Linux).
 
-Built with **Tauri 2 + SolidJS + SCSS**. Protocol reverse-engineered from the official Baseus app + live BLE captures (BP1 Pro ANC).
+Scan nearby devices over Bluetooth LE, connect, and control common listening features — noise modes, EQ, spatial, game/low-latency, battery, find buds.
 
-> ⚠️ Not affiliated with Baseus. All trademarks belong to their respective owners.
+> **Not affiliated** with any earbud brand or their official apps. Trademarks belong to their owners.  
+> Personal interoperability only.
 
 ---
 
-## Features
+## Why “B4S”?
 
-- ✅ **Bluetooth LE** scan / pair / disconnect
-- ✅ **Baseus protocol (BP1 Pro ANC)** — real GATT commands
-  - Battery L / R / Case (live notify)
-  - ANC Off / On / Transparency + strength
-  - EQ presets (Balanced / Bass / Voice / Clear)
-  - Game / low-latency mode
-  - Find My Buds
-- ✅ Demo mode when no Bluetooth adapter
-- ✅ Dark UI matching official Baseus app
+Neutral product name — not a brand clone, not an “official desktop app”.  
+Protocol support grows model-by-model; some devices are verified on hardware, others experimental.
 
+---
 
-## Supported models
+## What it controls (listening)
 
-| Level | Models |
-|-------|--------|
-| ✅ **Verified** | Bass BP1 Pro ANC only |
-| 🟡 **Experimental** (~70) | Full official-app TWS/headset list (MA10, M2s, E3, WM01, Encok, Inspire…) — tries BP1 protocol |
-| ⚪ Scan only | Unknown Baseus-like names |
+- Bluetooth LE scan / connect / disconnect  
+- Battery left · case · right (when the device notifies)  
+- Noise: Normal · Ambient · ANC (+ strength where supported)  
+- Spatial / panoramic (best-effort)  
+- EQ presets (indices best-effort)  
+- Game / low-latency mode  
+- Find buds  
 
-See [`docs/protocol/models-catalog.md`](docs/protocol/models-catalog.md).
+---
 
-Use **Capture Studio** to verify Experimental models on your hardware.
+## Model support
 
-## Protocol (BP1 Pro ANC)
+| Level | Meaning |
+|-------|---------|
+| **Verified** | Packet table + control proven on real hardware |
+| **Experimental** | Catalog match; tries BA/AA (+ 789C wrap when flagged) |
+| **Scan only** | Name recognized; no control mapping yet |
 
-| | UUID |
-|---|---|
-| Service | `53527aa4-29f7-ae11-4e74-997334782568` |
-| Write | `ee684b1a-1e9b-ed3e-ee55-f894667e92ac` |
-| Notify | `654b749c-e37f-ae1f-ebab-40ca133e3690` |
+Catalog: [`docs/protocol/models-catalog.md`](docs/protocol/models-catalog.md)
 
-```
-Write  : BA <cmd> <payload>
-Notify : AA <cmd> <payload>
-```
+**Windows tip:** one pair often appears as **two scan entries** (BLE control vs audio). Use the entry that reaches a live control link.
 
-| Action | Packet |
-|--------|--------|
-| ANC On | `BA 34 01 68` |
-| ANC Off | `BA 34 00 FF` |
-| Transparency | `BA 34 02 FF` |
-| EQ Bass | `BA 43 01` |
-| Game ON | `BA 24 01` |
-| Battery notify | `AA 02 <L> 00 <R> 01` |
-| Case notify | `AA 27 <%> <chg>` |
+---
 
-Full table: [`docs/protocol/bp1-pro-anc.md`](docs/protocol/bp1-pro-anc.md)
+## Stack
 
-## Tech Stack
+| Layer | Tech |
+|-------|------|
+| Shell | Tauri 2 |
+| UI | SolidJS + SCSS |
+| BLE | btleplug |
+| Backend | Rust |
 
-| Layer | Choice |
-|-------|--------|
-| Framework | Tauri 2 |
-| Frontend | SolidJS + SCSS |
-| BLE | btleplug 0.11 |
-| Protocol | Custom (framing + BP1 Pro) |
-| Language | TypeScript + Rust |
+---
 
 ## Run
 
@@ -75,64 +60,50 @@ npm install
 npm run tauri:dev
 ```
 
-**Requirements:** Node 18+, Rust stable, Bluetooth ON  
-(Linux: `bluez` + user in `bluetooth` group)
+**Needs:** Node 18+, Rust stable, **Bluetooth ON**.
 
-## Project layout
+Demo UI (fake devices) is opt-in only when BT is off.
+
+### Settings & auto-update
+
+In-app **Cài đặt**: version, theme, check update.
+
+```bash
+npm run version:bump
+git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
+git commit -m "chore: release v…"
+git tag v0.1.1 && git push origin main --tags
+```
+
+CI builds **Windows / macOS / Linux**. Details: [`docs/release.md`](docs/release.md).
+
+Repo: [github.com/hoan02/b4s](https://github.com/hoan02/b4s)
+
+---
+
+## Layout
 
 ```
 src/
-  components/     BlePairing, Battery, AncControl, EqCards…
-  lib/ble.ts      BLE API
-  lib/device.ts   Protocol commands + live events
+  components/     HomePanel, MorePanel, Settings, BlePairing…
+  lib/            BLE, device, theme, toast
 src-tauri/src/
-  ble.rs          Scan / connect / subscribe / write
-  protocol/       Framing + BP1 Pro decoder + command builders
-    framing.rs
-    types.rs
-    bp1_pro.rs
-docs/protocol/    Packet tables
+  ble.rs          Scan, connect, write, notify
+  protocol/       Framing, wrap_v2, models catalog
+docs/
+  protocol/       Packet tables + model catalog
+  re/             Local RE notes (bulk artifacts gitignored)
 ```
 
-## Events (frontend)
+---
 
-| Event | Payload |
-|-------|---------|
-| `device://battery` | `{ left, right, case, *Charging }` |
-| `device://anc` | `off` \| `anc` \| `transparency` |
-| `device://eq` | preset name |
-| `device://game` | boolean |
-| `ble://scan-status` | devices list |
-| `ble://connected` | BleDevice |
+## Legal / hygiene
 
-## Capture Studio
+- Do **not** commit official APKs/XAPKs, private keys, or decompiled dumps  
+- Do **not** present B4S as an official product  
+- Device **marketing names** in the catalog are for BLE name matching only  
 
-In-app reverse-engineering toolkit (button 🔬 in titlebar):
-
-1. **Start capture** while connected
-2. Follow **Guided steps** (ANC, EQ, Game…)
-3. Watch live **Hex log** (TX orange / RX cyan) with auto-decode hints
-4. Inspect **GATT map** discovered on connect
-5. **Raw write** arbitrary hex to probe opcodes
-6. **Export** JSON bundle or Markdown packet table
-
-Backend: `src-tauri/src/capture.rs`  
-Frontend: `src/components/CaptureStudio.tsx`
-
-## Roadmap
-
-- [x] BLE pair
-- [x] BP1 Pro protocol (ANC / EQ / Game / Battery)
-- [x] Capture Studio (hex log, guided, export)
-- [ ] More models (use Capture Studio → export bundle)
-- [ ] Auto-reconnect last device
-- [ ] System tray + low-battery notification
-- [ ] Custom EQ bands
-- [ ] Gesture config
-
-## Credits
-
-Protocol data adapted from [elaxptr/baseus-desktop](https://github.com/elaxptr/baseus-desktop) (MIT).
+---
 
 ## License
 

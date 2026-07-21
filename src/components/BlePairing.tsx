@@ -7,13 +7,14 @@ import {
   onScanStatus,
   onConnecting,
   rssiToBars,
-  rssiLabel,
   checkAdapter,
 } from "../lib/ble";
 import { resolveDeviceThumb } from "../lib/deviceImages";
 
 interface Props {
   onConnected: (device: BleDevice) => void;
+  onOpenSettings?: () => void;
+  appVersion?: string;
 }
 
 const BlePairing: Component<Props> = (props) => {
@@ -27,28 +28,19 @@ const BlePairing: Component<Props> = (props) => {
   let unsubs: Array<() => void> = [];
 
   onMount(async () => {
-    // Check adapter
     const ok = await checkAdapter();
     setAdapterOk(ok);
-    if (!ok) {
-      setUseMock(true);
-    }
+    if (!ok) setError("Bật Bluetooth rồi quét lại.");
 
-    // Listen for scan updates
-    const u1 = await onScanStatus((status) => {
-      setScanning(status.scanning);
-      setDevices(status.devices);
-      if (status.error) setError(status.error);
-    });
-    unsubs.push(u1);
-
-    const u2 = await onConnecting((id) => {
-      setConnectingId(id);
-    });
-    unsubs.push(u2);
-
-    // Auto-start scan
-    handleScan();
+    unsubs.push(
+      await onScanStatus((status) => {
+        setScanning(status.scanning);
+        setDevices(status.devices);
+        if (status.error) setError(status.error);
+      })
+    );
+    unsubs.push(await onConnecting((id) => setConnectingId(id)));
+    if (ok) handleScan();
   });
 
   onCleanup(() => {
@@ -59,22 +51,30 @@ const BlePairing: Component<Props> = (props) => {
   const handleScan = async () => {
     setError(null);
     setDevices([]);
+    if (!useMock()) {
+      const ok = await checkAdapter();
+      setAdapterOk(ok);
+      if (!ok) {
+        setError("Bật Bluetooth rồi quét lại.");
+        return;
+      }
+    }
     try {
       await startScan(useMock());
     } catch (e) {
       setError(String(e));
-      // Retry with mock
-      try {
-        setUseMock(true);
-        await startScan(true);
-      } catch (e2) {
-        setError(String(e2));
-      }
     }
   };
 
-  const handleStop = async () => {
-    await stopScan();
+  const enableDemo = async () => {
+    setUseMock(true);
+    setError(null);
+    setDevices([]);
+    try {
+      await startScan(true);
+    } catch (e) {
+      setError(String(e));
+    }
   };
 
   const handleConnect = async (device: BleDevice) => {
@@ -82,112 +82,162 @@ const BlePairing: Component<Props> = (props) => {
     setError(null);
     setConnectingId(device.id);
     try {
-      const connected = await connect(device.id, useMock() || device.id.startsWith("mock-"));
-      props.onConnected(connected);
+      const isMock = useMock() || device.id.startsWith("mock-");
+      if (!isMock) {
+        const ok = await checkAdapter();
+        if (!ok) {
+          setError("Bluetooth đang tắt.");
+          setConnectingId(null);
+          return;
+        }
+      }
+      props.onConnected(await connect(device.id, isMock));
     } catch (e) {
       setError(String(e));
       setConnectingId(null);
     }
   };
 
-  const baseusDevices = () => devices().filter((d) => d.isBaseus);
-  const otherDevices = () => devices().filter((d) => !d.isBaseus);
+  const matched = () => {
+    const list = devices().filter((d) => d.isBaseus);
+    return [...list].sort((a, b) => {
+      const rank = (s?: string | null) =>
+        s === "verified" ? 0 : s === "experimental" ? 1 : 2;
+      const r = rank(a.support) - rank(b.support);
+      return r !== 0 ? r : b.rssi - a.rssi;
+    });
+  };
+  const others = () => devices().filter((d) => !d.isBaseus);
+  const hasDual = () => {
+    const names = matched().map((d) => d.name.toLowerCase());
+    return names.some((n, i) => names.indexOf(n) !== i);
+  };
 
   return (
-    <div class="ble-pairing">
-      <div class="ble-hero">
-        <div class="ble-radar">
-          <div class={`radar-ring ${scanning() ? "active" : ""}`} />
-          <div class={`radar-ring delay ${scanning() ? "active" : ""}`} />
-          <div class="radar-core">
-            <span class="radar-icon">🎧</span>
+    <div class="pair-shell">
+      {/* Scrollable middle */}
+      <div class="pair-scroll">
+        <div class="ble-pairing">
+          <div class="ble-hero">
+            <div class={`ble-radar sm ${scanning() ? "on" : ""}`}>
+              <div class="radar-ring" />
+              <div class="radar-core" />
+            </div>
+            <h2>Kết nối</h2>
+            <p class="ble-subtitle">
+              {adapterOk() === false && !useMock()
+                ? "Bật Bluetooth để quét"
+                : useMock()
+                  ? "Demo — thiết bị giả"
+                  : "Tai nghe gần / mở nắp hộp"}
+            </p>
+          </div>
+
+          <div class="ble-controls">
+            <Show
+              when={!scanning()}
+              fallback={
+                <button
+                  class="ble-btn secondary"
+                  type="button"
+                  onClick={() => stopScan()}
+                >
+                  <span class="spinner" />
+                  Dừng
+                </button>
+              }
+            >
+              <button class="ble-btn primary" type="button" onClick={handleScan}>
+                Quét thiết bị
+              </button>
+            </Show>
+          </div>
+
+          <Show when={error()}>
+            <div class="ble-error">{error()}</div>
+          </Show>
+
+          <Show when={adapterOk() === false && !useMock()}>
+            <div class="ble-bt-off">
+              <p>Bluetooth tắt — không điều khiển được tai nghe thật.</p>
+              <button class="ble-btn secondary" type="button" onClick={enableDemo}>
+                Mở demo UI
+              </button>
+            </div>
+          </Show>
+
+          <Show when={hasDual() && !useMock()}>
+            <p class="ble-tip">
+              Cùng tên 2 dòng: chọn RSSI mạnh trước (thường là BLE control).
+            </p>
+          </Show>
+
+          <div class="ble-list">
+            <Show when={matched().length > 0}>
+              <div class="ble-group-label">
+                {useMock() ? "Demo" : "Thiết bị"}
+              </div>
+              <For each={matched()}>
+                {(device) => (
+                  <DeviceRow
+                    device={device}
+                    connecting={connectingId() === device.id}
+                    onConnect={() => handleConnect(device)}
+                  />
+                )}
+              </For>
+            </Show>
+
+            <Show when={others().length > 0 && !useMock()}>
+              <div class="ble-group-label">Khác</div>
+              <For each={others()}>
+                {(device) => (
+                  <DeviceRow
+                    device={device}
+                    connecting={connectingId() === device.id}
+                    onConnect={() => handleConnect(device)}
+                  />
+                )}
+              </For>
+            </Show>
+
+            <Show
+              when={
+                !scanning() &&
+                devices().length === 0 &&
+                !error() &&
+                adapterOk() !== false
+              }
+            >
+              <div class="ble-empty">
+                <p>Chưa thấy thiết bị</p>
+                <span>Đưa tai vào chế độ ghép · quét lại</span>
+              </div>
+            </Show>
+
+            <Show when={scanning() && devices().length === 0}>
+              <div class="ble-empty scanning">
+                <p>Đang quét…</p>
+              </div>
+            </Show>
           </div>
         </div>
-        <h2>Connect your earbuds</h2>
-        <p class="ble-subtitle">
-          <Show
-            when={adapterOk() !== false}
-            fallback="Bluetooth adapter not found — using demo mode"
-          >
-            Make sure your Baseus earbuds are out of the case and in pairing mode
-          </Show>
-        </p>
       </div>
 
-      {/* Scan controls */}
-      <div class="ble-controls">
-        <Show
-          when={!scanning()}
-          fallback={
-            <button class="ble-btn secondary" type="button" onClick={handleStop}>
-              <span class="spinner" />
-              Stop scanning
-            </button>
-          }
+      {/* Fixed footer */}
+      <footer class="pair-footer">
+        <button
+          type="button"
+          class="pair-footer-settings"
+          onClick={() => props.onOpenSettings?.()}
         >
-          <button class="ble-btn primary" type="button" onClick={handleScan}>
-            🔍 Scan for devices
-          </button>
-        </Show>
-
-        <Show when={useMock()}>
-          <span class="mock-badge">Demo mode</span>
-        </Show>
-      </div>
-
-      {/* Error */}
-      <Show when={error()}>
-        <div class="ble-error">{error()}</div>
-      </Show>
-
-      {/* Device list */}
-      <div class="ble-list">
-        <Show when={baseusDevices().length > 0}>
-          <div class="ble-group-label">Baseus devices</div>
-          <For each={baseusDevices()}>
-            {(device) => (
-              <DeviceRow
-                device={device}
-                connecting={connectingId() === device.id}
-                onConnect={() => handleConnect(device)}
-              />
-            )}
-          </For>
-        </Show>
-
-        <Show when={otherDevices().length > 0}>
-          <div class="ble-group-label">Other devices</div>
-          <For each={otherDevices()}>
-            {(device) => (
-              <DeviceRow
-                device={device}
-                connecting={connectingId() === device.id}
-                onConnect={() => handleConnect(device)}
-              />
-            )}
-          </For>
-        </Show>
-
-        <Show when={!scanning() && devices().length === 0 && !error()}>
-          <div class="ble-empty">
-            <p>No devices found</p>
-            <span>Put earbuds in pairing mode and scan again</span>
-          </div>
-        </Show>
-
-        <Show when={scanning() && devices().length === 0}>
-          <div class="ble-empty scanning">
-            <p>Searching nearby...</p>
-          </div>
-        </Show>
-      </div>
+          Cài đặt
+        </button>
+        <span class="pair-footer-ver">B4S v{props.appVersion ?? "…"}</span>
+      </footer>
     </div>
   );
 };
-
-// ---------------------------------------------------------------------------
-// Single device row
-// ---------------------------------------------------------------------------
 
 const DeviceRow: Component<{
   device: BleDevice;
@@ -195,10 +245,11 @@ const DeviceRow: Component<{
   onConnect: () => void;
 }> = (props) => {
   const bars = () => rssiToBars(props.device.rssi);
+  const title = () => props.device.modelName || props.device.name;
 
   return (
     <button
-      class={`ble-device ${props.device.isBaseus ? "baseus" : ""} ${props.connecting ? "connecting" : ""}`}
+      class={`ble-device ${props.device.isBaseus ? "matched" : ""} ${props.connecting ? "connecting" : ""}`}
       type="button"
       disabled={props.connecting}
       onClick={() => props.onConnect()}
@@ -210,45 +261,37 @@ const DeviceRow: Component<{
           draggable={false}
         />
       </div>
-
       <div class="device-info">
         <div class="device-name-row">
-          <span class="name">{props.device.modelName || props.device.name}</span>
+          <span class="name" title={title()}>
+            {title()}
+          </span>
           <Show when={props.device.support === "verified"}>
-            <span class="baseus-tag verified">Verified</span>
+            <span class="tag ok">OK</span>
           </Show>
           <Show when={props.device.support === "experimental"}>
-            <span class="baseus-tag experimental">Experimental</span>
-          </Show>
-          <Show when={props.device.isBaseus && !props.device.support}>
-            <span class="baseus-tag">Baseus</span>
+            <span class="tag">Beta</span>
           </Show>
         </div>
         <div class="device-meta">
-          <span class="rssi" title={rssiLabel(props.device.rssi)}>
+          <span class="rssi">
             <SignalBars level={bars()} />
-            {props.device.rssi} dBm
+            {props.device.rssi}
           </span>
-          <Show when={props.device.modelName && props.device.modelName !== props.device.name}>
-            <span class="address">{props.device.name}</span>
+          <Show when={props.device.hint}>
+            <span class="hint-inline">2 entry</span>
           </Show>
-          <span class="address">{props.device.address}</span>
         </div>
       </div>
-
       <div class="device-action">
-        <Show
-          when={!props.connecting}
-          fallback={<span class="spinner small" />}
-        >
-          <span class="connect-label">Connect</span>
+        <Show when={!props.connecting} fallback={<span class="spinner small" />}>
+          <span class="connect-label">Kết nối</span>
         </Show>
       </div>
     </button>
   );
 };
 
-// Simple signal bars
 const SignalBars: Component<{ level: number }> = (props) => (
   <span class="signal-bars" aria-hidden="true">
     {[1, 2, 3, 4].map((i) => (

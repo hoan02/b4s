@@ -1,16 +1,12 @@
-// ============================================
-// MAIN STYLESHEET
-// ============================================
-
-@use "variables" as *;
-@use "mixins" as *;
 @use "base";
-
-// Components
+@use "components/home";
+@use "components/more";
+@use "components/eq-panel";
+@use "components/settings";
+@use "components/listening";
+@use "components/device";
 @use "components/battery";
 @use "components/anc";
 @use "components/eq";
-@use "components/device";
 @use "components/ble";
-@use "components/capture";
 @use "components/layout";

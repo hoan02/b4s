@@ -21,7 +21,7 @@
   margin-bottom: $space-4;
 
   .device-image {
-    width: 220px;
+    width: 200px;
     height: 180px;
     object-fit: contain;
     filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.55));
@@ -32,18 +32,8 @@
     position: relative;
     z-index: 1;
 
-    &.style-bean,
-    &.style-case {
-      width: 200px;
-      height: 160px;
-    }
-    &.style-open {
-      width: 210px;
-      height: 170px;
-    }
-
     &:hover {
-      transform: scale(1.04);
+      transform: scale(1.03);
     }
   }
 
@@ -101,7 +91,7 @@
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: radial-gradient(circle, $accent-blue 0%, darken($accent-blue, 20%) 100%);
+      background: radial-gradient(circle, $accent-blue 0%, shade($accent-blue, 20%) 100%);
       box-shadow: 0 0 12px rgba($accent-blue, 0.5);
     }
 
@@ -137,12 +127,157 @@
     box-shadow: 0 0 8px rgba($accent-green, 0.6);
     animation: pulse-dot 2s ease-in-out infinite;
 
-    &.disconnected {
+    &.disconnected,
+    &.level-offline {
       background: $text-tertiary;
       box-shadow: none;
       animation: none;
     }
+    &.level-live {
+      background: $accent-green;
+      box-shadow: 0 0 8px rgba($accent-green, 0.6);
+    }
+    &.level-waiting {
+      background: $accent-blue;
+      box-shadow: 0 0 8px rgba($accent-blue, 0.5);
+    }
+    &.level-demo {
+      background: $accent-yellow;
+      box-shadow: 0 0 8px rgba($accent-yellow, 0.5);
+    }
+    &.level-dead {
+      background: $accent-red;
+      box-shadow: 0 0 8px rgba($accent-red, 0.5);
+      animation: none;
+    }
   }
+}
+
+// Link health banner
+.link-banner {
+  @include flex-column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  max-width: 360px;
+  margin-top: $space-3;
+  padding: $space-3 $space-4;
+  border-radius: $radius-md;
+  border: 1px solid $border-color;
+  background: $bg-card;
+  color: $text-secondary;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color $transition-fast, background $transition-fast;
+
+  &:hover {
+    border-color: $border-color-strong;
+    background: $bg-card-hover;
+  }
+
+  .link-banner-title {
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+    color: $text-primary;
+  }
+  .link-banner-msg {
+    font-size: $fs-xs;
+    line-height: 1.35;
+    color: $text-secondary;
+  }
+  .link-banner-hint {
+    font-size: 10px;
+    color: $text-tertiary;
+    margin-top: 2px;
+  }
+
+  &.level-live {
+    border-color: rgba($accent-green, 0.35);
+    background: rgba($accent-green, 0.08);
+  }
+  &.level-waiting {
+    border-color: rgba($accent-blue, 0.35);
+    background: rgba($accent-blue, 0.08);
+  }
+  &.level-demo {
+    border-color: rgba($accent-yellow, 0.4);
+    background: rgba($accent-yellow, 0.1);
+  }
+  &.level-dead {
+    border-color: rgba($accent-red, 0.4);
+    background: rgba($accent-red, 0.1);
+  }
+}
+
+.link-diag {
+  width: 100%;
+  max-width: 360px;
+  margin-top: $space-2;
+  padding: $space-3 $space-4;
+  border-radius: $radius-md;
+  border: 1px solid $border-color;
+  background: $bg-elevated;
+  text-align: left;
+  font-size: $fs-xs;
+
+  .link-row {
+    @include flex-between;
+    gap: $space-3;
+    padding: 4px 0;
+    border-bottom: 1px solid $divider;
+
+    span {
+      color: $text-tertiary;
+    }
+    strong {
+      font-weight: $fw-medium;
+      color: $text-primary;
+      font-variant-numeric: tabular-nums;
+      &.ok { color: $accent-green; }
+      &.bad { color: $accent-red; }
+      &.warn { color: $accent-yellow; }
+    }
+  }
+
+  .link-hex {
+    margin-top: $space-2;
+    span {
+      display: block;
+      color: $text-tertiary;
+      margin-bottom: 2px;
+    }
+    code {
+      display: block;
+      font-family: $font-mono;
+      font-size: 10px;
+      color: $accent-cyan;
+      word-break: break-all;
+      background: $bg-primary;
+      padding: 4px 6px;
+      border-radius: 4px;
+    }
+  }
+
+  .link-help {
+    margin-top: $space-3;
+    color: $text-tertiary;
+    line-height: 1.4;
+    strong { color: $text-secondary; }
+    em { color: $accent-green; font-style: normal; font-weight: $fw-semibold; }
+  }
+}
+
+.battery-warn {
+  margin-top: $space-3;
+  max-width: 360px;
+  padding: $space-2 $space-3;
+  border-radius: $radius-sm;
+  background: rgba($accent-yellow, 0.12);
+  border: 1px solid rgba($accent-yellow, 0.3);
+  color: $accent-yellow;
+  font-size: $fs-xs;
+  line-height: 1.35;
 }
 
 @keyframes pulse-dot {
@@ -158,51 +293,39 @@
   font-variant-numeric: tabular-nums;
 }
 
-// Quick actions row
+// Quick actions — text pills, no emoji
 .quick-actions {
   @include flex-center;
-  gap: $space-3;
-  margin-top: $space-5;
+  gap: $space-2;
+  margin-top: $space-4;
   width: 100%;
-  padding: 0 $space-2;
+  padding: 0;
 }
 
 .quick-btn {
   @include button-base;
-  @include flex-column;
-  gap: $space-1;
   flex: 1;
-  padding: $space-3 $space-2;
-  background: $bg-card;
-  border: 1px solid $border-color;
-  border-radius: $radius-md;
-  color: $text-secondary;
-  min-height: 72px;
-
-  .quick-icon {
-    font-size: 22px;
-  }
+  padding: 12px 8px;
+  background: $bg-secondary;
+  border: none;
+  border-radius: $radius-lg;
+  color: $accent-blue;
+  min-height: 44px;
 
   .quick-label {
-    font-size: $fs-xs;
+    font-size: $fs-sm;
     font-weight: $fw-medium;
   }
 
   &:hover {
-    background: $bg-card-hover;
-    color: $text-primary;
-    border-color: $border-color-strong;
+    background: $bg-elevated;
   }
 
-  &.active {
-    background: rgba($accent-blue, 0.15);
-    border-color: $accent-blue;
-    color: $accent-blue;
+  &:active {
+    opacity: 0.75;
   }
 
-  &.danger:hover {
-    background: rgba($accent-red, 0.1);
-    border-color: $accent-red;
+  &.danger {
     color: $accent-red;
   }
 }

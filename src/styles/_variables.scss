@@ -1,72 +1,79 @@
 // ============================================
-// BASEUS DESIGN SYSTEM
-// Closely matching official Baseus mobile app
+// B4S UI: yellow accent + white/black · clean mobile-app UX
+// Theme via [data-theme="light"|"dark"] on <html>
 // ============================================
 
-// --- Colors ---
-$bg-primary: #0f0f0f;
-$bg-secondary: #1a1a1a;
-$bg-card: #1e1e1e;
-$bg-card-hover: #252525;
-$bg-elevated: #2a2a2a;
+// Brand
+$brand-yellow: #ffcc00;
+$brand-yellow-deep: #e6b800;
+$brand-yellow-soft: rgba(255, 204, 0, 0.16);
+
+// Semantic (theme-independent accents)
+$accent-green: #34c759;
+$accent-red: #ff3b30;
+$accent-orange: #ff9500;
+$accent-blue: #007aff;
+$accent-gray: #8e8e93;
+
+// Map legacy names used across SCSS
+$accent-yellow: $brand-yellow;
+$accent-cyan: #5ac8fa;
+$accent-purple: #af52de;
+$accent-pink: #ff2d55;
+
+// Dark defaults (overridden by CSS vars in base)
+$bg-primary: #0a0a0a;
+$bg-secondary: #1c1c1e;
+$bg-card: #1c1c1e;
+$bg-card-hover: #2c2c2e;
+$bg-elevated: #2c2c2e;
+$bg-grouped: #000000;
+$bg-fill: rgba(120, 120, 128, 0.24);
+$bg-fill-secondary: rgba(120, 120, 128, 0.16);
 
 $text-primary: #ffffff;
-$text-secondary: #a0a0a0;
-$text-tertiary: #666666;
-$text-inverse: #0f0f0f;
+$text-secondary: rgba(235, 235, 245, 0.62);
+$text-tertiary: rgba(235, 235, 245, 0.35);
+$text-inverse: #000000;
+$text-label: rgba(235, 235, 245, 0.55);
 
-// Brand accents (from Baseus EQ cards)
-$accent-yellow: #ffcc00;
-$accent-orange: #ff6b00;
-$accent-blue: #3b82f6;
-$accent-cyan: #00d4ff;
-$accent-green: #22c55e;
-$accent-red: #ef4444;
-$accent-purple: #a855f7;
-$accent-pink: #ec4899;
+$battery-high: $accent-green;
+$battery-medium: $brand-yellow;
+$battery-low: $accent-red;
+$battery-charging: $brand-yellow;
 
-// Battery colors
-$battery-high: #22c55e;
-$battery-medium: #eab308;
-$battery-low: #ef4444;
-$battery-charging: #3b82f6;
+$anc-off: $accent-gray;
+$anc-on: $brand-yellow;
+$anc-transparency: $brand-yellow;
 
-// ANC modes
-$anc-off: #666666;
-$anc-on: #3b82f6;
-$anc-transparency: #22c55e;
+$border-color: rgba(84, 84, 88, 0.55);
+$border-color-strong: rgba(84, 84, 88, 0.85);
+$divider: rgba(84, 84, 88, 0.4);
 
-// Borders & Dividers
-$border-color: rgba(255, 255, 255, 0.08);
-$border-color-strong: rgba(255, 255, 255, 0.15);
-$divider: rgba(255, 255, 255, 0.06);
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+$shadow-md: 0 6px 16px rgba(0, 0, 0, 0.28);
+$shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.35);
+$shadow-glow-yellow: 0 0 0 transparent;
+$shadow-glow-blue: 0 0 0 transparent;
 
-// Shadows
-$shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-$shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-$shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-$shadow-glow-yellow: 0 0 20px rgba(255, 204, 0, 0.3);
-$shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.3);
-
-// --- Typography ---
-$font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-$font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+$font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+  Roboto, "Helvetica Neue", Arial, sans-serif;
+$font-mono: "SF Mono", ui-monospace, Consolas, monospace;
 
 $fs-xs: 11px;
-$fs-sm: 13px;
+$fs-sm: 12px;
 $fs-base: 15px;
 $fs-md: 17px;
 $fs-lg: 20px;
-$fs-xl: 24px;
-$fs-2xl: 32px;
-$fs-3xl: 40px;
+$fs-xl: 22px;
+$fs-2xl: 28px;
+$fs-3xl: 34px;
 
 $fw-regular: 400;
 $fw-medium: 500;
 $fw-semibold: 600;
 $fw-bold: 700;
 
-// --- Spacing ---
 $space-1: 4px;
 $space-2: 8px;
 $space-3: 12px;
@@ -78,20 +85,19 @@ $space-10: 40px;
 $space-12: 48px;
 $space-16: 64px;
 
-// --- Radius ---
-$radius-sm: 8px;
-$radius-md: 12px;
+$radius-sm: 10px;
+$radius-md: 14px;
 $radius-lg: 16px;
 $radius-xl: 20px;
 $radius-2xl: 24px;
 $radius-full: 9999px;
 
-// --- Transitions ---
-$transition-fast: 150ms ease;
-$transition-base: 250ms ease;
-$transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-fast: 160ms cubic-bezier(0.25, 0.1, 0.25, 1);
+$transition-base: 280ms cubic-bezier(0.25, 0.1, 0.25, 1);
+$transition-slow: 420ms cubic-bezier(0.25, 0.1, 0.25, 1);
 
-// --- Layout ---
 $sidebar-width: 280px;
-$header-height: 56px;
-$max-content-width: 480px;
+$header-height: 0; // no chrome header
+$max-content-width: 400px;
+$app-width: 400px;
+$app-height: 760px;
