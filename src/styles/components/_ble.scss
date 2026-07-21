@@ -1,0 +1,374 @@
+// ============================================
+// BLE PAIRING SCREEN
+// ============================================
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.ble-pairing {
+  width: 100%;
+  @include flex-column;
+  align-items: center;
+  gap: $space-5;
+  padding: $space-4 0 $space-8;
+  animation: fade-in-up 0.4s ease both;
+}
+
+// Hero + radar animation
+.ble-hero {
+  @include flex-column;
+  align-items: center;
+  text-align: center;
+  gap: $space-3;
+  padding-top: $space-4;
+
+  h2 {
+    font-size: $fs-xl;
+    font-weight: $fw-semibold;
+    margin-top: $space-2;
+  }
+
+  .ble-subtitle {
+    font-size: $fs-sm;
+    color: $text-secondary;
+    max-width: 280px;
+    line-height: 1.45;
+  }
+}
+
+.ble-radar {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  @include flex-center;
+  margin-bottom: $space-2;
+
+  .radar-core {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: $bg-elevated;
+    border: 2px solid $border-color-strong;
+    @include flex-center;
+    z-index: 2;
+    box-shadow: $shadow-md;
+
+    .radar-icon {
+      font-size: 26px;
+    }
+  }
+
+  .radar-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba($accent-blue, 0.35);
+    opacity: 0;
+    transform: scale(0.4);
+
+    &.active {
+      animation: radar-pulse 2.4s ease-out infinite;
+    }
+
+    &.delay.active {
+      animation-delay: 1.2s;
+    }
+  }
+}
+
+@keyframes radar-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.45);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+// Controls
+.ble-controls {
+  @include flex-center;
+  gap: $space-3;
+  flex-wrap: wrap;
+}
+
+.ble-btn {
+  @include button-base;
+  @include focus-ring;
+  padding: $space-3 $space-6;
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+  gap: $space-2;
+  min-height: 44px;
+
+  &.primary {
+    background: $accent-blue;
+    color: white;
+    box-shadow: 0 0 0 0 rgba($accent-blue, 0.4);
+
+    &:hover:not(:disabled) {
+      background: lighten($accent-blue, 6%);
+      box-shadow: 0 4px 16px rgba($accent-blue, 0.35);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &.secondary {
+    background: $bg-elevated;
+    color: $text-primary;
+    border: 1px solid $border-color;
+
+    &:hover:not(:disabled) {
+      background: $bg-card-hover;
+      border-color: $border-color-strong;
+    }
+  }
+}
+
+.mock-badge {
+  font-size: $fs-xs;
+  font-weight: $fw-medium;
+  color: $accent-yellow;
+  background: rgba($accent-yellow, 0.12);
+  padding: $space-1 $space-3;
+  border-radius: $radius-full;
+  border: 1px solid rgba($accent-yellow, 0.25);
+}
+
+// Error
+.ble-error {
+  width: 100%;
+  padding: $space-3 $space-4;
+  background: rgba($accent-red, 0.12);
+  border: 1px solid rgba($accent-red, 0.3);
+  border-radius: $radius-md;
+  color: lighten($accent-red, 15%);
+  font-size: $fs-sm;
+  text-align: center;
+}
+
+// Device list
+.ble-list {
+  width: 100%;
+  @include flex-column;
+  gap: $space-2;
+}
+
+.ble-group-label {
+  font-size: $fs-xs;
+  font-weight: $fw-semibold;
+  color: $text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: $space-3 $space-1 $space-1;
+}
+
+.ble-device {
+  @include flex-between;
+  width: 100%;
+  padding: $space-3 $space-4;
+  background: $bg-card;
+  border: 1px solid $border-color;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+  color: $text-primary;
+  gap: $space-3;
+
+  &:hover:not(:disabled) {
+    background: $bg-card-hover;
+    border-color: $border-color-strong;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  &.baseus {
+    border-color: rgba($accent-blue, 0.25);
+
+    &:hover:not(:disabled) {
+      border-color: rgba($accent-blue, 0.5);
+      box-shadow: 0 0 20px rgba($accent-blue, 0.1);
+    }
+  }
+
+  &.connecting {
+    border-color: $accent-blue;
+    background: rgba($accent-blue, 0.08);
+  }
+
+  .device-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: $radius-md;
+    background: $bg-elevated;
+    @include flex-center;
+    font-size: 20px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 1px solid $border-color;
+
+    &.photo {
+      background: #121212;
+      padding: 2px;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: $radius-sm;
+      }
+    }
+  }
+
+  .device-info {
+    flex: 1;
+    min-width: 0;
+    @include flex-column;
+    gap: 3px;
+  }
+
+  .device-name-row {
+    @include flex-center;
+    justify-content: flex-start;
+    gap: $space-2;
+
+    .name {
+      font-size: $fs-base;
+      font-weight: $fw-medium;
+      @include text-truncate;
+    }
+
+    .baseus-tag {
+      font-size: 10px;
+      font-weight: $fw-bold;
+      color: $accent-blue;
+      background: rgba($accent-blue, 0.15);
+      padding: 1px 6px;
+      border-radius: $radius-full;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+
+      &.verified {
+        color: $accent-green;
+        background: rgba($accent-green, 0.15);
+      }
+      &.experimental {
+        color: $accent-yellow;
+        background: rgba($accent-yellow, 0.12);
+      }
+    }
+  }
+
+  .device-meta {
+    @include flex-center;
+    justify-content: flex-start;
+    gap: $space-3;
+    font-size: $fs-xs;
+    color: $text-tertiary;
+
+    .rssi {
+      @include flex-center;
+      gap: 4px;
+    }
+
+    .address {
+      font-family: $font-mono;
+      opacity: 0.7;
+    }
+  }
+
+  .device-action {
+    flex-shrink: 0;
+    min-width: 64px;
+    text-align: right;
+
+    .connect-label {
+      font-size: $fs-sm;
+      font-weight: $fw-semibold;
+      color: $accent-blue;
+    }
+  }
+}
+
+// Signal bars
+.signal-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 12px;
+
+  .bar {
+    width: 3px;
+    background: $text-tertiary;
+    border-radius: 1px;
+    transition: background $transition-fast;
+
+    &:nth-child(1) { height: 4px; }
+    &:nth-child(2) { height: 6px; }
+    &:nth-child(3) { height: 9px; }
+    &:nth-child(4) { height: 12px; }
+
+    &.on {
+      background: $accent-green;
+    }
+  }
+}
+
+// Empty / scanning state
+.ble-empty {
+  @include flex-column;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-10 $space-4;
+  text-align: center;
+
+  p {
+    font-size: $fs-base;
+    color: $text-secondary;
+    font-weight: $fw-medium;
+  }
+
+  span {
+    font-size: $fs-sm;
+    color: $text-tertiary;
+  }
+
+  &.scanning p {
+    color: $text-tertiary;
+  }
+}
+
+// Spinner
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+
+  &.small {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
+    color: $accent-blue;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,166 @@
+// ============================================
+// ANC CONTROL COMPONENT
+// ============================================
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.anc-control {
+  @include card-base;
+  padding: $space-5;
+  width: 100%;
+}
+
+.anc-header {
+  @include flex-between;
+  margin-bottom: $space-4;
+
+  h3 {
+    font-size: $fs-md;
+    font-weight: $fw-semibold;
+  }
+
+  .anc-status {
+    font-size: $fs-sm;
+    color: $text-secondary;
+    padding: $space-1 $space-3;
+    background: $bg-elevated;
+    border-radius: $radius-full;
+  }
+}
+
+.anc-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-3;
+  margin-bottom: $space-5;
+}
+
+.anc-mode-btn {
+  @include button-base;
+  @include flex-column;
+  gap: $space-2;
+  padding: $space-4 $space-2;
+  background: $bg-elevated;
+  border-radius: $radius-md;
+  border: 2px solid transparent;
+  color: $text-secondary;
+  min-height: 88px;
+
+  .anc-icon {
+    width: 28px;
+    height: 28px;
+    @include flex-center;
+    font-size: 20px;
+  }
+
+  .anc-label {
+    font-size: $fs-xs;
+    font-weight: $fw-medium;
+    text-align: center;
+  }
+
+  &:hover:not(.active) {
+    background: lighten($bg-elevated, 5%);
+    color: $text-primary;
+  }
+
+  &.active {
+    border-color: $accent-blue;
+    background: rgba($accent-blue, 0.12);
+    color: $text-primary;
+    box-shadow: $shadow-glow-blue;
+
+    .anc-icon {
+      color: $accent-blue;
+    }
+  }
+
+  &.transparency.active {
+    border-color: $accent-green;
+    background: rgba($accent-green, 0.12);
+    box-shadow: 0 0 20px rgba($accent-green, 0.25);
+
+    .anc-icon {
+      color: $accent-green;
+    }
+  }
+
+  &.off.active {
+    border-color: $text-tertiary;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+
+    .anc-icon {
+      color: $text-tertiary;
+    }
+  }
+}
+
+// Strength slider
+.anc-strength {
+  .strength-header {
+    @include flex-between;
+    margin-bottom: $space-3;
+
+    span {
+      font-size: $fs-sm;
+      color: $text-secondary;
+    }
+
+    .strength-value {
+      font-size: $fs-sm;
+      font-weight: $fw-semibold;
+      color: $accent-blue;
+    }
+  }
+
+  .strength-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: $radius-full;
+    background: $bg-elevated;
+    outline: none;
+    cursor: pointer;
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: $accent-blue;
+      box-shadow: 0 0 0 4px rgba($accent-blue, 0.2), $shadow-sm;
+      cursor: grab;
+      transition: transform $transition-fast;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+
+      &:active {
+        cursor: grabbing;
+        transform: scale(1.05);
+      }
+    }
+
+    &::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: $accent-blue;
+      border: none;
+      box-shadow: 0 0 0 4px rgba($accent-blue, 0.2);
+      cursor: grab;
+    }
+  }
+
+  .strength-labels {
+    @include flex-between;
+    margin-top: $space-2;
+    font-size: $fs-xs;
+    color: $text-tertiary;
+  }
+}

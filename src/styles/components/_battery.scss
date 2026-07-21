@@ -1,0 +1,135 @@
+// ============================================
+// BATTERY COMPONENT
+// ============================================
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.battery-group {
+  @include flex-center;
+  gap: $space-6;
+  padding: $space-4 0;
+}
+
+.battery-item {
+  @include flex-column;
+  align-items: center;
+  gap: $space-2;
+  min-width: 64px;
+
+  .battery-label {
+    font-size: $fs-xs;
+    font-weight: $fw-medium;
+    color: $text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .battery-value {
+    font-size: $fs-lg;
+    font-weight: $fw-semibold;
+    color: $text-primary;
+    line-height: 1;
+  }
+
+  .battery-visual {
+    position: relative;
+    width: 36px;
+    height: 18px;
+    border: 2px solid $text-secondary;
+    border-radius: 4px;
+    padding: 2px;
+    background: transparent;
+
+    // Battery tip
+    &::after {
+      content: "";
+      position: absolute;
+      right: -5px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 8px;
+      background: $text-secondary;
+      border-radius: 0 2px 2px 0;
+    }
+
+    .battery-level {
+      height: 100%;
+      border-radius: 2px;
+      transition: width $transition-base, background $transition-base;
+
+      &.high {
+        background: linear-gradient(90deg, $battery-high, lighten($battery-high, 10%));
+      }
+      &.medium {
+        background: linear-gradient(90deg, $battery-medium, lighten($battery-medium, 10%));
+      }
+      &.low {
+        background: linear-gradient(90deg, $battery-low, lighten($battery-low, 10%));
+      }
+      &.charging {
+        background: linear-gradient(90deg, $battery-charging, lighten($battery-charging, 15%));
+        animation: battery-pulse 1.5s ease-in-out infinite;
+      }
+    }
+  }
+
+  .battery-charging-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    color: $text-primary;
+    z-index: 1;
+  }
+}
+
+@keyframes battery-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+// Compact horizontal version
+.battery-compact {
+  @include flex-center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  @include card-base;
+  border-radius: $radius-full;
+
+  .battery-compact-item {
+    @include flex-center;
+    gap: $space-1;
+    font-size: $fs-sm;
+    font-weight: $fw-medium;
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: $battery-high;
+
+      &.medium { background: $battery-medium; }
+      &.low { background: $battery-low; }
+      &.charging { background: $battery-charging; }
+    }
+
+    span {
+      color: $text-secondary;
+      font-size: $fs-xs;
+    }
+
+    strong {
+      color: $text-primary;
+      font-weight: $fw-semibold;
+    }
+  }
+
+  .separator {
+    width: 1px;
+    height: 14px;
+    background: $border-color;
+  }
+}

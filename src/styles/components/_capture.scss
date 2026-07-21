@@ -1,0 +1,523 @@
+// ============================================
+// CAPTURE STUDIO
+// ============================================
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.capture-studio {
+  width: 100%;
+  @include flex-column;
+  gap: $space-3;
+  animation: fade-in-up 0.3s ease both;
+  min-height: 0;
+  flex: 1;
+}
+
+.cs-header {
+  @include flex-between;
+  gap: $space-3;
+  width: 100%;
+
+  .cs-title {
+    @include flex-center;
+    gap: $space-3;
+    justify-content: flex-start;
+
+    .cs-icon {
+      font-size: 28px;
+    }
+
+    h2 {
+      font-size: $fs-lg;
+      font-weight: $fw-semibold;
+      margin: 0;
+    }
+
+    .cs-sub {
+      font-size: $fs-xs;
+      color: $text-tertiary;
+      margin: 0;
+    }
+  }
+
+  .cs-header-actions {
+    @include flex-center;
+    gap: $space-2;
+  }
+}
+
+.cs-status {
+  @include flex-center;
+  justify-content: flex-start;
+  gap: $space-2;
+  font-size: $fs-xs;
+  color: $text-secondary;
+  padding: $space-2 $space-3;
+  background: $bg-card;
+  border-radius: $radius-md;
+  border: 1px solid $border-color;
+  width: 100%;
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $text-tertiary;
+
+    &.live {
+      background: $accent-red;
+      box-shadow: 0 0 8px rgba($accent-red, 0.6);
+      animation: pulse-dot 1.2s ease-in-out infinite;
+    }
+  }
+
+  .sep {
+    color: $text-tertiary;
+  }
+
+  .warn {
+    color: $accent-yellow;
+  }
+}
+
+.cs-error {
+  width: 100%;
+  padding: $space-2 $space-3;
+  background: rgba($accent-red, 0.12);
+  border: 1px solid rgba($accent-red, 0.3);
+  border-radius: $radius-md;
+  color: lighten($accent-red, 12%);
+  font-size: $fs-sm;
+}
+
+// Tabs
+.cs-tabs {
+  display: flex;
+  gap: $space-1;
+  width: 100%;
+  border-bottom: 1px solid $border-color;
+  padding-bottom: 0;
+}
+
+.cs-tab {
+  @include button-base;
+  padding: $space-2 $space-3;
+  background: transparent;
+  color: $text-tertiary;
+  border-radius: $radius-sm $radius-sm 0 0;
+  font-size: $fs-sm;
+  border-bottom: 2px solid transparent;
+  gap: $space-1;
+
+  &:hover {
+    color: $text-primary;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &.active {
+    color: $accent-blue;
+    border-bottom-color: $accent-blue;
+  }
+
+  .badge {
+    font-size: 10px;
+    background: $bg-elevated;
+    color: $text-secondary;
+    padding: 1px 6px;
+    border-radius: $radius-full;
+  }
+}
+
+// Buttons
+.cs-btn {
+  @include button-base;
+  @include focus-ring;
+  padding: $space-2 $space-4;
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+  gap: $space-2;
+
+  &.sm {
+    padding: $space-1 $space-3;
+    font-size: $fs-xs;
+  }
+
+  &.primary {
+    background: $accent-blue;
+    color: white;
+    &:hover:not(:disabled) {
+      background: lighten($accent-blue, 6%);
+    }
+  }
+
+  &.secondary {
+    background: $bg-elevated;
+    color: $text-primary;
+    border: 1px solid $border-color;
+  }
+
+  &.danger {
+    background: $accent-red;
+    color: white;
+  }
+
+  &.ghost {
+    background: transparent;
+    color: $text-secondary;
+    &:hover {
+      background: $bg-elevated;
+      color: $text-primary;
+    }
+  }
+}
+
+.chip {
+  @include button-base;
+  padding: $space-1 $space-3;
+  font-size: $fs-xs;
+  background: $bg-elevated;
+  color: $text-secondary;
+  border: 1px solid $border-color;
+  border-radius: $radius-full;
+
+  &:hover {
+    border-color: $border-color-strong;
+    color: $text-primary;
+  }
+
+  &.active {
+    background: rgba($accent-blue, 0.15);
+    border-color: $accent-blue;
+    color: $accent-blue;
+  }
+}
+
+// Toolbar
+.cs-toolbar {
+  @include flex-between;
+  width: 100%;
+  gap: $space-2;
+  flex-wrap: wrap;
+
+  .cs-filters {
+    @include flex-center;
+    gap: $space-1;
+  }
+
+  .cs-toolbar-right {
+    @include flex-center;
+    gap: $space-1;
+  }
+}
+
+// Hex log
+.cs-log {
+  width: 100%;
+  max-height: 340px;
+  overflow-y: auto;
+  @include custom-scrollbar;
+  background: #0a0a0a;
+  border: 1px solid $border-color;
+  border-radius: $radius-md;
+  font-family: $font-mono;
+  font-size: 12px;
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: 88px 36px 1fr auto;
+  gap: $space-2;
+  padding: 6px $space-3;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  align-items: baseline;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  &.tx {
+    border-left: 2px solid $accent-orange;
+  }
+  &.rx {
+    border-left: 2px solid $accent-cyan;
+  }
+  &.info {
+    border-left: 2px solid $text-tertiary;
+    opacity: 0.75;
+  }
+
+  .log-time {
+    color: $text-tertiary;
+    font-size: 11px;
+  }
+
+  .log-dir {
+    font-weight: $fw-bold;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+
+    &.tx {
+      color: $accent-orange;
+    }
+    &.rx {
+      color: $accent-cyan;
+    }
+    &.info {
+      color: $text-tertiary;
+    }
+  }
+
+  .log-hex {
+    color: $text-primary;
+    word-break: break-all;
+    .muted {
+      color: $text-tertiary;
+      font-family: $font-family;
+      font-size: $fs-xs;
+    }
+  }
+
+  .log-meta {
+    @include flex-column;
+    align-items: flex-end;
+    gap: 2px;
+    max-width: 140px;
+
+    .decoded {
+      font-size: 10px;
+      color: $accent-green;
+      text-align: right;
+    }
+    .label {
+      font-size: 10px;
+      color: $accent-yellow;
+      text-align: right;
+    }
+  }
+}
+
+.cs-note-bar {
+  @include flex-center;
+  gap: $space-2;
+  width: 100%;
+
+  input {
+    flex: 1;
+    background: $bg-card;
+    border: 1px solid $border-color;
+    border-radius: $radius-md;
+    padding: $space-2 $space-3;
+    color: $text-primary;
+    font-size: $fs-sm;
+    outline: none;
+
+    &:focus {
+      border-color: $accent-blue;
+    }
+  }
+}
+
+// Steps
+.cs-steps {
+  width: 100%;
+  @include flex-column;
+  gap: $space-2;
+  max-height: 420px;
+  overflow-y: auto;
+  @include custom-scrollbar;
+}
+
+.cs-hint {
+  font-size: $fs-sm;
+  color: $text-tertiary;
+  margin-bottom: $space-2;
+
+  &.warn {
+    color: $accent-yellow;
+  }
+}
+
+.step-card {
+  @include card-base;
+  padding: $space-3 $space-4;
+  cursor: pointer;
+  transition: all $transition-fast;
+  border: 1px solid $border-color;
+
+  &:hover {
+    border-color: $border-color-strong;
+  }
+
+  &.active {
+    border-color: $accent-blue;
+    background: rgba($accent-blue, 0.08);
+    box-shadow: $shadow-glow-blue;
+  }
+
+  &.done {
+    opacity: 0.7;
+    .step-title {
+      text-decoration: line-through;
+      color: $text-tertiary;
+    }
+  }
+
+  .step-top {
+    @include flex-between;
+    margin-bottom: $space-1;
+  }
+
+  .step-check {
+    @include flex-center;
+    gap: $space-2;
+    cursor: pointer;
+    justify-content: flex-start;
+
+    input {
+      accent-color: $accent-green;
+    }
+  }
+
+  .step-title {
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+    color: $text-primary;
+  }
+
+  .step-count {
+    font-size: $fs-xs;
+    color: $text-tertiary;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-instruction {
+    font-size: $fs-xs;
+    color: $text-secondary;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .step-active-badge {
+    display: inline-block;
+    margin-top: $space-2;
+    font-size: 10px;
+    font-weight: $fw-bold;
+    color: $accent-blue;
+    background: rgba($accent-blue, 0.15);
+    padding: 2px 8px;
+    border-radius: $radius-full;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+}
+
+// GATT table
+.cs-gatt {
+  width: 100%;
+  max-height: 400px;
+  overflow: auto;
+  @include custom-scrollbar;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $fs-xs;
+
+    th {
+      text-align: left;
+      padding: $space-2;
+      color: $text-tertiary;
+      border-bottom: 1px solid $border-color;
+      font-weight: $fw-medium;
+      position: sticky;
+      top: 0;
+      background: $bg-primary;
+    }
+
+    td {
+      padding: $space-2;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: $text-secondary;
+    }
+
+    .mono {
+      font-family: $font-mono;
+      font-size: 11px;
+      color: $text-primary;
+    }
+  }
+
+  .prop-tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: $fw-bold;
+    padding: 1px 5px;
+    margin-right: 3px;
+    border-radius: 3px;
+    background: $bg-elevated;
+    color: $accent-cyan;
+    letter-spacing: 0.3px;
+  }
+}
+
+// Raw write
+.cs-write {
+  width: 100%;
+  @include flex-column;
+  gap: $space-3;
+}
+
+.cs-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-1;
+}
+
+.cs-write-row {
+  @include flex-center;
+  gap: $space-2;
+  width: 100%;
+
+  input {
+    flex: 1;
+    background: $bg-card;
+    border: 1px solid $border-color;
+    border-radius: $radius-md;
+    padding: $space-3;
+    color: $text-primary;
+    font-size: $fs-sm;
+    outline: none;
+
+    &.mono {
+      font-family: $font-mono;
+      letter-spacing: 0.5px;
+    }
+
+    &:focus {
+      border-color: $accent-blue;
+    }
+  }
+}
+
+.cs-empty {
+  @include flex-column;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-10 $space-4;
+  text-align: center;
+
+  p {
+    font-size: $fs-base;
+    color: $text-secondary;
+    font-weight: $fw-medium;
+  }
+  span {
+    font-size: $fs-sm;
+    color: $text-tertiary;
+  }
+}
+
+.mono {
+  font-family: $font-mono;
+}

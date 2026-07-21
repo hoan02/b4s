@@ -1,0 +1,183 @@
+// ============================================
+// EQ CARDS COMPONENT
+// Matching Baseus colorful abstract EQ style
+// ============================================
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.eq-section {
+  width: 100%;
+}
+
+.eq-header {
+  @include flex-between;
+  margin-bottom: $space-4;
+  padding: 0 $space-1;
+
+  h3 {
+    font-size: $fs-md;
+    font-weight: $fw-semibold;
+  }
+
+  .eq-current {
+    font-size: $fs-sm;
+    color: $accent-yellow;
+    font-weight: $fw-medium;
+  }
+}
+
+.eq-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $space-3;
+}
+
+.eq-card {
+  position: relative;
+  height: 100px;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all $transition-base;
+  @include flex-center;
+
+  // Abstract blob background layers
+  .eq-blob {
+    position: absolute;
+    inset: 0;
+    opacity: 0.9;
+    transition: transform $transition-slow;
+
+    &.blob-1 {
+      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+      transform: scale(1.2) rotate(-10deg);
+    }
+
+    &.blob-2 {
+      border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+      transform: scale(1.1) rotate(15deg);
+      opacity: 0.6;
+      mix-blend-mode: soft-light;
+    }
+  }
+
+  .eq-content {
+    position: relative;
+    z-index: 2;
+    @include flex-column;
+    align-items: center;
+    gap: $space-2;
+    text-align: center;
+  }
+
+  .eq-icon {
+    font-size: 24px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+
+  .eq-name {
+    font-size: $fs-sm;
+    font-weight: $fw-semibold;
+    color: $text-primary;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+  // Color variants matching Baseus
+  &.classic {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    .eq-blob.blob-1 { background: #718096; }
+    .eq-blob.blob-2 { background: #a0aec0; }
+  }
+
+  &.bass {
+    background: linear-gradient(135deg, #d69e2e 0%, #b7791f 100%);
+
+    .eq-blob.blob-1 { background: #ecc94b; }
+    .eq-blob.blob-2 { background: #f6e05e; }
+  }
+
+  &.voice {
+    background: linear-gradient(135deg, #dd6b20 0%, #c05621 100%);
+
+    .eq-blob.blob-1 { background: #ed8936; }
+    .eq-blob.blob-2 { background: #f6ad55; }
+  }
+
+  &.clear {
+    background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+
+    .eq-blob.blob-1 { background: #4299e1; }
+    .eq-blob.blob-2 { background: #63b3ed; }
+  }
+
+  &.custom {
+    background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
+
+    .eq-blob.blob-1 { background: #9f7aea; }
+    .eq-blob.blob-2 { background: #b794f4; }
+  }
+
+  &.game {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+
+    .eq-blob.blob-1 { background: #fc8181; }
+    .eq-blob.blob-2 { background: #feb2b2; }
+  }
+
+  // Hover & Active states
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: $shadow-md;
+
+    .eq-blob.blob-1 {
+      transform: scale(1.3) rotate(-5deg);
+    }
+  }
+
+  &.active {
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), $shadow-lg;
+    transform: scale(1.03);
+
+    &::after {
+      content: "✓";
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      width: 22px;
+      height: 22px;
+      background: rgba(255, 255, 255, 0.95);
+      color: $bg-primary;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: $fw-bold;
+      @include flex-center;
+      z-index: 3;
+      box-shadow: $shadow-sm;
+    }
+  }
+}
+
+// Center logo style like Baseus (optional center card)
+.eq-center-logo {
+  grid-column: 1 / -1;
+  @include flex-center;
+  height: 64px;
+  margin: $space-2 0;
+
+  .logo-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: $bg-elevated;
+    border: 2px solid $border-color-strong;
+    @include flex-center;
+    font-size: $fs-xs;
+    font-weight: $fw-bold;
+    color: $text-secondary;
+    letter-spacing: 0.5px;
+    text-transform: lowercase;
+  }
+}

@@ -1,0 +1,202 @@
+// ============================================
+// APP LAYOUT
+// ============================================
+
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.app {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: $bg-primary;
+  overflow: hidden;
+}
+
+// Top title bar (for frameless window later)
+.titlebar {
+  height: $header-height;
+  @include flex-between;
+  padding: 0 $space-4;
+  background: $bg-secondary;
+  border-bottom: 1px solid $border-color;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+
+  .titlebar-left {
+    @include flex-center;
+    gap: $space-3;
+
+    .app-logo {
+      font-size: $fs-sm;
+      font-weight: $fw-bold;
+      color: $text-primary;
+      letter-spacing: 1px;
+      text-transform: lowercase;
+    }
+  }
+
+  .titlebar-right {
+    @include flex-center;
+    gap: $space-2;
+    -webkit-app-region: no-drag;
+  }
+
+  .window-btn {
+    @include button-base;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $text-secondary;
+    font-size: 14px;
+
+    &:hover {
+      background: $bg-elevated;
+      color: $text-primary;
+    }
+
+    &.close:hover {
+      background: $accent-red;
+      color: white;
+    }
+  }
+}
+
+// Main scrollable content
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  @include custom-scrollbar;
+  padding: $space-4 $space-5 $space-8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-5;
+  max-width: $max-content-width;
+  width: 100%;
+  margin: 0 auto;
+}
+
+// Section wrapper
+.section {
+  width: 100%;
+  animation: fade-in-up 0.4s ease both;
+
+  @for $i from 1 through 6 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.06}s;
+    }
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Game mode toggle
+.game-mode-toggle {
+  @include card-base;
+  @include flex-between;
+  padding: $space-4 $space-5;
+  width: 100%;
+
+  .game-info {
+    @include flex-center;
+    gap: $space-3;
+
+    .game-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: $radius-md;
+      background: rgba($accent-red, 0.15);
+      @include flex-center;
+      font-size: 20px;
+    }
+
+    .game-text {
+      h4 {
+        font-size: $fs-base;
+        font-weight: $fw-medium;
+        margin-bottom: 2px;
+      }
+      p {
+        font-size: $fs-xs;
+        color: $text-tertiary;
+      }
+    }
+  }
+}
+
+// Toggle switch
+.toggle {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: $bg-elevated;
+    border-radius: $radius-full;
+    transition: $transition-base;
+    border: 1px solid $border-color;
+
+    &::before {
+      content: "";
+      position: absolute;
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background: $text-secondary;
+      border-radius: 50%;
+      transition: $transition-base;
+      box-shadow: $shadow-sm;
+    }
+  }
+
+  input:checked + .slider {
+    background: $accent-red;
+    border-color: $accent-red;
+
+    &::before {
+      transform: translateX(20px);
+      background: white;
+    }
+  }
+}
+
+// Footer
+.app-footer {
+  padding: $space-3 $space-4;
+  text-align: center;
+  font-size: $fs-xs;
+  color: $text-tertiary;
+  border-top: 1px solid $border-color;
+  background: $bg-secondary;
+  flex-shrink: 0;
+
+  a {
+    color: $text-secondary;
+    &:hover {
+      color: $accent-yellow;
+    }
+  }
+}
