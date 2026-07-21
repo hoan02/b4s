@@ -1,0 +1,46 @@
+{
+  "id": "bass-bp1-pro",
+  "displayName": "Baseus Bass BP1 Pro",
+  "aliases": ["bass bp1 pro", "bp1 pro"],
+  "support": "verified",
+  "protocolFamily": "bp1",
+  "category": "tws",
+  "group": "Bass BP1 / EP10",
+  "capabilities": {
+    "anc": true,
+    "eq": true,
+    "customEq": true,
+    "gameMode": true,
+    "bassBoost": true,
+    "spatial": true,
+    "ldac": false,
+    "hearingProtection": false
+  },
+  "noise": {
+    "supportsAdaptive": true,
+    "environments": [101, 102, 103, 108],
+    "maxCustomLevel": 5,
+    "supportsTransparencyVoice": true
+  },
+  "eq": {
+    "bands": [100, 200, 400, 800, 1000, 3000, 6000, 10000],
+    "minGain": -12,
+    "maxGain": 12,
+    "customSlots": 2,
+    "presets": [
+      {"id":"classic","label":"Classic","description":"Cân bằng","dictSort":0,"curve":[0,0,0,0,0,0,0,0]},
+      {"id":"bass","label":"Super Bass","description":"Tăng trầm","dictSort":1,"curve":[4,3,2,1,0,-1,-2,-2]},
+      {"id":"cinema","label":"Cinema","description":"Âm thanh phim","dictSort":2,"curve":[3,1,1,2,1,2,1,-1]},
+      {"id":"hifi","label":"Hi-Fi Live","description":"Sân khấu","dictSort":3,"curve":[0,-2,1,2,1,2,1,-1]},
+      {"id":"voice","label":"Clear Voice","description":"Rõ giọng","dictSort":4,"curve":[2,-2,1,3,3,2,0,-1]},
+      {"id":"dj","label":"DJ","description":"DJ","dictSort":5,"curve":[3,0,3,2,1,2,1,-1]},
+      {"id":"pop","label":"Pop","description":"Nhạc pop","dictSort":6,"curve":[2,-2,3,2,1,2,1,-1]},
+      {"id":"jazz","label":"Jazz","description":"Jazz","dictSort":7,"curve":[3,-1,2,1,2,2,1,-1]},
+      {"id":"classical","label":"Classical","description":"Cổ điển","dictSort":8,"curve":[-2,-3,1,2,1,2,1,-1]},
+      {"id":"clear","label":"Treble Boost","description":"Tăng cao","dictSort":9,"curve":[-2,-2,1,2,3,4,3,1]},
+      {"id":"original","label":"Original","description":"Nguyên bản","dictSort":10,"curve":[0,0,0,0,0,0,0,0]},
+      {"id":"rock","label":"Rock Classic","description":"Rock","dictSort":11,"curve":[3,1,2,3,1,2,1,-1]}
+    ]
+  },
+  "image": "default_ear_pic"
+}

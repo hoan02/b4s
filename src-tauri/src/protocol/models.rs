@@ -10,6 +10,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::advertisement::BASEUS_SERVICE_UUID;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SupportLevel {
@@ -21,9 +23,33 @@ pub enum SupportLevel {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ProtocolFamily {
-    /// BP1 Pro / Ultra family — AA/BA frames, service 53527aa4-…
+    /// Packet table verified on Bass BP1 Pro / Ultra hardware.
     Bp1Pro,
+    /// Best-effort shared Baseus AA/BA implementation; not hardware-verified for this model.
+    BaseusAaBaExperimental,
     Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelCapabilities {
+    pub anc: bool,
+    pub eq: bool,
+    pub game_mode: bool,
+    pub bass_boost: bool,
+    pub ldac: bool,
+    pub hearing_protection: bool,
+    pub spatial: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BleTransportConfig {
+    pub service_uuid: Option<String>,
+    pub write_uuid: Option<String>,
+    pub notify_uuid: Option<String>,
+    pub use_self_uuid: bool,
+    pub required_advertised_service: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +66,11 @@ pub struct ModelInfo {
     pub category: String,
     /// UI grouping (from official app families)
     pub group: String,
+    pub capabilities: ModelCapabilities,
+    pub transport: BleTransportConfig,
+    pub color_variants: Vec<String>,
+    pub image_url: Option<String>,
+    pub image_provenance: String,
 }
 
 fn m(
@@ -54,6 +85,12 @@ fn m(
     category: &str,
     group: &str,
 ) -> ModelInfo {
+    let protocol = match (support, protocol) {
+        (SupportLevel::Verified, protocol) => protocol,
+        (_, ProtocolFamily::Bp1Pro) => ProtocolFamily::BaseusAaBaExperimental,
+        (_, protocol) => protocol,
+    };
+
     ModelInfo {
         id: id.into(),
         display_name: display.into(),
@@ -65,6 +102,98 @@ fn m(
         has_game_mode: game,
         category: category.into(),
         group: group.into(),
+        capabilities: ModelCapabilities {
+            anc,
+            eq,
+            game_mode: game,
+            bass_boost: eq,
+            ldac: false,
+            hearing_protection: false,
+            spatial: eq,
+        },
+        transport: BleTransportConfig {
+            service_uuid: Some(BASEUS_SERVICE_UUID.into()),
+            write_uuid: Some("EE684B1A-1E9B-ED3E-EE55-F894667E92AC".into()),
+            notify_uuid: Some("654B749C-E37A-AE1F-EBAB-40CA133E3690".into()),
+            use_self_uuid: false,
+            required_advertised_service: false,
+        },
+        color_variants: Vec::new(),
+        image_url: None,
+        image_provenance: "fallback".into(),
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct NoiseCapability {
+    pub supports_adaptive: bool,
+    pub environments: Vec<u16>,
+    pub max_custom_level: u8,
+    pub supports_transparency_voice: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceProfile {
+    pub model_id: Option<String>,
+    pub model_name: Option<String>,
+    pub firmware: Option<String>,
+    pub protocol: ProtocolFamily,
+    pub verified: bool,
+    pub noise: NoiseCapability,
+}
+
+pub fn unknown_profile(model_id: Option<&str>, model_name: Option<&str>) -> DeviceProfile {
+    DeviceProfile {
+        model_id: model_id.map(str::to_owned),
+        model_name: model_name.map(str::to_owned),
+        firmware: None,
+        protocol: ProtocolFamily::Unknown,
+        verified: false,
+        noise: NoiseCapability {
+            supports_adaptive: false,
+            environments: Vec::new(),
+            max_custom_level: 0,
+            supports_transparency_voice: false,
+        },
+    }
+}
+
+pub fn profile_for(
+    model_id: Option<&str>,
+    model_name: Option<&str>,
+    firmware: Option<&str>,
+) -> DeviceProfile {
+    let Some(id) = model_id else {
+        return unknown_profile(model_id, model_name);
+    };
+    let Some(model) = all_models().into_iter().find(|item| item.id == id) else {
+        return unknown_profile(model_id, model_name);
+    };
+    let max_custom_level = if !model.has_anc {
+        0
+    } else if id == "eh10-nc-lite" || id == "bh1-nc-lite" {
+        3
+    } else {
+        5
+    };
+    DeviceProfile {
+        model_id: Some(model.id),
+        model_name: Some(model.display_name),
+        firmware: firmware.map(str::to_owned),
+        protocol: model.protocol,
+        verified: matches!(model.support, SupportLevel::Verified),
+        noise: NoiseCapability {
+            supports_adaptive: model.has_anc,
+            environments: if model.has_anc {
+                vec![101, 102, 103, 108]
+            } else {
+                Vec::new()
+            },
+            max_custom_level,
+            supports_transparency_voice: model.has_anc,
+        },
     }
 }
 
@@ -227,5 +356,41 @@ pub fn looks_like_baseus(ble_name: &str) -> bool {
 
 pub fn catalog_json() -> Vec<ModelInfo> {
     all_models()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bp1_profile_is_verified_and_has_apk_noise_capabilities() {
+        let profile = profile_for(Some("bass-bp1-pro"), None, Some("1.0.0"));
+        assert!(profile.verified);
+        assert_eq!(profile.protocol, ProtocolFamily::Bp1Pro);
+        assert_eq!(profile.noise.max_custom_level, 5);
+        assert_eq!(profile.noise.environments, vec![101, 102, 103, 108]);
+    }
+
+    #[test]
+    fn lite_profile_caps_custom_anc_at_three() {
+        let profile = profile_for(Some("eh10-nc-lite"), None, None);
+        assert_eq!(profile.noise.max_custom_level, 3);
+    }
+
+    #[test]
+    fn non_anc_profile_does_not_expose_noise_controls() {
+        let profile = profile_for(Some("bowie-m1"), None, None);
+        assert!(!profile.noise.supports_adaptive);
+        assert_eq!(profile.noise.max_custom_level, 0);
+        assert!(profile.noise.environments.is_empty());
+    }
+
+    #[test]
+    fn unknown_profile_is_safe_and_unverified() {
+        let profile = profile_for(Some("unknown"), Some("Baseus Unknown"), None);
+        assert!(!profile.verified);
+        assert_eq!(profile.protocol, ProtocolFamily::Unknown);
+        assert_eq!(profile.noise.max_custom_level, 0);
+    }
 }
 

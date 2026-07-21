@@ -106,6 +106,15 @@ pub fn wrap_ba_command(bare: &[u8]) -> Option<Vec<u8>> {
     Some(body)
 }
 
+/// The canonical BP1 Ultra battery polling frame.
+///
+/// Ultra firmware returns earbud and case battery from the wrapped BA02
+/// exchange. Do not mix bare BA02 or BA27 frames into this exchange.
+pub fn battery_query_frame() -> Vec<u8> {
+    let bare = vec![0xBA, 0x02];
+    wrap_ba_command(&bare).expect("BA02 always produces a BP1 Ultra frame")
+}
+
 /// Extract AA frames from a notify buffer.
 ///
 /// Matches official `HeadPhoneDataResolveManager.getReplyData` (app 2.14.1):
@@ -291,6 +300,13 @@ mod tests {
         let w = wrap_ba_command(&[0xBA, 0x02]).unwrap();
         assert_eq!(&w[0..8], &[0x78, 0x9C, 0x00, 0x0A, 0x02, 0x01, 0x01, 0x02]);
         assert_eq!(w.len(), 10);
+    }
+
+    #[test]
+    fn bp1_ultra_battery_poll_uses_one_wrapped_query() {
+        let frame = battery_query_frame();
+        assert_eq!(frame[..2], [0x78, 0x9C]);
+        assert_eq!(frame[5..8], [0x02, 0x01, 0x01]);
     }
 
     #[test]

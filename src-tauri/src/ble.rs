@@ -1,10 +1,12 @@
 //! Bluetooth LE manager for multi-model earbuds (B4S).
 
-use crate::protocol::{
-    self, AncMode, BatteryState, Bp1ProAnc, DeviceEvent, EqPreset,
-};
+#[path = "ble/handshake.rs"]
+mod handshake;
+
+use crate::device::{DeviceIdentity, DeviceRegistry};
+use crate::protocol::{self, AncMode, BatteryState, DeviceEvent, EqPreset, ListeningCommand};
 use btleplug::api::{
-    Central, CentralEvent, CharPropFlags, Manager as _, Peripheral as _, ScanFilter, WriteType,
+    Central, CentralEvent, CentralState, CharPropFlags, Manager as _, Peripheral as _, ScanFilter, WriteType,
 };
 use btleplug::platform::{Adapter, Manager, Peripheral, PeripheralId};
 use futures::stream::StreamExt;
@@ -43,10 +45,16 @@ pub struct BleDevice {
     /// Matched catalog model id (e.g. bass-bp1-pro)
     pub model_id: Option<String>,
     pub model_name: Option<String>,
+    pub device_profile: protocol::DeviceProfile,
     /// verified | experimental | scanOnly
     pub support: Option<String>,
-    /// UI hint when Windows lists the same product twice (BLE control vs audio)
+    /// UI hint when a platform lists the same product twice (BLE control vs audio)
     pub hint: Option<String>,
+    pub image_url: Option<String>,
+    pub image_provenance: String,
+    pub color_variants: Vec<String>,
+    pub serial: Option<String>,
+    pub advertised_services: Vec<String>,
 }
 
 /// How healthy the control link is — UI uses this to show Demo / Waiting / Live / Dead.
@@ -251,7 +259,13 @@ fn normalize_addr(a: &str) -> String {
 static BLE: Lazy<Arc<Mutex<BleInner>>> = Lazy::new(|| Arc::new(Mutex::new(BleInner::new())));
 
 fn model_fields(name: &str) -> (bool, Option<String>, Option<String>, Option<String>) {
-    if let Some(m) = protocol::identify_model(name) {
+    let resolved = DeviceRegistry::resolve(DeviceIdentity {
+        address: String::new(),
+        name: name.into(),
+        advertised_service: None,
+        manufacturer_data: Vec::new(),
+    });
+    if let Some(m) = resolved.model {
         let support = match m.support {
             protocol::SupportLevel::Verified => "verified",
             protocol::SupportLevel::Experimental => "experimental",
@@ -300,7 +314,7 @@ pub async fn init_adapter() -> Result<(), String> {
 }
 
 pub async fn is_adapter_available() -> bool {
-    // Adapter present AND radio usable (start_scan fails when BT is off on Windows)
+    // Adapter present and radio usable across Windows, macOS, and Linux.
     if init_adapter().await.is_err() {
         return false;
     }
@@ -309,7 +323,13 @@ pub async fn is_adapter_available() -> bool {
         return false;
     };
     drop(state);
-    // Probe: start + stop scan. If Bluetooth is powered off this errors.
+    // Read the platform radio state. An adapter can exist while Bluetooth is
+    // powered off, so probing scan alone is not a reliable power-state check.
+    if matches!(adapter.adapter_state().await, Ok(CentralState::PoweredOff)) {
+        return false;
+    }
+
+    // Probe: start + stop scan for unknown backend states.
     match adapter.start_scan(ScanFilter::default()).await {
         Ok(()) => {
             let _ = adapter.stop_scan().await;
@@ -328,6 +348,17 @@ pub async fn is_adapter_available() -> bool {
 
 pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     init_adapter().await?;
+    let adapter_state = {
+        let state = BLE.lock().await;
+        state.adapter.clone()
+    }
+    .ok_or_else(|| "No Bluetooth adapter found".to_string())?
+    .adapter_state()
+    .await
+    .map_err(|e| format!("Bluetooth state: {e}"))?;
+    if adapter_state == CentralState::PoweredOff {
+        return Err("Bluetooth đang tắt trên thiết bị này".into());
+    }
     let mut state = BLE.lock().await;
     if state.scanning {
         return Ok(());
@@ -411,7 +442,33 @@ async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, id: &Periph
     let id_str = id_to_string(id);
     let address = props.address.to_string();
     let rssi = props.rssi.unwrap_or(-100);
-    let (is_baseus, model_id, model_name, support) = model_fields(&name);
+    let advertised_services: Vec<String> = props
+        .services
+        .iter()
+        .map(|uuid| uuid.to_string().to_uppercase())
+        .collect();
+    let manufacturer: Vec<u8> = props
+        .manufacturer_data
+        .values()
+        .flat_map(|bytes| bytes.iter().copied())
+        .collect();
+    let resolved = DeviceRegistry::resolve(DeviceIdentity {
+        address: address.clone(),
+        name: name.clone(),
+        advertised_service: advertised_services.first().cloned(),
+        manufacturer_data: manufacturer.clone(),
+    });
+    let is_baseus = resolved.model.is_some() || protocol::looks_like_baseus(&name);
+    let model_id = resolved.model.as_ref().map(|model| model.id.clone());
+    let model_name = resolved.model.as_ref().map(|model| model.display_name.clone());
+    let support = resolved.model.as_ref().map(|model| match model.support {
+        protocol::SupportLevel::Verified => "verified".into(),
+        protocol::SupportLevel::Experimental => "experimental".into(),
+        protocol::SupportLevel::ScanOnly => "scanOnly".into(),
+    }).or_else(|| is_baseus.then(|| "scanOnly".into()));
+    let (image_url, image_provenance, color_variants) = model_presentation(model_id.as_deref());
+    let serial = protocol::advertisement::canonical_serial(&manufacturer, false);
+    let device_profile = resolved.profile;
 
     let mut device = BleDevice {
         id: id_str.clone(),
@@ -422,8 +479,14 @@ async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, id: &Periph
         connected: false,
         model_id,
         model_name,
+        device_profile,
         support,
         hint: None,
+        image_url,
+        image_provenance,
+        color_variants,
+        serial,
+        advertised_services,
     };
 
     {
@@ -488,7 +551,6 @@ async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, id: &Periph
         state.devices.insert(id_str.clone(), device.clone());
         state.peripherals.insert(id_str, peripheral);
     }
-    let _ = app.emit("ble://device", &device);
     emit_scan_status(app).await;
 }
 
@@ -637,6 +699,18 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
                 try_ids.push(sid);
             }
         }
+        try_ids.sort_by(|a, b| {
+            let score = |id: &String| {
+                state.devices.get(id).map(|device| {
+                    (
+                        has_advertised_control_service(device),
+                        device.rssi,
+                        id == &device_id,
+                    )
+                })
+            };
+            score(b).cmp(&score(a))
+        });
     }
 
     let mut last_err = String::from("Connect failed");
@@ -692,6 +766,7 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
 
 async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, String> {
     let peripheral = resolve_peripheral(&device_id).await?;
+    let mut first_connect = handshake::Handshake::new(30_000);
 
     // Ensure not half-open
     if peripheral.is_connected().await.unwrap_or(false) {
@@ -703,6 +778,7 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         .connect()
         .await
         .map_err(|e| format!("Connect failed: {e}"))?;
+    first_connect.on_connected();
 
     // Small delay then discover — Windows needs this after reconnect
     tokio::time::sleep(Duration::from_millis(250)).await;
@@ -711,6 +787,7 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         .discover_services()
         .await
         .map_err(|e| format!("Service discovery: {e}"))?;
+    first_connect.on_services_discovered();
 
     // Keep fresh handle in map
     {
@@ -740,6 +817,18 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
                 .into(),
         );
     }
+    let known_model = {
+        let state = BLE.lock().await;
+        state
+            .devices
+            .get(&device_id)
+            .and_then(|device| device.model_id.as_ref())
+            .is_some()
+    };
+    if known_model && !has_baseus {
+        let _ = peripheral.disconnect().await;
+        return Err("Known Baseus model without official control service; trying another entry".into());
+    }
     if !has_baseus {
         // Weak signal: may be wrong dual entry — still try, but prefer fail if subscribe dies
         log::warn!("No known Baseus write/notify UUID — may be wrong dual entry");
@@ -763,6 +852,16 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
 
     // Subscribe to notify characteristic(s)
     subscribe_notifications(app.clone(), peripheral.clone()).await?;
+    first_connect.on_notifications_enabled();
+
+    // The APK's first-bind handshake is a plain UTF-8 query, not a BA frame.
+    write_raw(&peripheral, first_connect.init_payload())
+        .await
+        .map_err(|e| format!("Init-state query: {e}"))?;
+    let _ = app.emit(
+        "ble://handshake",
+        &serde_json::json!({ "phase": "awaitingInitState", "timeoutMs": 30_000 }),
+    );
 
     tokio::time::sleep(Duration::from_millis(200)).await;
 
@@ -805,15 +904,25 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Post-connect queries — battery first (BA02 bare + wrapped)
-    let _ = send_battery_queries(&peripheral).await;
-    tokio::time::sleep(Duration::from_millis(120)).await;
-    let _ = write_command(&peripheral, protocol::Command::QueryEq).await;
-    tokio::time::sleep(Duration::from_millis(50)).await;
-    let _ = write_bytes(&peripheral, &[0xBA, 0x23]).await;
+    let startup_plan = device_preview
+        .as_ref()
+        .map(|device| {
+            let model = device
+                .model_id
+                .as_ref()
+                .and_then(|id| protocol::catalog_json().into_iter().find(|m| &m.id == id));
+            crate::device::initialization::plan_for(model.as_ref(), &device.device_profile)
+        })
+        .unwrap_or_else(|| vec![crate::device::initialization::StartupQuery::Battery]);
+    for query in startup_plan {
+        if matches!(query, crate::device::initialization::StartupQuery::Battery) {
+            let _ = send_battery_queries(&peripheral).await;
+        } else if let Some(command) = crate::device::initialization::command_for(query) {
+            let _ = write_command(&peripheral, command).await;
+        }
+        tokio::time::sleep(Duration::from_millis(80)).await;
+    }
     // Another battery nudge after EQ (some firmwares only answer once “awake”)
-    tokio::time::sleep(Duration::from_millis(80)).await;
-    let _ = send_battery_queries(&peripheral).await;
-
     let mut state = BLE.lock().await;
     state.connected_id = Some(device_id.clone());
     let mut device = if let Some(d) = state.devices.get_mut(&device_id) {
@@ -829,8 +938,14 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
             connected: true,
             model_id: None,
             model_name: None,
+            device_profile: protocol::profile_for(None, None, None),
             support: Some("experimental".into()),
             hint: None,
+            image_url: None,
+            image_provenance: "fallback".into(),
+            color_variants: Vec::new(),
+            serial: None,
+            advertised_services: Vec::new(),
         }
     };
     if !has_baseus {
@@ -965,6 +1080,21 @@ async fn handle_notification(app: &AppHandle, data: &[u8], _char_uuid: Option<St
         }
     }
     let _ = app.emit("ble://link", &get_connection_state().await.link);
+
+    if let Ok(text) = std::str::from_utf8(data) {
+        let lower = text.to_ascii_lowercase();
+        if lower.contains("init state") {
+            let _ = app.emit(
+                "ble://bind-state",
+                &serde_json::json!({ "state": "initial", "action": "relieveBind" }),
+            );
+        } else if lower.contains("already configured") {
+            let _ = app.emit(
+                "ble://bind-state",
+                &serde_json::json!({ "state": "alreadyConfigured", "action": "preserveExisting" }),
+            );
+        }
+    }
 
     let last_anc = {
         let state = BLE.lock().await;
@@ -1191,6 +1321,18 @@ async fn apply_event(app: &AppHandle, event: DeviceEvent) {
         DeviceEvent::GameMode(on) => {
             let _ = app.emit("device://game", on);
         }
+        DeviceEvent::BassBoost(level) => {
+            let _ = app.emit("device://bass-boost", level);
+        }
+        DeviceEvent::Ldac(enabled) => {
+            let _ = app.emit("device://ldac", enabled);
+        }
+        DeviceEvent::HearingProtection { enabled, level } => {
+            let _ = app.emit(
+                "device://hearing-protection",
+                &serde_json::json!({ "enabled": enabled, "level": level }),
+            );
+        }
         DeviceEvent::Unknown { cmd, payload } => {
             let _ = app.emit(
                 "ble://raw",
@@ -1328,8 +1470,22 @@ where
     f(p).await
 }
 
-pub async fn send_anc(mode: AncMode, strength: u8) -> Result<(), String> {
-    let data = Bp1ProAnc::cmd_set_anc(mode, strength);
+pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
+    let profile = {
+        let state = BLE.lock().await;
+        let id = state.connected_id.as_ref().ok_or("Not connected")?;
+        state
+            .devices
+            .get(id)
+            .map(|device| device.device_profile.clone())
+            .ok_or("Connected device profile is missing")?
+    };
+    let data = protocol::encode_listening(&profile, command)?;
+    let mode = match command {
+        ListeningCommand::Normal => AncMode::Off,
+        ListeningCommand::TransparencyFull | ListeningCommand::TransparencyVoice => AncMode::Transparency,
+        ListeningCommand::CustomLevel(_) | ListeningCommand::AdaptiveEnvironment(_) => AncMode::Anc,
+    };
     log::info!("TX ANC {:?} → {:02X?}", mode, data);
     {
         let mut state = BLE.lock().await;
@@ -1356,7 +1512,7 @@ pub async fn send_anc(mode: AncMode, strength: u8) -> Result<(), String> {
 }
 
 pub async fn send_eq(preset: EqPreset) -> Result<(), String> {
-    let data = Bp1ProAnc::cmd_set_eq(preset);
+    let data = encode_connected_feature(protocol::FeatureCommand::SetEq(preset)).await?;
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
@@ -1374,7 +1530,7 @@ pub async fn send_eq(preset: EqPreset) -> Result<(), String> {
 }
 
 pub async fn send_game_mode(on: bool) -> Result<(), String> {
-    let data = Bp1ProAnc::cmd_set_game_mode(on);
+    let data = encode_connected_feature(protocol::FeatureCommand::SetGameMode(on)).await?;
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
@@ -1391,8 +1547,8 @@ pub async fn send_game_mode(on: bool) -> Result<(), String> {
     .await
 }
 
-pub async fn send_find_buds() -> Result<(), String> {
-    let data = Bp1ProAnc::cmd_find_buds();
+pub async fn send_find_buds(start: bool) -> Result<(), String> {
+    let data = encode_connected_feature(protocol::FeatureCommand::FindBuds(start)).await?;
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
@@ -1407,18 +1563,99 @@ pub async fn send_find_buds() -> Result<(), String> {
 }
 
 pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {
-    with_connected_peripheral(|p| {
-        Box::pin(async move { write_command(&p, protocol::Command::SetSpatial(mode)).await })
-    })
-    .await
+    let data = encode_connected_feature(protocol::FeatureCommand::SetSpatial(mode)).await?;
+    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+}
+
+pub async fn send_eq_index(index: u8) -> Result<(), String> {
+    let data = encode_connected_feature(protocol::FeatureCommand::SetEqIndex(index)).await?;
+    let state = BLE.lock().await;
+    if state.mock {
+        drop(state);
+        if let Some(app) = app_handle() {
+            let _ = app.emit("device://eq-index", index);
+        }
+        return Ok(());
+    }
+    drop(state);
+    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+}
+
+pub async fn send_custom_eq(bands: Vec<protocol::EqBand>, dict_sort: u8, anc: bool) -> Result<(), String> {
+    if bands.len() != 8 {
+        return Err("Custom EQ requires exactly 8 bands".into());
+    }
+    let data = encode_connected_feature(protocol::FeatureCommand::SetCustomEq { dict_sort, anc, bands }).await?;
+    let state = BLE.lock().await;
+    if state.mock {
+        drop(state);
+        if let Some(app) = app_handle() {
+            let _ = app.emit("device://eq-custom", true);
+        }
+        return Ok(());
+    }
+    drop(state);
+    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
 }
 
 pub async fn send_bass_boost(level: u8) -> Result<(), String> {
     let level = level.min(3);
-    with_connected_peripheral(|p| {
-        Box::pin(async move { write_command(&p, protocol::Command::SetBassBoost(level)).await })
-    })
-    .await
+    let data = encode_connected_feature(protocol::FeatureCommand::SetBassBoost(level)).await?;
+    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+}
+
+fn model_presentation(model_id: Option<&str>) -> (Option<String>, String, Vec<String>) {
+    let Some(id) = model_id else {
+        return (None, "fallback".into(), Vec::new());
+    };
+    protocol::catalog_json()
+        .into_iter()
+        .find(|model| model.id == id)
+        .map(|model| (model.image_url, model.image_provenance, model.color_variants))
+        .unwrap_or((None, "fallback".into(), Vec::new()))
+}
+
+pub async fn send_ldac(enabled: bool) -> Result<(), String> {
+    let data = encode_connected_feature(protocol::FeatureCommand::SetLdac(enabled)).await?;
+    let state = BLE.lock().await;
+    if state.mock {
+        drop(state);
+        if let Some(app) = app_handle() {
+            let _ = app.emit("device://ldac", enabled);
+        }
+        return Ok(());
+    }
+    drop(state);
+    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+}
+
+pub async fn send_hearing_protection(enabled: bool, level: u8) -> Result<(), String> {
+    let level = level.min(3);
+    let data = encode_connected_feature(protocol::FeatureCommand::SetHearingProtection { enabled, level }).await?;
+    let state = BLE.lock().await;
+    if state.mock {
+        drop(state);
+        if let Some(app) = app_handle() {
+            let _ = app.emit(
+                "device://hearing-protection",
+                &serde_json::json!({ "enabled": enabled, "level": level }),
+            );
+        }
+        return Ok(());
+    }
+    drop(state);
+    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+}
+
+async fn encode_connected_feature(command: protocol::FeatureCommand) -> Result<Vec<u8>, String> {
+    let state = BLE.lock().await;
+    let id = state.connected_id.as_ref().ok_or("Not connected")?;
+    let profile = state
+        .devices
+        .get(id)
+        .map(|device| device.device_profile.clone())
+        .ok_or("Connected device profile is missing")?;
+    protocol::encode_feature(&profile, command)
 }
 
 pub async fn get_battery_state() -> BatteryState {
@@ -1467,31 +1704,13 @@ pub async fn disconnect(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Send BA02 (and BA27) in bare + 789C forms so Pro and Ultra both respond.
+/// Poll BP1 Ultra battery with the canonical APK-style frame.
 async fn send_battery_queries(peripheral: &Peripheral) -> Result<(), String> {
-    let bare = vec![0xBA, 0x02];
-    // Primary path respects connection wrap flag
-    let _ = write_command(peripheral, protocol::Command::QueryBattery).await;
-    tokio::time::sleep(Duration::from_millis(40)).await;
-    // Force bare BA02 (Pro / some firmware)
-    let _ = write_raw(peripheral, &bare).await;
-    // Force 789C-wrapped BA02 (Ultra) even if wrap flag wrong
-    if let Some(w) = protocol::wrap_ba_command(&bare) {
-        tokio::time::sleep(Duration::from_millis(40)).await;
-        let _ = write_raw(peripheral, &w).await;
-    }
-    // Case battery query (some firmwares need BA27; others push AA27 on lid open)
-    let case_q = vec![0xBA, 0x27];
-    tokio::time::sleep(Duration::from_millis(30)).await;
-    let _ = write_raw(peripheral, &case_q).await;
-    if let Some(w) = protocol::wrap_ba_command(&case_q) {
-        tokio::time::sleep(Duration::from_millis(30)).await;
-        let _ = write_raw(peripheral, &w).await;
-    }
-    Ok(())
+    write_raw(peripheral, &protocol::battery_query_frame()).await
 }
 
-/// Explicit battery refresh. Sends BA02/BA27 and waits for AA02/AA27 notify.
+/// Explicit battery refresh. Sends the canonical wrapped BA02 and waits for
+/// AA02/AA27 notifications from the BP1 Ultra.
 pub async fn query_battery() -> Result<BatteryState, String> {
     // Demo mode: return seeded mock values
     {
@@ -1553,7 +1772,7 @@ pub async fn query_battery() -> Result<BatteryState, String> {
 
 pub async fn get_scan_status() -> ScanStatus {
     let state = BLE.lock().await;
-    let mut devices: Vec<_> = state.devices.values().cloned().collect();
+    let mut devices = visible_scan_devices(state.devices.values().cloned().collect());
     devices.sort_by(|a, b| match (a.is_baseus, b.is_baseus) {
         (true, false) => std::cmp::Ordering::Less,
         (false, true) => std::cmp::Ordering::Greater,
@@ -1563,6 +1782,71 @@ pub async fn get_scan_status() -> ScanStatus {
         scanning: state.scanning,
         devices,
         error: None,
+    }
+}
+
+fn has_advertised_control_service(device: &BleDevice) -> bool {
+    device
+        .advertised_services
+        .iter()
+        .any(|uuid| uuid.eq_ignore_ascii_case(protocol::advertisement::BASEUS_SERVICE_UUID))
+}
+
+fn visible_scan_devices(all: Vec<BleDevice>) -> Vec<BleDevice> {
+    let mut visible = Vec::new();
+    for device in all {
+        let duplicate = visible.iter().position(|shown: &BleDevice| {
+            shown.name.eq_ignore_ascii_case(&device.name)
+                && shown.model_id == device.model_id
+        });
+        let Some(index) = duplicate else {
+            visible.push(device);
+            continue;
+        };
+        let current_is_control = has_advertised_control_service(&visible[index]);
+        let incoming_is_control = has_advertised_control_service(&device);
+        if (incoming_is_control && !current_is_control)
+            || (incoming_is_control == current_is_control && device.rssi > visible[index].rssi)
+        {
+            visible[index] = device;
+        }
+    }
+    visible
+}
+
+#[cfg(test)]
+mod scan_tests {
+    use super::*;
+
+    fn device(id: &str, rssi: i16, services: &[&str]) -> BleDevice {
+        BleDevice {
+            id: id.into(),
+            name: "Baseus Bass BP1 Pro".into(),
+            address: id.into(),
+            rssi,
+            is_baseus: true,
+            connected: false,
+            model_id: Some("bass-bp1-pro".into()),
+            model_name: Some("Baseus Bass BP1 Pro".into()),
+            device_profile: protocol::profile_for(Some("bass-bp1-pro"), Some("Baseus Bass BP1 Pro"), None),
+            support: Some("verified".into()),
+            hint: None,
+            image_url: None,
+            image_provenance: "fallback".into(),
+            color_variants: Vec::new(),
+            serial: None,
+            advertised_services: services.iter().map(|s| (*s).into()).collect(),
+        }
+    }
+
+    #[test]
+    fn scan_list_prefers_control_service_over_stronger_audio_sibling() {
+        let devices = visible_scan_devices(vec![
+            device("audio", -45, &[]),
+            device("control", -70, &[protocol::advertisement::BASEUS_SERVICE_UUID]),
+        ]);
+        assert_eq!(devices.len(), 1);
+        assert_eq!(devices[0].id, "control");
     }
 }
 
@@ -1655,6 +1939,8 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
         .iter()
         .map(|(id, name, rssi)| {
             let (is_baseus, model_id, model_name, support) = model_fields(name);
+            let (image_url, image_provenance, color_variants) = model_presentation(model_id.as_deref());
+            let device_profile = protocol::profile_for(model_id.as_deref(), model_name.as_deref(), None);
             BleDevice {
                 id: (*id).into(),
                 name: (*name).into(),
@@ -1664,8 +1950,14 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
                 connected: false,
                 model_id,
                 model_name,
+                device_profile,
                 support,
                 hint: None,
+                image_url,
+                image_provenance,
+                color_variants,
+                serial: None,
+                advertised_services: Vec::new(),
             }
         })
         .collect();

@@ -6,19 +6,10 @@ import { invoke, listen, type UnlistenFn } from "./tauri";
 import type { BatteryData } from "../components/Battery";
 
 export type AncMode = "off" | "anc" | "transparency";
+export type TransparencyMode = "full" | "voice";
+export type NoiseEnvironment = 101 | 102 | 103 | 108;
 export type SpatialMode = "off" | "music" | "cinema" | "game";
-export type EqPresetId =
-  | "classic"
-  | "bass"
-  | "hifi"
-  | "pop"
-  | "jazz"
-  | "classical"
-  | "clear"
-  | "acoustic"
-  | "bassReduce"
-  | "trebleReduce"
-  | "voice";
+export type EqPresetId = string;
 
 export interface DeviceBattery {
   left: number;
@@ -48,12 +39,73 @@ export async function queryBattery(): Promise<DeviceBattery> {
   return invoke<DeviceBattery>("query_battery");
 }
 
-export async function setAncMode(mode: AncMode, strength = 70): Promise<void> {
-  await invoke("set_anc_mode", { mode, strength });
+export async function setAncMode(
+  mode: AncMode,
+  strength = 70,
+  parameter?: number
+): Promise<void> {
+  await invoke("set_anc_mode", { mode, strength, parameter });
+}
+
+export interface ListeningStateRequest {
+  mode: AncMode;
+  transparencyMode: TransparencyMode;
+  adaptive: boolean;
+  environment: NoiseEnvironment;
+  level: number;
+}
+
+export async function setListeningState(state: ListeningStateRequest): Promise<void> {
+  await invoke("set_listening_state", state as unknown as Record<string, unknown>);
+}
+
+export interface NoiseProfile {
+  adaptive: boolean;
+  maxLevel: 0 | 3 | 5;
+}
+
+export function profileNoise(profile?: {
+  supportsAdaptive: boolean;
+  maxCustomLevel: number;
+}): NoiseProfile {
+  if (!profile) return { adaptive: false, maxLevel: 0 };
+  return {
+    adaptive: profile.supportsAdaptive,
+    maxLevel: profile.maxCustomLevel === 3 ? 3 : profile.maxCustomLevel > 0 ? 5 : 0,
+  };
+}
+
+const THREE_LEVEL_MODELS = new Set(["eh10-nc-lite", "bh1-nc-lite"]);
+
+export function noiseProfile(modelId?: string | null, hasAnc = true): NoiseProfile {
+  if (!hasAnc) return { adaptive: false, maxLevel: 3 };
+  return {
+    adaptive: true,
+    maxLevel: THREE_LEVEL_MODELS.has(modelId ?? "") ? 3 : 5,
+  };
 }
 
 export async function setEqPreset(preset: EqPresetId | string): Promise<void> {
   await invoke("set_eq_preset", { preset });
+}
+
+export async function setEqIndex(index: number): Promise<void> {
+  await invoke("set_eq_index", { index });
+}
+
+export interface EqBandPayload {
+  frequency: number;
+  qValue: number;
+  gain: number;
+  filter: number;
+}
+
+export async function setCustomEq(
+  bands: EqBandPayload[],
+  dictSort = 101,
+  anc = false
+): Promise<void> {
+  await invoke("set_custom_eq", { bands, dictSort, anc });
 }
 
 export async function setGameMode(enabled: boolean): Promise<void> {
@@ -68,8 +120,19 @@ export async function setBassBoost(level: number): Promise<void> {
   await invoke("set_bass_boost", { level });
 }
 
-export async function findBuds(): Promise<void> {
-  await invoke("find_buds");
+export async function setLdac(enabled: boolean): Promise<void> {
+  await invoke("set_ldac", { enabled });
+}
+
+export async function setHearingProtection(
+  enabled: boolean,
+  level = 1
+): Promise<void> {
+  await invoke("set_hearing_protection", { enabled, level });
+}
+
+export async function findBuds(start = true): Promise<void> {
+  await invoke("find_buds", { start });
 }
 
 export function onBattery(cb: (b: DeviceBattery) => void): Promise<UnlistenFn> {
@@ -97,6 +160,23 @@ export function onEq(cb: (preset: string) => void): Promise<UnlistenFn> {
 
 export function onGameMode(cb: (on: boolean) => void): Promise<UnlistenFn> {
   return listen<boolean>("device://game", (e) => cb(!!e.payload));
+}
+
+export function onBassBoost(cb: (level: number) => void): Promise<UnlistenFn> {
+  return listen<number>("device://bass-boost", (e) => cb(Number(e.payload) || 0));
+}
+
+export function onLdac(cb: (enabled: boolean) => void): Promise<UnlistenFn> {
+  return listen<boolean>("device://ldac", (e) => cb(!!e.payload));
+}
+
+export function onHearingProtection(
+  cb: (state: { enabled: boolean; level: number }) => void
+): Promise<UnlistenFn> {
+  return listen<{ enabled: boolean; level: number }>(
+    "device://hearing-protection",
+    (e) => cb(e.payload)
+  );
 }
 
 export function onRawNotify(

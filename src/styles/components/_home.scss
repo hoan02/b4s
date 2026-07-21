@@ -281,10 +281,55 @@
 
     [data-theme="dark"] & {
       color: var(--brand);
-      span {
-        color: var(--text);
-      }
+      span { color: var(--text); }
     }
+  }
+}
+
+.action-chip.active {
+  background: color-mix(in srgb, $accent-blue 14%, var(--bg-card));
+  border-color: $accent-blue;
+  color: $accent-blue;
+  animation: find-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes find-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 120, 246, .18); }
+  50% { box-shadow: 0 0 0 6px rgba(52, 120, 246, 0); }
+}
+
+.home-find-action {
+  width: 100%;
+  margin: 4px 0 8px;
+}
+
+.find-row {
+  .list-ico { color: $accent-blue; }
+  &.active { background: color-mix(in srgb, $accent-blue 10%, var(--bg-card)); }
+}
+
+.find-action-button {
+  @include button-base;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, $accent-blue 30%, var(--border));
+  border-radius: $radius-lg;
+  background: var(--bg-card);
+  color: $accent-blue;
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+  transition: background $transition-fast, border-color $transition-fast, transform $transition-fast;
+
+  &:active { transform: scale(0.98); }
+
+  &.active {
+    background: color-mix(in srgb, $accent-blue 12%, var(--bg-card));
+    border-color: $accent-blue;
   }
 }
 
@@ -309,6 +354,123 @@
     width: 100%;
     accent-color: $brand-yellow;
   }
+}
+
+.noise-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: $radius-md;
+
+  > button {
+    @include button-base;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 9px 11px;
+    border: 0.5px solid var(--border);
+    border-radius: $radius-md;
+    background: var(--bg-fill);
+    color: var(--text-2);
+    text-align: left;
+    span, small { display: block; }
+    span { font-size: $fs-sm; font-weight: $fw-medium; }
+    small { margin-top: 2px; color: var(--text-3); font-size: 10px; }
+    &.active { border-color: var(--brand); background: var(--brand-soft); color: var(--text); }
+  }
+}
+
+.noise-adaptive-row, .noise-level-heading {
+  @include flex-between;
+  gap: 12px;
+  strong, span { font-size: $fs-sm; color: var(--text); }
+  small { display: block; margin-top: 2px; font-size: 10px; color: var(--text-3); }
+}
+
+.noise-environments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+.noise-environments-new { display: none !important; }
+.noise-environments:not(.noise-environments-new):not(.noise-environments-card) { display: none; }
+.noise-reduction-panel { display: flex; flex-direction: column; }
+.noise-reduction-panel .noise-adaptive-row { order: 1; }
+.noise-reduction-panel .noise-environments-card,
+.noise-reduction-panel .noise-levels { order: 2; }
+.noise-environments button {
+  @include button-base;
+  min-height: 84px;
+  padding: 10px;
+  border: 0.5px solid var(--border);
+  border-radius: $radius-md;
+  background: var(--bg-fill);
+  color: var(--text-2);
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  text-align: left;
+  white-space: nowrap;
+  svg { flex: 0 0 auto; color: var(--text-2); }
+  strong { flex: 0 0 auto; font-size: $fs-xs; font-weight: $fw-semibold; }
+  small { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 10px; line-height: 1.25; color: var(--text-3); }
+  &.active { border-color: var(--brand); background: var(--brand-soft); color: var(--text); }
+}
+
+.noise-environments-card button {
+  min-height: 68px;
+  padding: 9px;
+  gap: 8px;
+  white-space: normal;
+
+  span {
+    min-width: 0;
+    display: block;
+  }
+
+  strong, small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong { font-size: $fs-xs; }
+  small { margin-top: 3px; }
+}
+
+@media (max-width: 420px) {
+  .noise-environments {
+    grid-template-columns: 1fr;
+  }
+
+  .noise-environments button {
+    min-height: 72px;
+  }
+}
+
+// The four adaptive environments stay a compact 2x2 choice grid.
+.noise-environments-card {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.noise-levels { display: grid; gap: 10px; }
+.noise-level-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.noise-level-buttons button {
+  @include button-base;
+  min-height: 42px;
+  border: 0.5px solid var(--border);
+  border-radius: $radius-md;
+  background: var(--bg-fill);
+  color: var(--text-2);
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+  &.active { border-color: var(--brand); background: var(--brand-soft); color: var(--text); }
 }
 
 // —— List rows (not squares) ——

@@ -7,9 +7,12 @@ import type { EqPresetId } from "../lib/device";
 import {
   EQ_BANDS,
   EQ_PRESETS,
+  type CustomEqPreset,
   clampBand,
   curveForPreset,
   defaultCustomBands,
+  loadCustomEqPresets,
+  saveCustomEqPresets,
 } from "../lib/eq";
 import { IconBack } from "./Icons";
 
@@ -17,10 +20,11 @@ interface Props {
   eqActive: EqPresetId;
   customBands: number[];
   customActive: boolean;
+  storageKey: string;
   onBack: () => void;
   onEq: (id: EqPresetId) => void;
-  onCustomBands: (bands: number[]) => void;
-  onApplyCustom: () => void;
+  onCustomBands: (bands: number[]) => boolean;
+  onApplyCustom: (bands: number[], label: string) => void;
   onResetCustom: () => void;
 }
 
@@ -29,16 +33,54 @@ const EqPanel: Component<Props> = (props) => {
     props.customActive ? "custom" : "preset"
   );
   const [localBands, setLocalBands] = createSignal(
-    props.customBands.length === 5
+    props.customBands.length === EQ_BANDS.length
       ? props.customBands.slice()
       : defaultCustomBands()
   );
+  const [customPresets, setCustomPresets] = createSignal<CustomEqPreset[]>(
+    loadCustomEqPresets(props.storageKey)
+  );
+  const [customName, setCustomName] = createSignal("");
+  const [customError, setCustomError] = createSignal("");
 
   createEffect(() => {
-    if (props.customBands.length === 5) {
+    if (props.customBands.length === EQ_BANDS.length) {
       setLocalBands(props.customBands.slice());
     }
   });
+
+  const selectCustom = (preset: CustomEqPreset) => {
+    if (props.onCustomBands(preset.bands)) {
+      setLocalBands(preset.bands.slice());
+      setCustomName(preset.label);
+    }
+  };
+
+  const saveCustom = () => {
+    const label = customName().trim();
+    if (!label) {
+      setCustomError("Hãy đặt tên cho cấu hình EQ");
+      return;
+    }
+    if (customPresets().some((p) => p.label.toLowerCase() === label.toLowerCase())) {
+      setCustomError("Tên EQ này đã tồn tại");
+      return;
+    }
+    if (customPresets().length >= 2) {
+      setCustomError("Bạn có thể lưu tối đa 2 cấu hình EQ tùy chỉnh");
+      return;
+    }
+    const next = [...customPresets(), { id: `custom-${Date.now()}`, label, bands: localBands().slice() }];
+    setCustomPresets(next);
+    saveCustomEqPresets(props.storageKey, next);
+    setCustomError("");
+  };
+
+  const deleteCustom = (id: string) => {
+    const next = customPresets().filter((p) => p.id !== id);
+    setCustomPresets(next);
+    saveCustomEqPresets(props.storageKey, next);
+  };
 
   const previewCurve = () =>
     tab() === "custom"
@@ -48,16 +90,16 @@ const EqPanel: Component<Props> = (props) => {
   const setBand = (i: number, v: number) => {
     const next = localBands().slice();
     next[i] = clampBand(v);
-    setLocalBands(next);
-    props.onCustomBands(next);
+    if (props.onCustomBands(next)) {
+      setLocalBands(next);
+    }
   };
 
   return (
     <div class="eq-panel">
       <div class="screen-nav">
-        <button type="button" class="screen-back" onClick={() => props.onBack()}>
+        <button type="button" class="screen-back" aria-label="Quay lại" onClick={() => props.onBack()}>
           <IconBack size={20} />
-          Xong
         </button>
         <span class="screen-title">EQ</span>
         <div class="screen-nav-spacer" />
@@ -88,7 +130,7 @@ const EqPanel: Component<Props> = (props) => {
         </div>
         <p class="eq-preview-hint">
           {tab() === "custom"
-            ? "Tùy chỉnh · 5 băng tần"
+            ? "Tùy chỉnh · 8 băng tần"
             : EQ_PRESETS.find((p) => p.id === props.eqActive)?.label ??
               "Preset"}
         </p>
@@ -152,6 +194,28 @@ const EqPanel: Component<Props> = (props) => {
 
       <Show when={tab() === "custom"}>
         <p class="more-label">Tùy chỉnh EQ</p>
+        <Show when={customPresets().length > 0}>
+          <div class="eq-saved-list">
+            <For each={customPresets()}>
+              {(preset) => (
+                <div class="eq-saved-item">
+                  <button type="button" onClick={() => selectCustom(preset)}>{preset.label}</button>
+                  <button type="button" aria-label={`Xóa ${preset.label}`} onClick={() => deleteCustom(preset.id)}>×</button>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
+        <div class="eq-name-row">
+          <input
+            value={customName()}
+            placeholder="Tên cấu hình, ví dụ: Nhạc của tôi"
+            onInput={(e) => setCustomName(e.currentTarget.value)}
+            aria-label="Tên cấu hình EQ"
+          />
+          <button type="button" class="eq-btn ghost" onClick={saveCustom}>Lưu</button>
+        </div>
+        <Show when={customError()}><p class="eq-inline-error">{customError()}</p></Show>
         <div class="eq-custom-card">
           <div class="eq-sliders">
             <For each={[...EQ_BANDS]}>
@@ -163,8 +227,8 @@ const EqPanel: Component<Props> = (props) => {
                   </span>
                   <input
                     type="range"
-                    min={-6}
-                    max={6}
+                    min={-12}
+                    max={12}
                     step={1}
                     value={localBands()[i()]}
                     class="eq-vslider"
@@ -187,9 +251,6 @@ const EqPanel: Component<Props> = (props) => {
               type="button"
               class="eq-btn ghost"
               onClick={() => {
-                const z = defaultCustomBands();
-                setLocalBands(z);
-                props.onCustomBands(z);
                 props.onResetCustom();
               }}
             >
@@ -198,7 +259,7 @@ const EqPanel: Component<Props> = (props) => {
             <button
               type="button"
               class="eq-btn primary"
-              onClick={() => props.onApplyCustom()}
+              onClick={() => props.onApplyCustom(localBands(), customName().trim() || "Tùy chỉnh")}
             >
               Áp dụng
             </button>

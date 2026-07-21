@@ -187,15 +187,17 @@ const ListeningPanel: Component<Props> = (props) => {
                 <span class="setting-title">Tăng âm trầm</span>
                 <span class="setting-desc">Bass boost · 0–3</span>
               </div>
-              <div class="level-pills">
-                <For each={[0, 1, 2, 3]}>
+                <div class="level-pills" aria-label="Mức tăng âm trầm">
+                <For each={[{ value: 0, label: "Tắt" }, { value: 1, label: "Nhẹ" }, { value: 2, label: "Vừa" }, { value: 3, label: "Mạnh" }]}>
                   {(lv) => (
                     <button
                       type="button"
-                      class={props.bassBoost === lv ? "active" : ""}
-                      onClick={() => props.onBassBoost(lv)}
+                      class={props.bassBoost === lv.value ? "active" : ""}
+                      aria-pressed={props.bassBoost === lv.value}
+                      onClick={() => props.onBassBoost(lv.value)}
                     >
-                      {lv}
+                      <span>{lv.label}</span>
+                      <small>{lv.value}</small>
                     </button>
                   )}
                 </For>

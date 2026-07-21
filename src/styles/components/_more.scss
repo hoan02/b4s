@@ -115,13 +115,22 @@
   gap: 4px;
   button {
     @include button-base;
-    min-width: 32px;
-    height: 32px;
+    min-width: 54px;
+    height: 40px;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
     border-radius: $radius-sm;
     background: var(--bg-fill-2);
     color: var(--text-2);
     border: none;
     font-size: $fs-sm;
+    line-height: 1.05;
+    small {
+      font-size: 9px;
+      opacity: .65;
+    }
     &.active {
       background: $brand-yellow;
       color: #1d1d1f;

@@ -166,10 +166,22 @@ impl SpatialMode {
 // Commands (app → device)
 // ---------------------------------------------------------------------------
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EqBand {
+    pub frequency: u16,
+    pub q_value: f32,
+    pub gain: f32,
+    pub filter: u8,
+}
+
 #[derive(Debug, Clone)]
 pub enum Command {
     SetAnc { mode: AncMode, level: u8 },
+    SetNoise { mode: AncMode, parameter: u8 },
     SetEq(EqPreset),
+    SetEqIndex(u8),
+    SetCustomEq { dict_sort: u8, anc: bool, bands: Vec<EqBand> },
     QueryEq,
     /// Official app: BA02 → battery report AA02
     QueryBattery,
@@ -178,7 +190,11 @@ pub enum Command {
     SetSpatial(SpatialMode),
     /// Bass boost electronic: 0–3 (best-effort BA opcode)
     SetBassBoost(u8),
-    FindBuds,
+    SetLdac(bool),
+    SetHearingProtection { enabled: bool, level: u8 },
+    QueryLdac,
+    QueryHearingProtection,
+    FindBuds(bool),
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +208,9 @@ pub enum DeviceEvent {
     Anc(AncMode),
     Eq(EqPreset),
     GameMode(bool),
+    BassBoost(u8),
+    Ldac(bool),
+    HearingProtection { enabled: bool, level: u8 },
     /// Raw / unknown — forwarded for debug
     Unknown { cmd: u8, payload: Vec<u8> },
 }

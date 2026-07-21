@@ -13,17 +13,19 @@ export type DeviceVisual = {
 /** Generic earbud image asset. */
 export function resolveDeviceImage(
   _modelId?: string | null,
-  bleName?: string | null
+  bleName?: string | null,
+  imageUrl?: string | null
 ): DeviceVisual {
-  return {
-    src: defaultEar,
+    return {
+    src: imageUrl?.trim() || defaultEar,
     alt: bleName?.trim() || "Earbuds",
   };
 }
 
 export function resolveDeviceThumb(
   modelId?: string | null,
-  bleName?: string | null
+  bleName?: string | null,
+  imageUrl?: string | null
 ): DeviceVisual {
-  return resolveDeviceImage(modelId, bleName);
+  return resolveDeviceImage(modelId, bleName, imageUrl);
 }
