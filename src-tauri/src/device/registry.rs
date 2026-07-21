@@ -8,6 +8,7 @@ pub struct DeviceIdentity {
     pub manufacturer_data: Vec<u8>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolutionSource {
     CatalogName,
@@ -21,11 +22,14 @@ pub struct ResolvedDevice {
     pub identity: DeviceIdentity,
     pub model: Option<ModelInfo>,
     pub profile: DeviceProfile,
+    #[allow(dead_code)]
     pub source: ResolutionSource,
 }
 
+#[allow(dead_code)]
 pub struct DeviceRegistry;
 
+#[allow(dead_code)]
 impl DeviceRegistry {
     pub fn resolve(identity: DeviceIdentity) -> ResolvedDevice {
         let model = crate::protocol::identify_model(&identity.name);

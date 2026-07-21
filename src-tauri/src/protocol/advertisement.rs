@@ -1,5 +1,7 @@
 //! Pure parsing of BLE advertisement data used by the Baseus discovery flow.
 
+#![allow(dead_code)]
+
 pub const BASEUS_SERVICE_UUID: &str = "53527AA4-29F7-AE11-4E74-997334782568";
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -82,6 +82,7 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
     }
 }
 
+#[allow(dead_code)]
 pub fn init_state_payload() -> Vec<u8> {
     b"#InitState:".to_vec()
 }

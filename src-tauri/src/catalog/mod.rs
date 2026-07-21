@@ -1,6 +1,6 @@
 mod types;
 
-pub use types::{EqPresetProfile, EqProfile, ModelProfile, NoiseProfile};
+pub use types::ModelProfile;
 
 const BP1_PROFILE: &str = include_str!("../../catalog/models/bass-bp1-pro.json");
 
@@ -12,6 +12,7 @@ pub fn profile_for(model_id: &str) -> Option<ModelProfile> {
     all_profiles().into_iter().find(|profile| profile.id == model_id)
 }
 
+#[allow(dead_code)]
 pub fn validate() -> Result<(), String> {
     let profiles = all_profiles();
     let mut ids = std::collections::HashSet::new();
