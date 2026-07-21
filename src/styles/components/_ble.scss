@@ -78,6 +78,14 @@
   gap: 6px;
   padding-top: 8px;
 
+  .ble-app-logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    border-radius: 18px;
+    margin: 8px 0 10px;
+  }
+
   h2 {
     font-size: $fs-xl;
     font-weight: $fw-semibold;
@@ -94,6 +102,49 @@
     margin: 0;
     padding: 0 12px;
   }
+}
+
+.ble-hero.bluetooth-off {
+  h2,
+  .ble-subtitle { display: none; }
+}
+
+.ble-scan-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 5px 11px;
+  border: 0.5px solid var(--border);
+  border-radius: $radius-full;
+  background: var(--bg-fill-2);
+  color: var(--text-2);
+  font-size: $fs-xs;
+  font-weight: $fw-medium;
+}
+
+.scan-bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 14px;
+
+  i {
+    display: block;
+    width: 3px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--brand);
+    animation: scan-bar 0.9s ease-in-out infinite;
+
+    &:nth-child(2) { height: 11px; animation-delay: 0.15s; }
+    &:nth-child(3) { height: 8px; animation-delay: 0.3s; }
+  }
+}
+
+@keyframes scan-bar {
+  0%, 100% { transform: scaleY(0.65); opacity: 0.45; }
+  50% { transform: scaleY(1); opacity: 1; }
 }
 
 .ble-radar {
@@ -148,6 +199,10 @@
   flex-wrap: wrap;
   width: 100%;
 }
+
+.ble-radar:not(.on) { display: none; }
+
+.ble-controls.bluetooth-off { display: none; }
 
 .ble-btn {
   @include button-base;

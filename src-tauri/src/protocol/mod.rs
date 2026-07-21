@@ -13,19 +13,23 @@
 //!   Notify  : 654b749c-e37f-ae1f-ebab-40ca133e3690
 
 mod framing;
+pub mod advertisement;
 mod types;
 mod bp1_pro;
 mod crc_table;
 pub mod wrap_v2;
 pub mod models;
+pub mod router;
 
 pub use framing::Frame;
 pub use types::*;
 pub use bp1_pro::Bp1ProAnc;
 pub use models::{
-    catalog_json, identify as identify_model, looks_like_baseus, ModelInfo, SupportLevel,
+    catalog_json, identify as identify_model, looks_like_baseus, profile_for, DeviceProfile,
+    ModelInfo, ProtocolFamily, SupportLevel,
 };
-pub use wrap_v2::{needs_v2_wrap, unwrap_notify, wrap_ba_command};
+pub use wrap_v2::{battery_query_frame, needs_v2_wrap, unwrap_notify, wrap_ba_command};
+pub use router::{encode_feature, encode_listening, FeatureCommand, ListeningCommand};
 
 /// Encode a bare BA command (no 789C wrap).
 pub fn encode_command(cmd: Command) -> Vec<u8> {
@@ -33,8 +37,15 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
         Command::SetAnc { mode, level } => {
             Frame::write(0x34, &[mode.to_byte(), level]).encode_write()
         }
+        Command::SetNoise { mode, parameter } => {
+            Frame::write(0x34, &[mode.to_byte(), parameter]).encode_write()
+        }
         Command::SetEq(preset) => {
             Frame::write(0x43, &[preset.to_byte()]).encode_write()
+        }
+        Command::SetEqIndex(index) => Frame::write(0x43, &[index]).encode_write(),
+        Command::SetCustomEq { dict_sort, anc, bands } => {
+            Bp1ProAnc::cmd_set_custom_eq(dict_sort, anc, &bands)
         }
         Command::QueryEq => {
             Frame::write(0x42, &[]).encode_write()
@@ -51,16 +62,28 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             Frame::write(0x43, &[mode.to_byte()]).encode_write()
         }
         Command::SetBassBoost(level) => {
-            // Best-effort: reuse EQ bass when level>0 else classic
-            // Real bass-boost level may be model-specific; send BA43 bass/classic
-            let b = if level == 0 { 0u8 } else { 1u8 };
-            Frame::write(0x43, &[b]).encode_write()
+            let level = level.min(3);
+            Frame::write(0x54, &[if level > 0 { 0x01 } else { 0x00 }, level]).encode_write()
         }
-        Command::FindBuds => {
-            // Official app 2.14.1: both buds start = BA100201
-            Frame::write(0x10, &[0x02, 0x01]).encode_write()
+        Command::SetLdac(enabled) => {
+            // LdacSettingActivity.K0: BA75 + 00 when enabled, 01 when disabled.
+            Frame::write(0x75, &[if enabled { 0x00 } else { 0x01 }]).encode_write()
+        }
+        Command::SetHearingProtection { enabled, level } => {
+            Frame::write(0x94, &[if enabled { 0x01 } else { 0x00 }, level]).encode_write()
+        }
+        Command::QueryLdac => Frame::write(0x74, &[]).encode_write(),
+        Command::QueryHearingProtection => Frame::write(0x93, &[]).encode_write(),
+        Command::FindBuds(start) => {
+            // Official app 2.14.1: BA100201 starts both buds; the same command
+            // with the final flag cleared stops the alert.
+            Frame::write(0x10, &[0x02, if start { 0x01 } else { 0x00 }]).encode_write()
         }
     }
+}
+
+pub fn init_state_payload() -> Vec<u8> {
+    b"#InitState:".to_vec()
 }
 
 /// Decode a notification payload from the device (bare AA or 789C-wrapped).

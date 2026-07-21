@@ -1,11 +1,12 @@
 import { Component, createSignal, Show, onMount, onCleanup } from "solid-js";
-import type { AncMode, EqPresetId, SpatialMode } from "./lib/device";
+import type { AncMode, NoiseEnvironment, EqPresetId, SpatialMode, TransparencyMode } from "./lib/device";
 import BlePairing from "./components/BlePairing";
 import HomePanel from "./components/HomePanel";
 import MorePanel from "./components/MorePanel";
 import EqPanel from "./components/EqPanel";
 import Settings from "./components/Settings";
 import ToastHost from "./components/ToastHost";
+import ConfirmDialog from "./components/ConfirmDialog";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth } from "./lib/ble";
 import {
@@ -20,19 +21,26 @@ import {
 import {
   fetchBattery,
   queryBattery,
-  setAncMode,
-  setEqPreset,
+  setListeningState,
+  setEqIndex,
+  setCustomEq,
   setGameMode,
   setSpatialMode,
   setBassBoost,
+  setLdac as sendLdac,
+  setHearingProtection as sendHearingProtection,
   findBuds,
+  profileNoise,
   onBattery,
   onAnc,
   onEq,
   onGameMode,
+  onBassBoost,
+  onLdac,
+  onHearingProtection,
   toBatteryData,
 } from "./lib/device";
-import { EQ_LABEL, defaultCustomBands } from "./lib/eq";
+import { EQ_BANDS, EQ_LABEL, defaultCustomBands, presetSort } from "./lib/eq";
 import { getAppInfo } from "./lib/app";
 import {
   applyTheme,
@@ -45,6 +53,11 @@ import { IconBack } from "./components/Icons";
 import "./styles/main.scss";
 
 type View = "home" | "more" | "eq" | "settings";
+type PendingEqAction =
+  | { kind: "preset"; preset: EqPresetId }
+  | { kind: "customBands"; bands: number[] }
+  | { kind: "applyCustom" }
+  | { kind: "resetCustom" };
 
 const App: Component = () => {
   const [view, setView] = createSignal<View>("home");
@@ -60,17 +73,27 @@ const App: Component = () => {
   });
   const [ancMode, setAncModeUi] = createSignal<AncMode>("off");
   const [ancStrength, setAncStrength] = createSignal(70);
+  const [transparencyMode, setTransparencyMode] = createSignal<TransparencyMode>("full");
+  const [adaptiveNoise, setAdaptiveNoise] = createSignal(true);
+  const [noiseEnvironment, setNoiseEnvironment] = createSignal<NoiseEnvironment>(102);
+  const [noiseLevel, setNoiseLevel] = createSignal(3);
   const [eqActive, setEqActive] = createSignal<EqPresetId>("classic");
   const [eqCustomBands, setEqCustomBands] = createSignal(defaultCustomBands());
   const [eqCustomActive, setEqCustomActive] = createSignal(false);
   const [gameOn, setGameOn] = createSignal(false);
+  const [findActive, setFindActive] = createSignal(false);
+  const [findConfirmOpen, setFindConfirmOpen] = createSignal(false);
+  const [findDialogMode, setFindDialogMode] = createSignal<"confirm" | "active">("confirm");
   const [spatialOn, setSpatialOn] = createSignal(false);
   const [spatialMode, setSpatialModeUi] = createSignal<SpatialMode>("music");
   const [bassBoost, setBassBoostUi] = createSignal(0);
   const [ldac, setLdac] = createSignal(false);
   const [hearingProtect, setHearingProtect] = createSignal(false);
+  const [pendingEqAction, setPendingEqAction] = createSignal<PendingEqAction | null>(null);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
+  const noiseCaps = () => device()?.deviceProfile?.noise;
+  const noiseProfile = () => profileNoise(noiseCaps());
 
   let unsubs: Array<() => void> = [];
   let linkPoll: number | undefined;
@@ -191,6 +214,9 @@ const App: Component = () => {
         })
       );
       unsubs.push(await onGameMode((on) => setGameOn(on)));
+      unsubs.push(await onBassBoost((level) => setBassBoostUi(level)));
+      unsubs.push(await onLdac((on) => setLdac(on)));
+      unsubs.push(await onHearingProtection((state) => setHearingProtect(state.enabled)));
     } catch (e) {
       console.warn("[App] events", e);
     }
@@ -205,6 +231,7 @@ const App: Component = () => {
   const handleConnected = async (dev: BleDevice) => {
     setDevice(dev);
     setConnected(true);
+    setFindActive(false);
     setControlError(null);
     setView("home");
     startLinkPoll();
@@ -226,7 +253,13 @@ const App: Component = () => {
     setAncModeUi(mode);
     setControlError(null);
     try {
-      await setAncMode(mode, ancStrength());
+      await setListeningState({
+        mode,
+        transparencyMode: transparencyMode(),
+        adaptive: adaptiveNoise(),
+        environment: noiseEnvironment(),
+        level: noiseLevel(),
+      });
       applyLink(await getLinkHealth());
     } catch (e) {
       setControlError(String(e));
@@ -237,17 +270,23 @@ const App: Component = () => {
   const handleAncStrength = async (value: number) => {
     setAncStrength(value);
     try {
-      await setAncMode(ancMode(), value);
+      await setListeningState({
+        mode: ancMode(),
+        transparencyMode: transparencyMode(),
+        adaptive: adaptiveNoise(),
+        environment: noiseEnvironment(),
+        level: noiseLevel(),
+      });
     } catch (e) {
       setControlError(String(e));
     }
   };
 
-  const handleEq = async (preset: EqPresetId) => {
+  const applyEqPreset = async (preset: EqPresetId) => {
     setEqActive(preset);
     setEqCustomActive(false);
     try {
-      await setEqPreset(preset);
+      await setEqIndex(presetSort(preset));
       applyLink(await getLinkHealth());
       notify(`EQ · ${EQ_LABEL[preset] ?? preset}`, "success");
     } catch (e) {
@@ -255,27 +294,54 @@ const App: Component = () => {
     }
   };
 
-  const handleApplyCustomEq = async () => {
+  const requestEqAction = (action: PendingEqAction): boolean => {
+    if (!spatialOn()) return true;
+    setPendingEqAction(action);
+    return false;
+  };
+
+  const handleEq = async (preset: EqPresetId) => {
+    if (!requestEqAction({ kind: "preset", preset })) return;
+    await applyEqPreset(preset);
+  };
+
+  const handleCustomBands = (bands: number[]) => {
+    if (!requestEqAction({ kind: "customBands", bands })) return false;
+    setEqCustomBands(bands);
+    return true;
+  };
+
+  const handleApplyCustomEq = async (bands = eqCustomBands(), label = "Tùy chỉnh") => {
+    if (!requestEqAction({ kind: "applyCustom" })) return;
     setEqCustomActive(true);
+    const customLabel = label.trim() || "Tùy chỉnh";
     // Official Self-Define uses multi-band frames; desktop best-effort:
     // reset path BA43 00 then stay on custom UI (curve kept locally).
     try {
-      await setEqPreset("classic");
+      await setCustomEq(
+        bands.map((gain, index) => ({
+          frequency: EQ_BANDS[index].frequency,
+          qValue: 1,
+          gain,
+          filter: 1,
+        }))
+      );
       notify(
         "Đã lưu đường cong tùy chỉnh (BLE custom full còn best-effort)",
-        "warn",
-        "EQ custom"
+        "success",
+        `EQ custom · ${customLabel}`
       );
     } catch (e) {
-      notify(String(e), "error");
+      notify(String(e), "error", customLabel);
     }
   };
 
   const handleResetCustomEq = async () => {
+    if (!requestEqAction({ kind: "resetCustom" })) return;
     setEqCustomBands(defaultCustomBands());
     setEqCustomActive(false);
     try {
-      await setEqPreset("classic");
+      await setEqIndex(0);
       notify("Đã đặt lại EQ", "info");
     } catch (e) {
       notify(String(e), "error");
@@ -320,26 +386,120 @@ const App: Component = () => {
     }
   };
 
-  const handleFindBuds = async () => {
+  const startFindBuds = async () => {
     try {
-      await findBuds();
-      notify("Đang phát âm tìm tai nghe", "info", "Tìm tai");
+      await findBuds(true);
+      setFindActive(true);
+      setFindDialogMode("active");
+      notify("Tai nghe đang phát âm thanh tìm kiếm", "info", "Đang tìm tai");
     } catch (e) {
       notify(String(e), "error");
     }
   };
 
-  const handleRefreshBattery = async () => {
+  const stopFindBuds = async () => {
     try {
-      const b = toBatteryData(await queryBattery());
-      setBattery(b);
-      applyLink(await getLinkHealth());
-      if (b.left === 0 && b.right === 0 && b.case === 0) {
-        notify("Chưa có % pin — mở nắp hộp / đeo tai", "warn", "Pin");
-      } else {
-        notify(`L ${b.left}% · R ${b.right}% · Hộp ${b.case}%`, "success", "Pin");
-      }
+      await findBuds(false);
+      setFindActive(false);
+      setFindConfirmOpen(false);
+      setFindDialogMode("confirm");
+      notify("Đã dừng âm thanh tìm tai nghe", "info", "Đã dừng");
     } catch (e) {
+      notify(String(e), "error");
+    }
+  };
+
+  const handleFindBuds = async () => {
+    if (!findActive()) {
+      setFindDialogMode("confirm");
+      setFindConfirmOpen(true);
+      return;
+    }
+    const start = !findActive();
+    try {
+      await findBuds(start);
+      setFindActive(start);
+      if (!start) setFindConfirmOpen(false);
+      notify(
+        start ? "Tai nghe đang phát âm thanh tìm kiếm" : "Đã dừng âm thanh tìm tai nghe",
+        "info",
+        start ? "Đang tìm tai" : "Đã dừng"
+      );
+    } catch (e) {
+      notify(String(e), "error", "Đang tìm tai nghe");
+    }
+  };
+
+  const applyNoiseParameter = async (mode: AncMode, parameter: number) => {
+    setControlError(null);
+    try {
+      await setListeningState({
+        mode,
+        transparencyMode: transparencyMode(),
+        adaptive: adaptiveNoise(),
+        environment: noiseEnvironment(),
+        level: mode === "anc" && parameter < 100 ? parameter : noiseLevel(),
+      });
+    } catch (e) {
+      setControlError(String(e));
+      notify(String(e), "error", "Lỗi điều khiển");
+    }
+  };
+
+  const confirmEqAction = async () => {
+    const action = pendingEqAction();
+    setPendingEqAction(null);
+    if (!action) return;
+    try {
+      if (spatialOn()) {
+        setSpatialOn(false);
+        await setSpatialMode("off");
+      }
+      if (action.kind === "preset") await applyEqPreset(action.preset);
+      if (action.kind === "customBands") setEqCustomBands(action.bands);
+      if (action.kind === "applyCustom") await handleApplyCustomEq();
+      if (action.kind === "resetCustom") await handleResetCustomEq();
+    } catch (e) {
+      notify(String(e), "error");
+    }
+  };
+
+  const handleTransparencyMode = async (mode: TransparencyMode) => {
+    setTransparencyMode(mode);
+    if (ancMode() === "transparency") await applyNoiseParameter("transparency", mode === "voice" ? 1 : 0xff);
+  };
+
+  const handleAdaptiveNoise = async (on: boolean) => {
+    setAdaptiveNoise(on);
+    if (ancMode() === "anc") await applyNoiseParameter("anc", on ? noiseEnvironment() : noiseLevel());
+  };
+
+  const handleNoiseEnvironment = async (value: NoiseEnvironment) => {
+    setNoiseEnvironment(value);
+    if (ancMode() === "anc" && adaptiveNoise()) await applyNoiseParameter("anc", value);
+  };
+
+  const handleNoiseLevel = async (value: number) => {
+    setNoiseLevel(value);
+    if (ancMode() === "anc" && !adaptiveNoise()) await applyNoiseParameter("anc", value);
+  };
+
+  const handleLdac = async (enabled: boolean) => {
+    setLdac(enabled);
+    try {
+      await sendLdac(enabled);
+    } catch (e) {
+      setLdac(!enabled);
+      notify(String(e), "error");
+    }
+  };
+
+  const handleHearingProtection = async (enabled: boolean) => {
+    setHearingProtect(enabled);
+    try {
+      await sendHearingProtection(enabled, 1);
+    } catch (e) {
+      setHearingProtect(!enabled);
       notify(String(e), "error");
     }
   };
@@ -352,6 +512,7 @@ const App: Component = () => {
     }
     setConnected(false);
     setDevice(null);
+    setFindActive(false);
     setLink(emptyLink());
     setControlError(null);
     setView("home");
@@ -376,10 +537,10 @@ const App: Component = () => {
               <button
                 type="button"
                 class="screen-back"
+                aria-label="Quay lại"
                 onClick={() => setView("home")}
               >
                 <IconBack size={20} />
-                Xong
               </button>
               <span class="screen-title">Cài đặt</span>
               <div class="screen-nav-spacer" />
@@ -399,9 +560,10 @@ const App: Component = () => {
               eqActive={eqActive()}
               customBands={eqCustomBands()}
               customActive={eqCustomActive()}
+              storageKey={device()?.address || device()?.modelId || "default"}
               onBack={() => setView("home")}
               onEq={handleEq}
-              onCustomBands={setEqCustomBands}
+              onCustomBands={handleCustomBands}
               onApplyCustom={handleApplyCustomEq}
               onResetCustom={handleResetCustomEq}
             />
@@ -417,17 +579,8 @@ const App: Component = () => {
               hearingProtect={hearingProtect()}
               onBack={() => setView("home")}
               onBassBoost={handleBassBoost}
-              onLdac={(on) => {
-                setLdac(on);
-                notify(on ? "LDAC (UI)" : "LDAC off", "info");
-              }}
-              onHearingProtect={(on) => {
-                setHearingProtect(on);
-                notify(
-                  on ? "Hearing protection (UI)" : "Hearing protection off",
-                  "info"
-                );
-              }}
+              onLdac={handleLdac}
+              onHearingProtect={handleHearingProtection}
             />
           </section>
         </Show>
@@ -455,11 +608,21 @@ const App: Component = () => {
               <HomePanel
                 name={device()?.modelName || device()?.name || "Device"}
                 modelId={device()?.modelId}
+                imageUrl={device()?.imageUrl}
                 battery={battery()}
                 link={link()}
                 ancMode={ancMode()}
                 ancStrength={ancStrength()}
+                transparencyMode={transparencyMode()}
+                adaptiveNoise={adaptiveNoise()}
+                noiseEnvironment={noiseEnvironment()}
+                noiseLevel={noiseLevel()}
+                noiseMaxLevel={noiseProfile().maxLevel}
+                noiseSupported={(noiseCaps()?.maxCustomLevel ?? 0) > 0}
+                adaptiveSupported={noiseCaps()?.supportsAdaptive ?? false}
+                transparencyVoiceSupported={noiseCaps()?.supportsTransparencyVoice ?? false}
                 gameMode={gameOn()}
+                findActive={findActive()}
                 spatialOn={spatialOn()}
                 spatialMode={spatialMode()}
                 eqLabel={
@@ -469,9 +632,12 @@ const App: Component = () => {
                 }
                 onAncMode={handleAncMode}
                 onAncStrength={handleAncStrength}
+                onTransparencyMode={handleTransparencyMode}
+                onAdaptiveNoise={handleAdaptiveNoise}
+                onNoiseEnvironment={handleNoiseEnvironment}
+                onNoiseLevel={handleNoiseLevel}
                 onGameMode={handleGameMode}
                 onFindBuds={handleFindBuds}
-                onRefreshBattery={handleRefreshBattery}
                 onOpenMore={() => setView("more")}
                 onOpenSettings={() => setView("settings")}
                 onDisconnect={handleDisconnect}
@@ -490,6 +656,43 @@ const App: Component = () => {
           </Show>
         </Show>
       </main>
+      <Show when={pendingEqAction()}>
+        <ConfirmDialog
+          title="Tắt Âm thanh không gian?"
+          message="EQ không thể chỉnh khi Âm thanh không gian đang bật. Tắt Âm thanh không gian để tiếp tục chỉnh EQ?"
+          onCancel={() => setPendingEqAction(null)}
+          onConfirm={confirmEqAction}
+        />
+      </Show>
+      <Show when={findConfirmOpen() || findActive()}>
+        <ConfirmDialog
+          title="Cảnh báo âm thanh lớn"
+          message="Tính năng sẽ phát âm thanh rất lớn để tìm tai nghe và có thể gây khó chịu hoặc tổn thương thính giác. Hãy tháo tai nghe khỏi tai trước khi tiếp tục."
+          showCancel={findDialogMode() === "confirm"}
+          confirmLabel={findDialogMode() === "active" ? "Dừng tìm" : "Tôi đã sẵn sàng"}
+          onCancel={() => setFindConfirmOpen(false)}
+          onConfirm={() => (findDialogMode() === "active" ? stopFindBuds() : startFindBuds())}
+        />
+      </Show>
+      <Show when={false}>
+        <ConfirmDialog
+          title="Cảnh báo âm thanh lớn"
+          message="Tính năng sẽ phát âm thanh rất lớn để tìm tai nghe và có thể gây khó chịu hoặc tổn thương thính giác. Hãy tháo tai nghe khỏi tai trước khi tiếp tục."
+          confirmLabel="Tôi đã sẵn sàng"
+          onCancel={() => setFindConfirmOpen(false)}
+          onConfirm={startFindBuds}
+        />
+      </Show>
+      <Show when={false}>
+        <ConfirmDialog
+          title="Đang tìm tai nghe"
+          message="Tai nghe đang phát âm thanh tìm kiếm. Hãy để tai nghe ngoài tai và bấm Dừng tìm khi đã xác định được vị trí."
+          cancelLabel="Tiếp tục"
+          confirmLabel="Dừng tìm"
+          onCancel={() => undefined}
+          onConfirm={handleFindBuds}
+        />
+      </Show>
     </div>
   );
 };

@@ -1,8 +1,3 @@
-/**
- * EQ presets + custom band model (UI mirrors official ear-EQ screens).
- * Wire: BA43 + index for presets; custom is local curve (best-effort BLE later).
- */
-
 import type { EqPresetId } from "./device";
 
 export type { EqPresetId };
@@ -11,31 +6,42 @@ export interface EqPresetMeta {
   id: EqPresetId;
   label: string;
   sub: string;
-  /** Relative band gains for visualization / custom seed (-6…+6) */
+  dictSort: number;
   curve: number[];
 }
 
-/** 5 bands: 60 · 250 · 1k · 4k · 8k Hz */
+export interface CustomEqPreset {
+  id: string;
+  label: string;
+  bands: number[];
+}
+
+/** APK 2.14.1 uses eight configurable bands for self-defined EQ. */
 export const EQ_BANDS = [
-  { id: "60", label: "60", unit: "Hz" },
-  { id: "250", label: "250", unit: "Hz" },
-  { id: "1k", label: "1k", unit: "Hz" },
-  { id: "4k", label: "4k", unit: "Hz" },
-  { id: "8k", label: "8k", unit: "Hz" },
+  { id: "100", frequency: 100, label: "100", unit: "Hz" },
+  { id: "200", frequency: 200, label: "200", unit: "Hz" },
+  { id: "400", frequency: 400, label: "400", unit: "Hz" },
+  { id: "800", frequency: 800, label: "800", unit: "Hz" },
+  { id: "1k", frequency: 1000, label: "1K", unit: "Hz" },
+  { id: "3k", frequency: 3000, label: "3K", unit: "Hz" },
+  { id: "6k", frequency: 6000, label: "6K", unit: "Hz" },
+  { id: "10k", frequency: 10000, label: "10K", unit: "Hz" },
 ] as const;
 
+/** Local fallback for the APK's model/server-provided eq_sound_mode list. */
 export const EQ_PRESETS: EqPresetMeta[] = [
-  { id: "classic", label: "Classic", sub: "Cân bằng", curve: [0, 0, 0, 0, 0] },
-  { id: "bass", label: "Powerful Bass", sub: "Tăng trầm", curve: [5, 3, 0, -1, -2] },
-  { id: "hifi", label: "Hi-Fi Live", sub: "Sân khấu", curve: [1, 0, 1, 2, 3] },
-  { id: "pop", label: "Pop", sub: "Nhạc pop", curve: [-1, 2, 3, 1, 0] },
-  { id: "jazz", label: "Jazz Rock", sub: "Jazz / rock", curve: [2, 1, 0, 2, 1] },
-  { id: "classical", label: "Classical", sub: "Cổ điển", curve: [0, 0, 1, 2, 2] },
-  { id: "clear", label: "Clear Treble", sub: "Tăng cao", curve: [-2, -1, 0, 3, 5] },
-  { id: "acoustic", label: "Acoustic", sub: "Acoustic", curve: [1, 2, 1, 0, 1] },
-  { id: "voice", label: "Voice", sub: "Giọng nói", curve: [-2, 0, 4, 3, 0] },
-  { id: "bassReduce", label: "Giảm trầm", sub: "Less bass", curve: [-4, -2, 0, 1, 1] },
-  { id: "trebleReduce", label: "Giảm cao", sub: "Less treble", curve: [1, 1, 0, -2, -4] },
+  { id: "classic", label: "Classic", sub: "Cân bằng", dictSort: 0, curve: [0, 0, 0, 0, 0, 0, 0, 0] },
+  { id: "bass", label: "Super Bass", sub: "Tăng trầm", dictSort: 1, curve: [4, 3, 2, 1, 0, -1, -2, -2] },
+  { id: "cinema", label: "Cinema", sub: "Âm thanh phim", dictSort: 2, curve: [3, 1, 1, 2, 1, 2, 1, -1] },
+  { id: "hifi", label: "Hi-Fi Live", sub: "Sân khấu", dictSort: 3, curve: [0, -2, 1, 2, 1, 2, 1, -1] },
+  { id: "voice", label: "Clear Voice", sub: "Rõ giọng", dictSort: 4, curve: [2, -2, 1, 3, 3, 2, 0, -1] },
+  { id: "dj", label: "DJ", sub: "DJ", dictSort: 5, curve: [3, 0, 3, 2, 1, 2, 1, -1] },
+  { id: "pop", label: "Pop", sub: "Nhạc pop", dictSort: 6, curve: [2, -2, 3, 2, 1, 2, 1, -1] },
+  { id: "jazz", label: "Jazz", sub: "Jazz", dictSort: 7, curve: [3, -1, 2, 1, 2, 2, 1, -1] },
+  { id: "classical", label: "Classical", sub: "Cổ điển", dictSort: 8, curve: [-2, -3, 1, 2, 1, 2, 1, -1] },
+  { id: "clear", label: "Treble Boost", sub: "Tăng cao", dictSort: 9, curve: [-2, -2, 1, 2, 3, 4, 3, 1] },
+  { id: "original", label: "Original", sub: "Nguyên bản", dictSort: 10, curve: [0, 0, 0, 0, 0, 0, 0, 0] },
+  { id: "rock", label: "Rock Classic", sub: "Rock", dictSort: 11, curve: [3, 1, 2, 3, 1, 2, 1, -1] },
 ];
 
 export const EQ_LABEL: Record<string, string> = Object.fromEntries(
@@ -43,15 +49,36 @@ export const EQ_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 export function curveForPreset(id: EqPresetId): number[] {
-  return (
-    EQ_PRESETS.find((p) => p.id === id)?.curve.slice() ?? [0, 0, 0, 0, 0]
-  );
+  return EQ_PRESETS.find((p) => p.id === id)?.curve.slice() ?? defaultCustomBands();
+}
+
+export function presetSort(id: EqPresetId): number {
+  return EQ_PRESETS.find((p) => p.id === id)?.dictSort ?? 0;
 }
 
 export function clampBand(v: number): number {
-  return Math.max(-6, Math.min(6, Math.round(v)));
+  return Math.max(-12, Math.min(12, Math.round(v)));
 }
 
 export function defaultCustomBands(): number[] {
-  return [0, 0, 0, 0, 0];
+  return Array.from({ length: EQ_BANDS.length }, () => 0);
+}
+
+export function loadCustomEqPresets(storageKey: string): CustomEqPreset[] {
+  try {
+    const raw = localStorage.getItem(`b4s.eq.custom.${storageKey}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is CustomEqPreset =>
+        item && typeof item.id === "string" && typeof item.label === "string" &&
+        Array.isArray(item.bands) && item.bands.length === EQ_BANDS.length
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomEqPresets(storageKey: string, presets: CustomEqPreset[]): void {
+  localStorage.setItem(`b4s.eq.custom.${storageKey}`, JSON.stringify(presets));
 }

@@ -18,10 +18,30 @@ export interface BleDevice {
   connected: boolean;
   modelId?: string | null;
   modelName?: string | null;
+  deviceProfile?: DeviceProfile;
   /** verified | experimental | scanOnly */
   support?: string | null;
   /** Dual-entry / pairing tip from backend */
   hint?: string | null;
+  imageUrl?: string | null;
+  imageProvenance?: string;
+  colorVariants?: string[];
+  serial?: string | null;
+  advertisedServices?: string[];
+}
+
+export interface DeviceProfile {
+  modelId?: string | null;
+  modelName?: string | null;
+  firmware?: string | null;
+  protocol: "bp1Pro" | "baseusAaBaExperimental" | "unknown" | string;
+  verified: boolean;
+  noise: {
+    supportsAdaptive: boolean;
+    environments: number[];
+    maxCustomLevel: number;
+    supportsTransparencyVoice: boolean;
+  };
 }
 
 export interface ModelInfo {
@@ -36,10 +56,58 @@ export interface ModelInfo {
   category: string;
   /** Product family from official app (e.g. Bass BP1 / EP10) */
   group?: string;
+  capabilities: {
+    anc: boolean;
+    eq: boolean;
+    gameMode: boolean;
+    bassBoost: boolean;
+    ldac: boolean;
+    hearingProtection: boolean;
+    spatial: boolean;
+  };
+  transport: {
+    serviceUuid: string | null;
+    writeUuid: string | null;
+    notifyUuid: string | null;
+    useSelfUuid: boolean;
+    requiredAdvertisedService: boolean;
+  };
+  colorVariants: string[];
+  imageUrl: string | null;
+  imageProvenance: "local" | "cached" | "remote" | "fallback" | string;
 }
 
 export async function listModels(): Promise<ModelInfo[]> {
   return invoke<ModelInfo[]>("list_models");
+}
+
+export interface ModelProfile {
+  id: string;
+  displayName: string;
+  aliases: string[];
+  support: "verified" | "experimental" | "scanOnly" | string;
+  protocolFamily: string;
+  category: string;
+  group: string;
+  capabilities: Record<string, boolean>;
+  noise: {
+    supportsAdaptive: boolean;
+    environments: number[];
+    maxCustomLevel: number;
+    supportsTransparencyVoice: boolean;
+  };
+  eq: {
+    bands: number[];
+    minGain: number;
+    maxGain: number;
+    customSlots: number;
+    presets: Array<{ id: string; label: string; description: string; dictSort: number; curve: number[] }>;
+  } | null;
+  image: string | null;
+}
+
+export async function listModelProfiles(): Promise<ModelProfile[]> {
+  return invoke<ModelProfile[]>("list_model_profiles");
 }
 
 /** Proof of real control link — not just "connected" UI flag */

@@ -269,8 +269,12 @@
   gap: 4px;
   button {
     @include button-base;
-    min-width: 32px;
-    height: 32px;
+    min-width: 54px;
+    height: 40px;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
     padding: 0 8px;
     border-radius: $radius-sm;
     background: $bg-fill-secondary;
@@ -278,6 +282,11 @@
     border: none;
     font-size: $fs-sm;
     font-weight: $fw-medium;
+    line-height: 1.05;
+    small {
+      font-size: 9px;
+      opacity: .65;
+    }
     &.active {
       background: $accent-blue;
       color: white;

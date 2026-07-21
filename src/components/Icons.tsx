@@ -99,10 +99,40 @@ export const IconBack = (p: IconProps) => (
   </svg>
 );
 
+export const IconGithub = (p: IconProps) => (
+  <svg class={p.class} width={s(p)} height={s(p)} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 2C6.48 2 2 6.58 2 12.24c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49v-1.7c-2.78.62-3.37-1.23-3.37-1.23-.46-1.2-1.11-1.52-1.11-1.52-.91-.64.07-.63.07-.63 1.01.08 1.54 1.06 1.54 1.06.9 1.58 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.08 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.76 1.05A9.3 9.3 0 0 1 12 6.8c.85 0 1.7.12 2.5.36 1.92-1.32 2.76-1.05 2.76-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.64 1.03 2.76 0 3.95-2.35 4.82-4.58 5.08.36.32.68.94.68 1.9v2.82c0 .27.18.59.69.49A10.24 10.24 0 0 0 22 12.24C22 6.58 17.52 2 12 2Z" />
+  </svg>
+);
+
 export const IconTheme = (p: IconProps) => (
   <svg class={p.class} width={s(p)} height={s(p)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="4" />
     <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </svg>
+);
+
+export const IconOffice = (p: IconProps) => (
+  <svg class={p.class} width={s(p)} height={s(p)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h3a1 1 0 0 1 1 1v11M8 7h4M8 11h4M8 15h4M10 21v-3h2v3" />
+  </svg>
+);
+
+export const IconOutdoor = (p: IconProps) => (
+  <svg class={p.class} width={s(p)} height={s(p)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="17" cy="6" r="2.5" /><path d="M3 21l6-9 4 5 3-4 5 8M3 21h18" />
+  </svg>
+);
+
+export const IconTransit = (p: IconProps) => (
+  <svg class={p.class} width={s(p)} height={s(p)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="4" y="3" width="16" height="14" rx="3" /><path d="M4 11h16M8 21l2-4M16 21l-2-4M8 7h.01M16 7h.01" />
+  </svg>
+);
+
+export const IconFlight = (p: IconProps) => (
+  <svg class={p.class} width={s(p)} height={s(p)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 13l7-2 4-7 2 1-1 7 5 2c1 .4 1 1.8 0 2.2l-5 1.8 1 3-2 1-4-3-7 1v-2l6-2-6-2z" />
   </svg>
 );
 

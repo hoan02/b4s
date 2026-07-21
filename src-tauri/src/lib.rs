@@ -2,9 +2,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ble;
+mod catalog;
+mod device;
 mod protocol;
 
-use protocol::{AncMode, BatteryState, EqPreset, SpatialMode};
+use protocol::{AncMode, BatteryState, EqBand, EqPreset, ListeningCommand, SpatialMode};
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_updater::UpdaterExt;
@@ -75,6 +77,16 @@ fn list_models() -> Vec<protocol::ModelInfo> {
 }
 
 #[tauri::command]
+fn list_model_profiles() -> Vec<catalog::ModelProfile> {
+    catalog::all_profiles()
+}
+
+#[tauri::command]
+fn get_model_profile(model_id: String) -> Result<catalog::ModelProfile, String> {
+    catalog::profile_for(&model_id).ok_or_else(|| format!("No profile for model: {model_id}"))
+}
+
+#[tauri::command]
 async fn get_battery() -> Result<BatteryState, String> {
     Ok(ble::get_battery_state().await)
 }
@@ -85,20 +97,65 @@ async fn query_battery() -> Result<BatteryState, String> {
 }
 
 #[tauri::command]
-async fn set_anc_mode(mode: String, strength: Option<u8>) -> Result<(), String> {
+async fn set_listening_state(
+    mode: String,
+    transparency_mode: Option<String>,
+    adaptive: Option<bool>,
+    environment: Option<u16>,
+    level: Option<u8>,
+) -> Result<(), String> {
+    let command = match mode.to_lowercase().as_str() {
+        "off" | "normal" => ListeningCommand::Normal,
+        "transparency" | "ambient" => {
+            if transparency_mode.as_deref() == Some("voice") {
+                ListeningCommand::TransparencyVoice
+            } else {
+                ListeningCommand::TransparencyFull
+            }
+        }
+        "anc" | "noiseReduction" | "noisereduction" => {
+            if adaptive.unwrap_or(false) {
+                ListeningCommand::AdaptiveEnvironment(environment.ok_or("Adaptive environment is required")?)
+            } else {
+                ListeningCommand::CustomLevel(level.ok_or("Custom ANC level is required")?)
+            }
+        }
+        _ => return Err(format!("Unknown listening mode: {mode}")),
+    };
+    ble::send_listening(command).await
+}
+
+#[tauri::command]
+async fn set_anc_mode(
+    mode: String,
+    strength: Option<u8>,
+    parameter: Option<u8>,
+) -> Result<(), String> {
     let anc = match mode.to_lowercase().as_str() {
         "off" => AncMode::Off,
         "transparency" | "ambient" => AncMode::Transparency,
         _ => AncMode::Anc,
     };
-    let strength = strength.unwrap_or(70);
-    ble::send_anc(anc, strength).await
+    let parameter = parameter.unwrap_or_else(|| anc.level_from_percent(strength.unwrap_or(70)));
+    let command = match anc {
+        AncMode::Off => ListeningCommand::Normal,
+        AncMode::Transparency if parameter == 1 => ListeningCommand::TransparencyVoice,
+        AncMode::Transparency => ListeningCommand::TransparencyFull,
+        AncMode::Anc if parameter >= 100 => ListeningCommand::AdaptiveEnvironment(parameter as u16),
+        AncMode::Anc => ListeningCommand::CustomLevel(parameter),
+    };
+    ble::send_listening(command).await
 }
 
 #[tauri::command]
 async fn set_eq_preset(preset: String) -> Result<(), String> {
     let eq = EqPreset::from_ui(&preset);
     ble::send_eq(eq).await
+}
+
+#[tauri::command]
+async fn set_eq_index(index: u8) -> Result<(), String> {
+    ble::send_eq_index(index).await
 }
 
 #[tauri::command]
@@ -123,8 +180,27 @@ async fn set_bass_boost(level: u8) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn find_buds() -> Result<(), String> {
-    ble::send_find_buds().await
+async fn set_custom_eq(
+    bands: Vec<EqBand>,
+    dict_sort: Option<u8>,
+    anc: Option<bool>,
+) -> Result<(), String> {
+    ble::send_custom_eq(bands, dict_sort.unwrap_or(101), anc.unwrap_or(false)).await
+}
+
+#[tauri::command]
+async fn set_ldac(enabled: bool) -> Result<(), String> {
+    ble::send_ldac(enabled).await
+}
+
+#[tauri::command]
+async fn set_hearing_protection(enabled: bool, level: Option<u8>) -> Result<(), String> {
+    ble::send_hearing_protection(enabled, level.unwrap_or(1)).await
+}
+
+#[tauri::command]
+async fn find_buds(start: bool) -> Result<(), String> {
+    ble::send_find_buds(start).await
 }
 
 // ---------------------------------------------------------------------------
@@ -322,13 +398,20 @@ pub fn run() {
             ble_get_connection,
             ble_get_link_health,
             list_models,
+            list_model_profiles,
+            get_model_profile,
             get_battery,
             query_battery,
             set_anc_mode,
+            set_listening_state,
             set_eq_preset,
+            set_eq_index,
+            set_custom_eq,
             set_game_mode,
             set_spatial_mode,
             set_bass_boost,
+            set_ldac,
+            set_hearing_protection,
             find_buds,
             get_app_info,
             check_for_updates,

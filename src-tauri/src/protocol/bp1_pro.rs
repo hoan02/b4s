@@ -5,6 +5,11 @@
 use super::framing::Frame;
 use super::types::*;
 
+/// Decoder/command table verified from Bass BP1 Pro captures.
+///
+/// Other catalog models are deliberately marked as experimental. They may
+/// share the AA/BA framing, but must be validated with their own captures and
+/// model-specific GATT configuration before being considered supported.
 pub struct Bp1ProAnc;
 
 impl Bp1ProAnc {
@@ -42,6 +47,13 @@ impl Bp1ProAnc {
                 let preset = EqPreset::from_byte(byte).unwrap_or(EqPreset::Balanced);
                 Ok(DeviceEvent::Eq(preset))
             }
+
+            0x54 => Ok(DeviceEvent::BassBoost(Self::bass_level_from_payload(&frame.payload))),
+            0x74 | 0x75 => Ok(DeviceEvent::Ldac(frame.payload.first().copied().unwrap_or(1) == 0)),
+            0x94 => Ok(DeviceEvent::HearingProtection {
+                enabled: frame.payload.first().copied().unwrap_or(0) != 0,
+                level: frame.payload.get(1).copied().unwrap_or(0),
+            }),
 
             // Keepalive / identity / case event — ignore or unknown
             0x12 | 0x24 | 0x30 | 0x80 => Err(DecodeError::UnknownOpcode(frame.cmd)),
@@ -204,9 +216,38 @@ impl Bp1ProAnc {
 // ---------------------------------------------------------------------------
 
 impl Bp1ProAnc {
+    pub fn cmd_set_custom_eq(dict_sort: u8, anc: bool, bands: &[EqBand]) -> Vec<u8> {
+        let mut payload = vec![dict_sort, if anc { 0x01 } else { 0x00 }];
+        for band in bands.iter().take(8) {
+            payload.extend_from_slice(&band.frequency.to_le_bytes());
+            let gain = (band.gain * 10.0 + 120.0).round().clamp(0.0, 255.0) as u8;
+            payload.push(gain);
+            payload.push(0x00);
+            let q = (band.q_value * 10.0).round().clamp(0.0, 255.0) as u8;
+            payload.push(q);
+            payload.push(0x00);
+            payload.push(band.filter);
+            payload.push(0x00);
+        }
+        super::framing::Frame::write(0x31, &payload).encode_write()
+    }
+    fn bass_level_from_payload(payload: &[u8]) -> u8 {
+        // Firmware variants answer either AA54 [level] or AA54 [enabled, level].
+        let level = if payload.len() >= 2 && payload[0] <= 1 {
+            payload[1]
+        } else {
+            payload.first().copied().unwrap_or(0)
+        };
+        level.min(3)
+    }
+
     pub fn cmd_set_anc(mode: AncMode, strength_pct: u8) -> Vec<u8> {
         let level = mode.level_from_percent(strength_pct);
         super::encode_command(Command::SetAnc { mode, level })
+    }
+
+    pub fn cmd_set_noise(mode: AncMode, parameter: u8) -> Vec<u8> {
+        super::encode_command(Command::SetNoise { mode, parameter })
     }
 
     pub fn cmd_set_eq(preset: EqPreset) -> Vec<u8> {
@@ -217,14 +258,15 @@ impl Bp1ProAnc {
         super::encode_command(Command::SetGameMode(on))
     }
 
-    pub fn cmd_find_buds() -> Vec<u8> {
-        super::encode_command(Command::FindBuds)
+    pub fn cmd_find_buds(start: bool) -> Vec<u8> {
+        super::encode_command(Command::FindBuds(start))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::protocol::{encode_command, init_state_payload};
     use crate::protocol::framing::Frame;
 
     fn dec(raw: &[u8]) -> Result<DeviceEvent, DecodeError> {
@@ -334,5 +376,63 @@ mod tests {
         // Old bug: opcode 0x33 forced ANC
         assert!(dec(&[0xAA, 0x33]).is_err());
         assert!(dec(&[0xAA, 0x32]).is_err());
+    }
+
+    #[test]
+    fn apk_noise_modes_use_ba34_mode_and_parameter() {
+        assert_eq!(
+            Bp1ProAnc::cmd_set_noise(AncMode::Off, 0xFF),
+            vec![0xBA, 0x34, 0x00, 0xFF]
+        );
+        assert_eq!(
+            Bp1ProAnc::cmd_set_noise(AncMode::Transparency, 0xFF),
+            vec![0xBA, 0x34, 0x02, 0xFF]
+        );
+        assert_eq!(
+            Bp1ProAnc::cmd_set_noise(AncMode::Anc, 5),
+            vec![0xBA, 0x34, 0x01, 0x05]
+        );
+        assert_eq!(
+            Bp1ProAnc::cmd_set_noise(AncMode::Anc, 108),
+            vec![0xBA, 0x34, 0x01, 0x6C]
+        );
+    }
+
+    #[test]
+    fn bass_boost_uses_dedicated_ba54_command() {
+        assert_eq!(encode_command(Command::SetBassBoost(2)), vec![0xBA, 0x54, 0x01, 0x02]);
+        assert_eq!(encode_command(Command::SetBassBoost(0)), vec![0xBA, 0x54, 0x00, 0x00]);
+    }
+
+    #[test]
+    fn bass_boost_state_accepts_compact_and_enabled_level_payloads() {
+        assert_eq!(dec(&[0xAA, 0x54, 0x03]).unwrap(), DeviceEvent::BassBoost(3));
+        assert_eq!(dec(&[0xAA, 0x54, 0x01, 0x02]).unwrap(), DeviceEvent::BassBoost(2));
+        assert_eq!(dec(&[0xAA, 0x54, 0x00, 0x00]).unwrap(), DeviceEvent::BassBoost(0));
+    }
+
+    #[test]
+    fn find_buds_has_start_and_stop_commands() {
+        assert_eq!(Bp1ProAnc::cmd_find_buds(true), vec![0xBA, 0x10, 0x02, 0x01]);
+        assert_eq!(Bp1ProAnc::cmd_find_buds(false), vec![0xBA, 0x10, 0x02, 0x00]);
+    }
+
+    #[test]
+    fn ldac_toggle_uses_ba75_inverted_flag_from_apk() {
+        assert_eq!(encode_command(Command::SetLdac(true)), vec![0xBA, 0x75, 0x00]);
+        assert_eq!(encode_command(Command::SetLdac(false)), vec![0xBA, 0x75, 0x01]);
+    }
+
+    #[test]
+    fn hearing_protection_includes_enable_and_level() {
+        assert_eq!(
+            encode_command(Command::SetHearingProtection { enabled: true, level: 3 }),
+            vec![0xBA, 0x94, 0x01, 0x03]
+        );
+    }
+
+    #[test]
+    fn init_state_is_plain_utf8_payload() {
+        assert_eq!(init_state_payload(), b"#InitState:");
     }
 }

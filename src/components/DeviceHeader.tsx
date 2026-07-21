@@ -12,7 +12,6 @@ interface Props {
   rssi?: number;
   onFindBuds?: () => void;
   onDisconnect?: () => void;
-  onRefreshBattery?: () => void;
 }
 
 function pctClass(p: number) {
@@ -148,7 +147,7 @@ const DeviceHeader: Component<Props> = (props) => {
 
       <Show when={props.battery.left === 0 && props.battery.right === 0}>
         <div class="battery-warn">
-          Chưa nhận % pin — bấm Làm mới pin hoặc mở nắp hộp / đeo tai nghe
+          Chưa nhận % pin — mở nắp hộp / đeo tai nghe để thiết bị gửi lại trạng thái
         </div>
       </Show>
 
@@ -206,13 +205,6 @@ const DeviceHeader: Component<Props> = (props) => {
       </Show>
 
       <div class="quick-actions">
-        <button
-          class="quick-btn"
-          type="button"
-          onClick={() => props.onRefreshBattery?.()}
-        >
-          <span class="quick-label">Làm mới pin</span>
-        </button>
         <button class="quick-btn" type="button" onClick={() => props.onFindBuds?.()}>
           <span class="quick-label">Tìm tai nghe</span>
         </button>

@@ -26,24 +26,65 @@ const BlePairing: Component<Props> = (props) => {
   const [useMock, setUseMock] = createSignal(false);
 
   let unsubs: Array<() => void> = [];
+  let checkingAdapter = false;
+  let disposed = false;
+  let adapterPoll: number | undefined;
+  let handleFocus: (() => void) | undefined;
+  let handleVisibility: (() => void) | undefined;
 
-  onMount(async () => {
-    const ok = await checkAdapter();
-    setAdapterOk(ok);
-    if (!ok) setError("Bật Bluetooth rồi quét lại.");
+  const refreshAdapter = async () => {
+    if (useMock() || checkingAdapter) return;
+    checkingAdapter = true;
+    try {
+      const ok = await checkAdapter();
+      setAdapterOk(ok);
+      if (!ok) {
+        if (scanning()) await stopScan();
+        setScanning(false);
+        setDevices([]);
+        setError("Bật Bluetooth rồi quét lại.");
+      } else if (!scanning()) {
+        setError(null);
+      }
+    } finally {
+      checkingAdapter = false;
+    }
+  };
 
-    unsubs.push(
-      await onScanStatus((status) => {
+  onMount(() => {
+    handleFocus = () => { void refreshAdapter(); };
+    handleVisibility = () => {
+      if (document.visibilityState === "visible") void refreshAdapter();
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    adapterPoll = window.setInterval(() => { void refreshAdapter(); }, 3000);
+    void refreshAdapter();
+
+    void (async () => {
+      const scanUnsub = await onScanStatus((status) => {
         setScanning(status.scanning);
         setDevices(status.devices);
         if (status.error) setError(status.error);
-      })
-    );
-    unsubs.push(await onConnecting((id) => setConnectingId(id)));
-    if (ok) handleScan();
+      });
+      if (disposed) scanUnsub();
+      else unsubs.push(scanUnsub);
+    })();
+
+    void (async () => {
+      const connectingUnsub = await onConnecting((id) => setConnectingId(id));
+      if (disposed) connectingUnsub();
+      else unsubs.push(connectingUnsub);
+    })();
   });
 
   onCleanup(() => {
+    disposed = true;
+    if (handleFocus) window.removeEventListener("focus", handleFocus);
+    if (handleVisibility) {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    }
+    if (adapterPoll !== undefined) window.clearInterval(adapterPoll);
     unsubs.forEach((u) => u());
     stopScan().catch(() => {});
   });
@@ -118,11 +159,8 @@ const BlePairing: Component<Props> = (props) => {
       {/* Scrollable middle */}
       <div class="pair-scroll">
         <div class="ble-pairing">
-          <div class="ble-hero">
-            <div class={`ble-radar sm ${scanning() ? "on" : ""}`}>
-              <div class="radar-ring" />
-              <div class="radar-core" />
-            </div>
+          <div class={`ble-hero ${adapterOk() === false && !useMock() ? "bluetooth-off" : ""}`}>
+            <img class="ble-app-logo" src="/b4s-logo.png" alt="B4S" />
             <h2>Kết nối</h2>
             <p class="ble-subtitle">
               {adapterOk() === false && !useMock()
@@ -133,7 +171,7 @@ const BlePairing: Component<Props> = (props) => {
             </p>
           </div>
 
-          <div class="ble-controls">
+          <div class={`ble-controls ${adapterOk() === false && !useMock() ? "bluetooth-off" : ""}`}>
             <Show
               when={!scanning()}
               fallback={
@@ -217,7 +255,12 @@ const BlePairing: Component<Props> = (props) => {
 
             <Show when={scanning() && devices().length === 0}>
               <div class="ble-empty scanning">
-                <p>Đang quét…</p>
+                <div class="ble-scan-status" role="status" aria-live="polite">
+                  <span class="scan-bars" aria-hidden="true"><i /><i /><i /></span>
+                  <span>Đang quét thiết bị</span>
+                </div>
+                <p>Đang tìm tai nghe ở gần</p>
+                <span>Đưa tai vào chế độ ghép nối và mở nắp hộp</span>
               </div>
             </Show>
           </div>
@@ -256,7 +299,7 @@ const DeviceRow: Component<{
     >
       <div class="device-icon photo">
         <img
-          src={resolveDeviceThumb(props.device.modelId, props.device.name).src}
+          src={resolveDeviceThumb(props.device.modelId, props.device.name, props.device.imageUrl).src}
           alt=""
           draggable={false}
         />
