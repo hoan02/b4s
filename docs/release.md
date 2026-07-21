@@ -4,6 +4,15 @@ Repo: [hoan02/b4s](https://github.com/hoan02/b4s)
 
 B4S ships via **GitHub Releases** and can **self-update** (Tauri updater).
 
+## Why Actions looked empty after first push
+
+| Workflow | When it runs |
+|----------|----------------|
+| **CI** | Every push / PR to `main` (build check, no Release) |
+| **Release** | Only on **tag** `v*` (e.g. `v0.1.0`) or **Actions → Release → Run workflow** |
+
+Pushing code to `main` alone does **not** create installers or a Release.
+
 ## Version files (must stay in sync)
 
 | File | Field |
