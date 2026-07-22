@@ -2,6 +2,10 @@
 
 B4S là ứng dụng desktop độc lập để kết nối và điều khiển một số mẫu tai nghe Bluetooth LE trên Windows, macOS và Linux.
 
+| Quét & kết nối | Điều khiển thiết bị | Cài đặt |
+|---|---|---|
+| ![Quét và kết nối thiết bị](assets/i1.png) | ![Điều khiển pin, ANC và âm thanh](assets/i2.png) | ![Màn hình cài đặt](assets/i3.png) |
+
 ## Tình trạng hỗ trợ hiện tại
 
 Hiện tại phần cứng kiểm thử chính là **Baseus Bass BP1 Ultra**. Thiết bị này thuộc họ giao thức **BP1**; BP1 Pro và các model cùng họ có thể dùng chung family adapter nhưng vẫn phải có profile và kiểm thử riêng. Các model khác mới ở mức nhận diện catalog hoặc thử nghiệm, chưa được bảo đảm hoạt động đầy đủ.

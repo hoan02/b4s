@@ -12,7 +12,15 @@ import {
 } from "../lib/app";
 import type { ThemeMode } from "../lib/theme";
 import type { ToastKind } from "../lib/toast";
-import { IconGithub, IconPower, IconSettings, IconTheme } from "./Icons";
+import {
+  IconDownload,
+  IconGithub,
+  IconId,
+  IconOs,
+  IconTheme,
+  IconUpdate,
+  IconVersion,
+} from "./Icons";
 
 interface Props {
   theme: ThemeMode;
@@ -112,7 +120,7 @@ const Settings: Component<Props> = (props) => {
         <div class="settings-group-label">Cập nhật</div>
         <div class="settings-list">
           <div class="settings-row">
-            <IconSettings size={19} />
+            <IconVersion size={19} />
             <span class="settings-row-label">Phiên bản</span>
             <span class="settings-row-value">{info()?.version ?? "—"}</span>
           </div>
@@ -122,7 +130,7 @@ const Settings: Component<Props> = (props) => {
             disabled={checking() || installing()}
             onClick={handleCheck}
           >
-            <IconSettings size={19} />
+            <IconUpdate size={19} />
             <span class="settings-row-label">
               {checking() ? "Đang kiểm tra…" : "Kiểm tra cập nhật"}
             </span>
@@ -134,7 +142,7 @@ const Settings: Component<Props> = (props) => {
               disabled={installing()}
               onClick={handleInstall}
             >
-              <IconPower size={19} />
+              <IconDownload size={19} />
               <span class="settings-row-label">
                 {installing()
                   ? "Đang cài…"
@@ -158,12 +166,12 @@ const Settings: Component<Props> = (props) => {
         <div class="settings-group-label">Thông tin</div>
         <div class="settings-list">
           <div class="settings-row">
-            <IconSettings size={19} />
+            <IconOs size={19} />
             <span class="settings-row-label">Hệ điều hành</span>
             <span class="settings-row-value">{info()?.os ?? "—"}</span>
           </div>
           <div class="settings-row">
-            <IconSettings size={19} />
+            <IconId size={19} />
             <span class="settings-row-label">Identifier</span>
             <span class="settings-row-value">
               {info()?.identifier ?? "com.hoan02.b4s"}
