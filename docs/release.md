@@ -37,7 +37,22 @@ npm run version:bump -- 1.4.0
 
 `.tauri/` private keys are **gitignored**.
 
-## Publish
+## Publish (recommended)
+
+Working tree must be clean. Script bumps version files, commits, tags `vX.Y.Z`, and pushes — that triggers the **Release** workflow.
+
+```bash
+npm run release                 # patch  0.1.0 → 0.1.1
+npm run release -- minor        #        0.1.0 → 0.2.0
+npm run release -- major        #        0.1.0 → 1.0.0
+npm run release -- 0.2.0        # exact version
+
+npm run release -- patch --dry-run   # preview only
+npm run release -- --no-bump         # tag current version, no bump
+npm run release -- patch --no-push   # commit + tag local only
+```
+
+### Manual (equivalent)
 
 ```bash
 npm run version:bump
