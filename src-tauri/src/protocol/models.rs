@@ -136,6 +136,7 @@ pub struct NoiseCapability {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceProfile {
+    pub capabilities: crate::catalog::Capabilities,
     pub connection: Option<crate::catalog::ConnectionProfile>,
     pub model_id: Option<String>,
     pub model_name: Option<String>,
@@ -148,6 +149,7 @@ pub struct DeviceProfile {
 pub fn unknown_profile(model_id: Option<&str>, model_name: Option<&str>) -> DeviceProfile {
     DeviceProfile {
         connection: None,
+        capabilities: Default::default(),
         model_id: model_id.map(str::to_owned),
         model_name: model_name.map(str::to_owned),
         firmware: None,
@@ -183,6 +185,7 @@ pub fn profile_for(
     };
     DeviceProfile {
         connection: catalog_profile.as_ref().and_then(|profile| profile.connection.clone()),
+        capabilities: catalog_profile.as_ref().map(|profile| profile.capabilities.clone()).unwrap_or_default(),
         model_id: Some(model.id),
         model_name: Some(model.display_name),
         firmware: firmware.map(str::to_owned),

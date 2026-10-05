@@ -14,7 +14,8 @@
     "bassBoost": true,
     "spatial": true,
     "ldac": false,
-    "hearingProtection": false
+    "hearingProtection": false,
+    "findBuds": true
   },
   "noise": {
     "supportsAdaptive": true,

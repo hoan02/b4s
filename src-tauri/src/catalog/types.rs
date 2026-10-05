@@ -22,7 +22,7 @@ pub struct ConnectionProfile {
     pub provenance: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Capabilities {
     #[serde(default)]
@@ -41,6 +41,8 @@ pub struct Capabilities {
     pub ldac: bool,
     #[serde(default)]
     pub hearing_protection: bool,
+    #[serde(default)]
+    pub find_buds: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

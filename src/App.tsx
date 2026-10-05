@@ -667,6 +667,9 @@ const App: Component = () => {
         <Show when={view() === "more" && connected()}>
           <section class="section section-scroll">
             <MorePanel
+              bassSupported={device()?.deviceProfile?.capabilities.bassBoost ?? false}
+              ldacSupported={device()?.deviceProfile?.capabilities.ldac ?? false}
+              hearingSupported={device()?.deviceProfile?.capabilities.hearingProtection ?? false}
               bassBoost={bassBoost()}
               ldac={ldac()}
               hearingProtect={hearingProtect()}

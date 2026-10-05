@@ -2,11 +2,14 @@
  * “Âm thanh khác” — NOT EQ (EQ is its own screen).
  * Bass boost, LDAC, hearing protection, extras.
  */
-import { Component, For } from "solid-js";
+import { Component, For, Show } from "solid-js";
 import { IconBack } from "./Icons";
 import { t } from "../lib/i18n";
 
 interface Props {
+  bassSupported: boolean;
+  ldacSupported: boolean;
+  hearingSupported: boolean;
   bassBoost: number;
   ldac: boolean;
   hearingProtect: boolean;
@@ -26,6 +29,7 @@ const MorePanel: Component<Props> = (props) => (
       <div class="screen-nav-spacer" />
     </div>
 
+    <Show when={props.bassSupported}>
     <section class="more-group">
       <p class="more-label">{t("more.electronicAudio")}</p>
       <div class="more-card">
@@ -53,9 +57,12 @@ const MorePanel: Component<Props> = (props) => (
       </div>
     </section>
 
+    </Show>
+    <Show when={props.ldacSupported || props.hearingSupported}>
     <section class="more-group">
               <p class="more-label">{t("more.codecProtection")}</p>
       <div class="more-card">
+        <Show when={props.ldacSupported}>
         <div class="setting-row">
           <div>
             <span class="setting-title">LDAC</span>
@@ -72,6 +79,8 @@ const MorePanel: Component<Props> = (props) => (
             <span class="slider" />
           </label>
         </div>
+        </Show>
+        <Show when={props.hearingSupported}>
         <div class="setting-row">
           <div>
             <span class="setting-title">{t("more.hearingProtection")}</span>
@@ -90,11 +99,13 @@ const MorePanel: Component<Props> = (props) => (
             <span class="slider" />
           </label>
         </div>
+        </Show>
       </div>
       <p class="eq-footnote">
         {t("more.osCodecNote")}
       </p>
     </section>
+    </Show>
   </div>
 );
 

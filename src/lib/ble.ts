@@ -32,6 +32,7 @@ export interface BleDevice {
 }
 
 export interface DeviceProfile {
+  capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean };
   connection: {
     transport: "bleGatt" | "unresolved";
     framing: "bareAaBa" | "headphone789c" | "unresolved";

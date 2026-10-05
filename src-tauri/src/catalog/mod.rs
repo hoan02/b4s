@@ -2,6 +2,7 @@ mod types;
 pub mod public;
 
 pub use types::ModelProfile;
+pub use types::Capabilities;
 pub use types::{ConnectionProfile, ControlTransport, WireFraming};
 
 include!(concat!(env!("OUT_DIR"), "/model_profiles.rs"));

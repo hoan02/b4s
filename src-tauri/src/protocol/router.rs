@@ -51,6 +51,27 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
     if profile.protocol == ProtocolFamily::Unknown {
         return Err("No protocol is verified for this model".into());
     }
+    use crate::device::capability::{authorize, Feature};
+    let feature = match &command {
+        FeatureCommand::SetEq(_) | FeatureCommand::SetEqIndex(_) => Feature::Eq,
+        FeatureCommand::SetCustomEq { .. } => Feature::CustomEq,
+        FeatureCommand::SetGameMode(_) => Feature::Game,
+        FeatureCommand::SetSpatial(_) => Feature::Spatial,
+        FeatureCommand::SetBassBoost(_) => Feature::Bass,
+        FeatureCommand::SetLdac(_) => Feature::Ldac,
+        FeatureCommand::SetHearingProtection { .. } => Feature::Hearing,
+        FeatureCommand::FindBuds(_) => Feature::Find,
+    };
+    authorize(profile, feature)?;
+    if let FeatureCommand::SetCustomEq { bands, .. } = &command {
+        let eq = profile.model_id.as_deref().and_then(crate::catalog::profile_for)
+            .and_then(|profile| profile.eq).ok_or("No reviewed custom EQ schema")?;
+        if bands.len() != eq.bands.len() || bands.iter().zip(&eq.bands).any(|(band, frequency)|
+            band.frequency != *frequency || !band.q_value.is_finite() || band.q_value <= 0.0 ||
+            !band.gain.is_finite() || band.gain < eq.min_gain || band.gain > eq.max_gain) {
+            return Err("Custom EQ values do not match the reviewed model schema".into());
+        }
+    }
     // Preserve existing wire limits by rejecting invalid intent rather than
     // silently clamping it into another command. Profile-scoped constraints
     // will replace these legacy bounds during the profile-v2 migration.
@@ -110,6 +131,7 @@ pub fn encode_listening(
     profile: &DeviceProfile,
     command: ListeningCommand,
 ) -> Result<Vec<u8>, String> {
+    crate::device::capability::authorize(profile, crate::device::capability::Feature::Listening)?;
     let (mode, parameter) = match command {
         ListeningCommand::Normal => (AncMode::Off, 0xFF),
         ListeningCommand::TransparencyFull => (AncMode::Transparency, 0xFF),
@@ -156,6 +178,24 @@ pub fn encode_listening(
 mod tests {
     use super::*;
     use crate::protocol::profile_for;
+
+    #[test]
+    fn custom_eq_rejects_wrong_layout_and_nonfinite_values_before_encoding() {
+        let profile = profile_for(Some("bass-bp1-pro"), None, None);
+        let bands: Vec<_> = crate::catalog::profile_for("bass-bp1-pro").unwrap().eq.unwrap().bands
+            .into_iter().map(|frequency| EqBand { frequency, q_value: 1.0, gain: 0.0, filter: 1 }).collect();
+        for invalid in 0..3 {
+            let mut changed = bands.clone();
+            match invalid {
+                0 => changed[0].frequency = 1,
+                1 => changed[0].gain = f32::NAN,
+                _ => changed[0].q_value = 0.0,
+            }
+            assert!(encode_feature(&profile, FeatureCommand::SetCustomEq {
+                dict_sort: 101, anc: false, bands: changed,
+            }).is_err());
+        }
+    }
 
     #[test]
     fn notification_routing_preserves_bp1_and_keeps_unknown_raw() {
@@ -221,15 +261,8 @@ mod tests {
     #[test]
     fn bp1_custom_eq_uses_ba31_and_eight_band_payload() {
         let profile = profile_for(Some("bass-bp1-pro"), None, None);
-        let bands = vec![
-            EqBand {
-                frequency: 100,
-                q_value: 1.0,
-                gain: 0.0,
-                filter: 1
-            };
-            8
-        ];
+        let bands = crate::catalog::profile_for("bass-bp1-pro").unwrap().eq.unwrap().bands
+            .into_iter().map(|frequency| EqBand { frequency, q_value: 1.0, gain: 0.0, filter: 1 }).collect();
         let packet = encode_feature(
             &profile,
             FeatureCommand::SetCustomEq {
