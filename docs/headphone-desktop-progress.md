@@ -39,7 +39,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
 | P6.1 | ANC/transparency/game, constraints/readback | Open |
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
-| P6.3 | Bass/spatial/codec/hearing constraints | Open |
+| P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; hearing threshold/spatial policy outstanding |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
 | P6.5 | Multipoint/find/device settings | Open |
 | P7.1 | Classify headphone-only catalog và legacy migration | Open |
@@ -251,3 +251,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Added explicit QueryBassBoost BA53 startup request so reviewed BP1 Pro sessions can observe initial bass state. Startup EQ/bass/LDAC/hearing queries use the shared backend feature authorizer, not public/marketing capability flags.
 - Extracted common control authorization for transport/review/firmware checks; startup also requires model/profile identity equality. Unknown/unreviewed/mismatched profiles cannot trigger speculative battery/feature queries.
 - Three initialization tests passed. Added marketing-flag, firmware/identity mismatch and BA53 byte coverage for CI without another local suite. Startup readiness/correlation and captured initialization order remain open.
+
+
+## Increment 28 — hearing threshold source contract
+
+- Traced hearing UI threshold list and setter: 75/80/85/90/95/100 dB, with -1 encoded as FF. AA94 is ACK; AA93 is state query and has region/model UI guards.
+- Recorded mismatch with legacy B4S setter 0–3/default 1 as an explicit implementation gap. Existing BP1 Pro hearing capability remains disabled; no global permissive range change or unsupported model activation.
+- Added source dossier with consumer pointers and per-model threshold/sentinel/readback/capture requirements. Documentation only, no redundant build. P6.3 remains in progress.
