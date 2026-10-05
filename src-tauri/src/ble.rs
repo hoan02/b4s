@@ -2,6 +2,8 @@
 
 #[path = "ble/handshake.rs"]
 mod handshake;
+#[path = "ble/discovery.rs"]
+mod discovery;
 
 use crate::device::{DeviceIdentity, DeviceRegistry};
 use crate::protocol::{self, AncMode, BatteryState, DeviceEvent, EqPreset, ListeningCommand};
@@ -137,6 +139,7 @@ pub struct ScanStatus {
 
 struct BleInner {
     adapter: Option<Adapter>,
+    central_task: Option<tokio::task::JoinHandle<()>>,
     peripherals: HashMap<String, Peripheral>,
     connected_id: Option<String>,
     scanning: bool,
@@ -168,6 +171,7 @@ impl BleInner {
     fn new() -> Self {
         Self {
             adapter: None,
+            central_task: None,
             peripherals: HashMap::new(),
             connected_id: None,
             scanning: false,
@@ -386,18 +390,18 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     state.mock = false;
     drop(state);
 
-    adapter
-        .start_scan(ScanFilter::default())
-        .await
-        .map_err(|e| format!("start_scan: {e}"))?;
-    emit_scan_status(&app).await;
-
-    let app_c = app.clone();
-    tauri::async_runtime::spawn(async move {
-        if let Err(e) = listen_central_events(app_c, adapter).await {
-            log::error!("central events: {e}");
+    let start_result = async {
+        discovery::ensure_central_listener(app.clone(), adapter.clone()).await?;
+        adapter.start_scan(ScanFilter::default()).await.map_err(|error| format!("start_scan: {error}"))
+    }.await;
+    if let Err(error) = start_result {
+        let mut state = BLE.lock().await;
+        if state.scan_generation == scan_generation {
+            state.scanning = false;
         }
-    });
+        return Err(error);
+    }
+    emit_scan_status(&app).await;
 
     let app_t = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -407,41 +411,12 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-async fn listen_central_events(app: AppHandle, adapter: Adapter) -> Result<(), String> {
-    let mut events = adapter
-        .events()
-        .await
-        .map_err(|e| format!("events: {e}"))?;
-
-    while let Some(event) = events.next().await {
-        match event {
-            CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
-                if let Ok(p) = adapter.peripheral(&id).await {
-                    process_peripheral(&app, p, &id).await;
-                }
-            }
-            CentralEvent::DeviceDisconnected(id) => {
-                let id_str = id_to_string(&id);
-                let mut state = BLE.lock().await;
-                if state.connected_id.as_ref() == Some(&id_str) {
-                    state.connected_id = None;
-                    state.battery = BatteryState::default();
-                    state.reset_link();
-                }
-                if let Some(d) = state.devices.get_mut(&id_str) {
-                    d.connected = false;
-                }
-                drop(state);
-                emit_connection_state(&app).await;
-                let _ = app.emit("ble://disconnected", &id_str);
-            }
-            _ => {}
-        }
-    }
-    Ok(())
-}
-
 async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, id: &PeripheralId) {
+    let scan_generation = {
+        let state = BLE.lock().await;
+        if !state.scanning { return; }
+        state.scan_generation
+    };
     let props = match peripheral.properties().await {
         Ok(Some(p)) => p,
         _ => return,
@@ -502,6 +477,7 @@ async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, id: &Periph
 
     {
         let mut state = BLE.lock().await;
+        if !state.scanning || state.scan_generation != scan_generation { return; }
         // Prefer stronger RSSI if same Windows id already seen
         if let Some(old) = state.devices.get(&id_str) {
             if rssi < old.rssi {
@@ -1011,9 +987,14 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     // Poll battery + link health while connected
     let app_h = app.clone();
     let poll_id = device_id.clone();
+    let mut lease = BLE.lock().await.session.lease(token);
     tauri::async_runtime::spawn(async move {
         for i in 0..40 {
-            tokio::time::sleep(Duration::from_secs(if i < 5 { 2 } else { 10 })).await;
+            tokio::select! {
+                biased;
+                _ = lease.cancelled() => break,
+                _ = tokio::time::sleep(Duration::from_secs(if i < 5 { 2 } else { 10 })) => {},
+            }
             let still = {
                 let s = BLE.lock().await;
                 s.session.accepts(token) && s.connected_id.as_ref() == Some(&poll_id)
@@ -1022,7 +1003,11 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
                 break;
             }
             if let Ok(p) = resolve_peripheral(&poll_id).await {
-                let _ = send_battery_queries(&p).await;
+                tokio::select! {
+                    biased;
+                    _ = lease.cancelled() => break,
+                    _ = send_battery_queries(&p) => {},
+                }
             }
             emit_connection_state(&app_h).await;
         }
@@ -1109,9 +1094,15 @@ async fn subscribe_notifications(
         .await
         .map_err(|e| format!("notifications stream: {e}"))?;
 
+    let mut lease = BLE.lock().await.session.lease(token);
     tauri::async_runtime::spawn(async move {
         let mut receivers = HashMap::<uuid::Uuid, protocol::receiver::NotificationReceiver>::new();
-        while let Some(n) = stream.next().await {
+        loop {
+            let n = tokio::select! {
+                biased;
+                _ = lease.cancelled() => break,
+                item = stream.next() => match item { Some(item) => item, None => break },
+            };
             if !BLE.lock().await.session.accepts(token) {
                 break;
             }
@@ -1420,6 +1411,7 @@ async fn write_command(peripheral: &Peripheral, cmd: protocol::Command) -> Resul
 }
 
 async fn write_raw(peripheral: &Peripheral, data: &[u8]) -> Result<(), String> {
+    let token = BLE.lock().await.session.token();
     if !peripheral
         .is_connected()
         .await
@@ -1463,12 +1455,14 @@ async fn write_raw(peripheral: &Peripheral, data: &[u8]) -> Result<(), String> {
         }
     );
 
+    ensure_session(token).await?;
     let result = peripheral.write(ch, data, write_type).await;
     let result = match result {
         Err(e)
             if matches!(write_type, WriteType::WithResponse)
                 && ch.properties.contains(CharPropFlags::WRITE_WITHOUT_RESPONSE) =>
         {
+            ensure_session(token).await?;
             log::warn!("Write WithResponse failed ({e}), retry WithoutResponse");
             peripheral
                 .write(ch, data, WriteType::WithoutResponse)
@@ -1481,6 +1475,9 @@ async fn write_raw(peripheral: &Peripheral, data: &[u8]) -> Result<(), String> {
 
     {
         let mut state = BLE.lock().await;
+        if !state.session.accepts(token) {
+            return Err("Device session was cancelled during write".into());
+        }
         state.tx_count = state.tx_count.saturating_add(1);
         state.last_tx_ms = Some(now_ms());
         state.last_tx_hex = Some(hex_encode(data));
@@ -1512,8 +1509,16 @@ where
         .get(&id)
         .ok_or("Peripheral gone")?
         .clone();
+    let token = state.session.token();
+    let mut lease = state.session.lease(token);
     drop(state);
-    f(p).await
+    let result = tokio::select! {
+        biased;
+        _ = lease.cancelled() => Err("Device session was cancelled".into()),
+        result = f(p) => result,
+    };
+    ensure_session(token).await?;
+    result
 }
 
 pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
@@ -1981,6 +1986,7 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
     let mut state = BLE.lock().await;
     state.scanning = true;
     state.scan_generation = state.scan_generation.wrapping_add(1);
+    let scan_generation = state.scan_generation;
     state.mock = true;
     state.devices.clear();
     drop(state);
@@ -2028,7 +2034,7 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
             tokio::time::sleep(Duration::from_millis(350 * (i as u64 + 1))).await;
             {
                 let mut s = BLE.lock().await;
-                if !s.scanning {
+                if !s.scanning || s.scan_generation != scan_generation {
                     return;
                 }
                 s.devices.insert(d.id.clone(), d.clone());
@@ -2042,6 +2048,7 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(Duration::from_secs(8)).await;
         let mut s = BLE.lock().await;
+        if s.scan_generation != scan_generation { return; }
         s.scanning = false;
         drop(s);
         emit_scan_status(&app3).await;
