@@ -171,6 +171,7 @@ pub fn profile_for(
     let Some(model) = all_models().into_iter().find(|item| item.id == id) else {
         return unknown_profile(model_id, model_name);
     };
+    let catalog_profile = crate::catalog::profile_for(id);
     let max_custom_level = if !model.has_anc {
         0
     } else if id == "eh10-nc-lite" || id == "bh1-nc-lite" {
@@ -184,7 +185,12 @@ pub fn profile_for(
         firmware: firmware.map(str::to_owned),
         protocol: model.protocol,
         verified: matches!(model.support, SupportLevel::Verified),
-        noise: NoiseCapability {
+        noise: catalog_profile.map(|profile| NoiseCapability {
+            supports_adaptive: profile.noise.supports_adaptive,
+            environments: profile.noise.environments,
+            max_custom_level: profile.noise.max_custom_level,
+            supports_transparency_voice: profile.noise.supports_transparency_voice,
+        }).unwrap_or(NoiseCapability {
             supports_adaptive: model.has_anc,
             environments: if model.has_anc {
                 vec![101, 102, 103, 108]
@@ -193,12 +199,49 @@ pub fn profile_for(
             },
             max_custom_level,
             supports_transparency_voice: model.has_anc,
-        },
+        }),
     }
 }
 
 /// Full listening catalog from Baseus app 2.14.1.
 pub fn all_models() -> Vec<ModelInfo> {
+    let mut models = legacy_models();
+    for profile in crate::catalog::all_profiles() {
+        let support = match profile.support.as_str() {
+            "verified" => SupportLevel::Verified,
+            "experimental" => SupportLevel::Experimental,
+            _ => SupportLevel::ScanOnly,
+        };
+        let protocol = match profile.protocol_family.as_str() {
+            "bp1" => ProtocolFamily::Bp1Pro,
+            "baseusAaBaExperimental" => ProtocolFamily::BaseusAaBaExperimental,
+            _ => ProtocolFamily::Unknown,
+        };
+        let aliases: Vec<_> = profile.aliases.iter().map(String::as_str).collect();
+        let mut model = m(
+            &profile.id,
+            &profile.display_name,
+            &aliases,
+            support,
+            protocol,
+            profile.capabilities.anc,
+            profile.capabilities.eq,
+            profile.capabilities.game_mode,
+            &profile.category,
+            &profile.group,
+        );
+        model.capabilities.bass_boost = profile.capabilities.bass_boost;
+        model.capabilities.spatial = profile.capabilities.spatial;
+        model.capabilities.ldac = profile.capabilities.ldac;
+        model.capabilities.hearing_protection = profile.capabilities.hearing_protection;
+        models.retain(|existing| existing.id != model.id);
+        models.push(model);
+    }
+    models
+}
+
+// Compatibility catalog: migrate entries only when model-specific data is available.
+fn legacy_models() -> Vec<ModelInfo> {
     vec![
         m("bass-bp1-pro", "Baseus Bass BP1 Pro", &["bass bp1 pro", "bp1 pro"], SupportLevel::Verified, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
         m("bass-bp1-ultra", "Baseus Bass BP1 Ultra", &["bass bp1 ultra", "bp1 ultra"], SupportLevel::Verified, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
@@ -361,6 +404,16 @@ pub fn catalog_json() -> Vec<ModelInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn json_profile_drives_registry_capabilities_and_aliases() {
+        let profile = crate::catalog::profile_for("bass-bp1-pro").unwrap();
+        let model = identify(&profile.aliases[0]).unwrap();
+        assert_eq!(model.id, profile.id);
+        assert_eq!(model.capabilities.ldac, profile.capabilities.ldac);
+        assert_eq!(model.capabilities.spatial, profile.capabilities.spatial);
+        assert_eq!(all_models().iter().filter(|item| item.id == profile.id).count(), 1);
+    }
 
     #[test]
     fn bp1_profile_is_verified_and_has_apk_noise_capabilities() {

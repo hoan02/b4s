@@ -64,6 +64,10 @@ jobs:
         working-directory: src-tauri
         run: cargo check
 
+      - name: Rust tests (no Bluetooth hardware required)
+        working-directory: src-tauri
+        run: cargo test --lib
+
       # Full Tauri bundle without updater signing (CI only)
       - name: Tauri build (no updater artifacts)
         uses: tauri-apps/tauri-action@v0

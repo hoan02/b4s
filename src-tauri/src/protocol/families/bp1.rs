@@ -2,8 +2,8 @@
 //!
 //! Packet table verified on hardware (see docs/protocol/bp1-pro-anc.md).
 
-use super::framing::Frame;
-use super::types::*;
+use crate::protocol::Frame;
+use crate::protocol::types::*;
 
 /// Decoder/command table verified from Bass BP1 Pro captures.
 ///
@@ -229,7 +229,7 @@ impl Bp1ProAnc {
             payload.push(band.filter);
             payload.push(0x00);
         }
-        super::framing::Frame::write(0x31, &payload).encode_write()
+        Frame::write(0x31, &payload).encode_write()
     }
     fn bass_level_from_payload(payload: &[u8]) -> u8 {
         // Firmware variants answer either AA54 [level] or AA54 [enabled, level].
@@ -244,23 +244,23 @@ impl Bp1ProAnc {
     #[allow(dead_code)]
     pub fn cmd_set_anc(mode: AncMode, strength_pct: u8) -> Vec<u8> {
         let level = mode.level_from_percent(strength_pct);
-        super::encode_command(Command::SetAnc { mode, level })
+        crate::protocol::encode_command(Command::SetAnc { mode, level })
     }
 
     pub fn cmd_set_noise(mode: AncMode, parameter: u8) -> Vec<u8> {
-        super::encode_command(Command::SetNoise { mode, parameter })
+        crate::protocol::encode_command(Command::SetNoise { mode, parameter })
     }
 
     pub fn cmd_set_eq(preset: EqPreset) -> Vec<u8> {
-        super::encode_command(Command::SetEq(preset))
+        crate::protocol::encode_command(Command::SetEq(preset))
     }
 
     pub fn cmd_set_game_mode(on: bool) -> Vec<u8> {
-        super::encode_command(Command::SetGameMode(on))
+        crate::protocol::encode_command(Command::SetGameMode(on))
     }
 
     pub fn cmd_find_buds(start: bool) -> Vec<u8> {
-        super::encode_command(Command::FindBuds(start))
+        crate::protocol::encode_command(Command::FindBuds(start))
     }
 }
 

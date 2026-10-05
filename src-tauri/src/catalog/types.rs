@@ -1,5 +1,26 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Capabilities {
+    #[serde(default)]
+    pub anc: bool,
+    #[serde(default)]
+    pub eq: bool,
+    #[serde(default)]
+    pub custom_eq: bool,
+    #[serde(default)]
+    pub game_mode: bool,
+    #[serde(default)]
+    pub bass_boost: bool,
+    #[serde(default)]
+    pub spatial: bool,
+    #[serde(default)]
+    pub ldac: bool,
+    #[serde(default)]
+    pub hearing_protection: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct EqPresetProfile {
@@ -39,7 +60,7 @@ pub struct ModelProfile {
     pub protocol_family: String,
     pub category: String,
     pub group: String,
-    pub capabilities: serde_json::Value,
+    pub capabilities: Capabilities,
     pub noise: NoiseProfile,
     pub eq: Option<EqProfile>,
     pub image: Option<String>,

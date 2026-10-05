@@ -306,7 +306,8 @@ mod tests {
     fn bp1_ultra_battery_poll_uses_one_wrapped_query() {
         let frame = battery_query_frame();
         assert_eq!(frame[..2], [0x78, 0x9C]);
-        assert_eq!(frame[5..8], [0x02, 0x01, 0x01]);
+        // Control marker, query type, payload length, battery opcode.
+        assert_eq!(frame[4..8], [0x02, 0x01, 0x01, 0x02]);
     }
 
     #[test]

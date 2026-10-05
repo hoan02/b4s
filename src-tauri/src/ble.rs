@@ -1096,9 +1096,15 @@ async fn handle_notification(app: &AppHandle, data: &[u8], _char_uuid: Option<St
         }
     }
 
-    let last_anc = {
+    let (last_anc, family) = {
         let state = BLE.lock().await;
-        state.last_anc
+        let family = state
+            .connected_id
+            .as_ref()
+            .and_then(|id| state.devices.get(id))
+            .map(|device| device.device_profile.protocol)
+            .unwrap_or(protocol::ProtocolFamily::Unknown);
+        (state.last_anc, family)
     };
 
     // Unwrap 789C multi-frames → one or more AA payloads; decode each
@@ -1107,7 +1113,7 @@ async fn handle_notification(app: &AppHandle, data: &[u8], _char_uuid: Option<St
     let mut any_decoded = false;
     for frame in &frames {
         match protocol::Frame::decode_notify(frame) {
-            Ok(fr) => match protocol::Bp1ProAnc::decode_frame(&fr, last_anc) {
+            Ok(fr) => match protocol::decode_frame(family, &fr, last_anc) {
                 Ok(event) => {
                     log::info!("DeviceEvent: {:?}", event);
                     apply_event(app, event).await;

@@ -15,7 +15,7 @@
 mod framing;
 pub mod advertisement;
 mod types;
-mod bp1_pro;
+mod families;
 mod crc_table;
 pub mod wrap_v2;
 pub mod models;
@@ -23,13 +23,13 @@ pub mod router;
 
 pub use framing::Frame;
 pub use types::*;
-pub use bp1_pro::Bp1ProAnc;
+pub use families::bp1::Bp1ProAnc;
 pub use models::{
     catalog_json, identify as identify_model, looks_like_baseus, profile_for, DeviceProfile,
     ModelInfo, ProtocolFamily, SupportLevel,
 };
 pub use wrap_v2::{battery_query_frame, needs_v2_wrap, unwrap_notify, wrap_ba_command};
-pub use router::{encode_feature, encode_listening, FeatureCommand, ListeningCommand};
+pub use router::{decode_frame, encode_feature, encode_listening, FeatureCommand, ListeningCommand};
 
 /// Encode a bare BA command (no 789C wrap).
 pub fn encode_command(cmd: Command) -> Vec<u8> {

@@ -48,6 +48,10 @@ npm run tauri:dev
 
 ## Kiến trúc
 
+Hướng dẫn cộng đồng: [Contributing](CONTRIBUTING.md) ·
+[Kiến trúc và điểm mở rộng](docs/architecture.md) ·
+[Thêm model](docs/model-catalog.md).
+
 - `src/`: giao diện SolidJS, trạng thái thiết bị và profile frontend.
 - `src-tauri/src/ble.rs`: scan, connect, GATT và event.
 - `src-tauri/src/protocol/`: frame và protocol family.
