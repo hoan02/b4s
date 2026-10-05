@@ -86,11 +86,11 @@ test("EQ readback resolves custom, model presets and unknown without inventing C
 });
 
 
-const controllerSource = readFileSync(new URL("../src/features/equalizer/controller.ts", import.meta.url), "utf8");
+const controllerSource = readFileSync(new URL("../src/features/shared/confirmedOperation.ts", import.meta.url), "utf8");
 const controllerCompiled = ts.transpileModule(controllerSource, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;
-const { createEqualizerController } = await import(`data:text/javascript;base64,${Buffer.from(controllerCompiled).toString("base64")}`);
+const { createConfirmedOperation } = await import(`data:text/javascript;base64,${Buffer.from(controllerCompiled).toString("base64")}`);
 
 function deferred() {
   let resolve;
@@ -103,7 +103,7 @@ test("EQ controller rejects duplicate writes and session changes during refresh"
   let writes = 0;
   let confirmed = 0;
   const refresh = deferred();
-  const controller = createEqualizerController({
+  const controller = createConfirmedOperation({
     session: { capture: () => generation, isCurrent: token => token === generation },
     refresh: () => refresh.promise, pending: () => {}, error: () => {}, formatError: String,
   });
@@ -122,7 +122,7 @@ test("EQ reset permits new operation and old completion cannot clear its pending
   let confirmed = 0;
   const oldWrite = deferred();
   const newWrite = deferred();
-  const controller = createEqualizerController({
+  const controller = createConfirmedOperation({
     session: { capture: () => 1, isCurrent: () => true }, refresh: async () => {},
     pending: value => { pending = value; }, error: () => {}, formatError: String,
   });

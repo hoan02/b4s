@@ -4,9 +4,12 @@
  */
 import { Component, For, Show } from "solid-js";
 import { IconBack } from "./Icons";
+import OperationStatus from "./OperationStatus";
 import { t } from "../lib/i18n";
 
 interface Props {
+  pending?: boolean;
+  error?: string | null;
   bassSupported: boolean;
   ldacSupported: boolean;
   hearingSupported: boolean;
@@ -58,6 +61,7 @@ const MorePanel: Component<Props> = (props) => (
     </section>
 
     </Show>
+    <OperationStatus pending={props.pending} error={props.error} />
     <Show when={props.ldacSupported || props.hearingSupported}>
     <section class="more-group">
               <p class="more-label">{t("more.codecProtection")}</p>
@@ -71,6 +75,7 @@ const MorePanel: Component<Props> = (props) => (
           <label class="toggle sm">
             <input
               type="checkbox"
+              disabled={props.pending}
               checked={props.ldac}
               onChange={(e) =>
                 props.onLdac((e.currentTarget as HTMLInputElement).checked)
@@ -89,6 +94,7 @@ const MorePanel: Component<Props> = (props) => (
           <label class="toggle sm">
             <input
               type="checkbox"
+              disabled={props.pending}
               checked={props.hearingProtect}
               onChange={(e) =>
                 props.onHearingProtect(

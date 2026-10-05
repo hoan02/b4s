@@ -12,7 +12,7 @@ interface Dependencies<T> {
 }
 
 /** Owns admission and UI publication; backend commands own wire confirmation. */
-export function createEqualizerController<T>(dependencies: Dependencies<T>) {
+export function createConfirmedOperation<T>(dependencies: Dependencies<T>) {
   let epoch = 0;
   let busy = false;
   return {
