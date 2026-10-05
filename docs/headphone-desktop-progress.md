@@ -244,3 +244,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Source ResultHandle.i/j and Setting.i establish BA54 00/01 write, BA53 query, AA53 boolean state and AA54 success/error ACK. Replaced the invented enabled+level write and four-level UI; backend rejects levels above 1 and AA54 never publishes bass state.
 - Bass setter waits for matching AA53 observation in the serialized current-session transaction. UI uses nullable snapshot state and shared confirmed-operation pending/error behavior; unsupported multi-level intents reject instead of clamping.
 - All 63 protocol tests and frontend typecheck passed; five-locale On label added. Firmware/conflict/readiness and hardware verification remain open. Increment 25's retained legacy layouts are superseded by this source-traced query-only decoder.
+
+
+## Increment 27 — authorized startup bass query
+
+- Added explicit QueryBassBoost BA53 startup request so reviewed BP1 Pro sessions can observe initial bass state. Startup EQ/bass/LDAC/hearing queries use the shared backend feature authorizer, not public/marketing capability flags.
+- Extracted common control authorization for transport/review/firmware checks; startup also requires model/profile identity equality. Unknown/unreviewed/mismatched profiles cannot trigger speculative battery/feature queries.
+- Three initialization tests passed. Added marketing-flag, firmware/identity mismatch and BA53 byte coverage for CI without another local suite. Startup readiness/correlation and captured initialization order remain open.

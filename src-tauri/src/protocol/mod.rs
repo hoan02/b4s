@@ -63,6 +63,7 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             // PanoramicSoundViewModel.u: "BA43" + "00"|"01"|"02"|…
             Frame::write(0x43, &[mode.to_byte()]).encode_write()
         }
+        Command::QueryBassBoost => Frame::write(0x53, &[]).encode_write(),
         Command::SetBassBoost(level) => {
             Frame::write(0x54, &[level]).encode_write()
         }

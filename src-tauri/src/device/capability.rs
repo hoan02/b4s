@@ -16,7 +16,7 @@ pub enum Feature {
     Find,
 }
 
-pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String> {
+pub fn authorize_control(profile: &DeviceProfile) -> Result<(), String> {
     let connection = profile
         .connection
         .as_ref()
@@ -37,6 +37,11 @@ pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String
     {
         return Err("Firmware does not match the reviewed profile".into());
     }
+    Ok(())
+}
+
+pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String> {
+    authorize_control(profile)?;
     let capability = &profile.capabilities;
     let enabled = match feature {
         Feature::Listening => capability.anc,

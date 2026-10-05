@@ -195,6 +195,7 @@ pub enum Command {
     SetSpatial(SpatialMode),
     /// Bass boost electronic: 0–3 (best-effort BA opcode)
     SetBassBoost(u8),
+    QueryBassBoost,
     SetLdac(bool),
     SetHearingProtection { enabled: bool, level: u8 },
     QueryLdac,
