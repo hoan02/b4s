@@ -25,8 +25,10 @@ import {
 
 interface Props {
   theme: ThemeMode;
-  onToggleTheme: () => void;
+  onSelectTheme: (mode: ThemeMode) => void;
   onNotify?: (msg: string, kind?: ToastKind, title?: string) => void;
+  activeSubpage: "language" | "appearance" | null;
+  onNavigate: (page: "language" | "appearance" | null) => void;
 }
 
 const Settings: Component<Props> = (props) => {
@@ -94,6 +96,9 @@ const Settings: Component<Props> = (props) => {
 
   return (
     <div class="settings">
+      <Show when={props.activeSubpage === "appearance"} fallback={
+        <Show when={props.activeSubpage === "language"} fallback={
+        <>
       <div class="settings-hero">
         <img class="settings-app-logo" src="/b4s-logo.png" alt="B4S" />
         <div class="settings-app-ver">
@@ -103,14 +108,18 @@ const Settings: Component<Props> = (props) => {
       </div>
 
       <div class="settings-group">
-        <div class="settings-group-label">{t("settings.language")}</div>
+        <div class="settings-group-label">{t("settings.general")}</div>
         <div class="settings-list">
-          <label class="settings-row">
+          <button
+            type="button"
+            class="settings-row action"
+            onClick={() => props.onNavigate("language")}
+            aria-label={`${t("settings.language")}: ${LOCALE_NAMES[locale()]}`}
+          >
             <span class="settings-row-label">{t("settings.language")}</span>
-            <select aria-label={t("settings.language")} value={locale()} onChange={(event) => void setLocale(event.currentTarget.value as Locale)}>
-              {LOCALES.map((code) => <option value={code}>{LOCALE_NAMES[code]}</option>)}
-            </select>
-          </label>
+            <span class="settings-row-value">{LOCALE_NAMES[locale()]}</span>
+            <span class="settings-row-chev" aria-hidden="true">›</span>
+          </button>
         </div>
       </div>
 
@@ -120,12 +129,12 @@ const Settings: Component<Props> = (props) => {
           <button
             type="button"
             class="settings-row action"
-            onClick={() => props.onToggleTheme()}
+            onClick={() => props.onNavigate("appearance")}
           >
             <IconTheme size={19} />
             <span class="settings-row-label">{t("settings.interface")}</span>
             <span class="settings-row-value">
-              {props.theme === "dark" ? t("settings.dark") : t("settings.light")}
+              {t(`settings.${props.theme}`)}
             </span>
             <span class="settings-row-chev">›</span>
           </button>
@@ -231,6 +240,47 @@ const Settings: Component<Props> = (props) => {
           </div>
         </div>
       </div>
+        </>
+        }>
+          <div class="settings-language-page">
+            <div class="settings-list" role="group" aria-label={t("settings.language")}>
+              {LOCALES.map((code) => (
+                <button
+                  type="button"
+                  class={`settings-row action settings-language-option${locale() === code ? " selected" : ""}`}
+                  aria-pressed={locale() === code}
+                  onClick={() => {
+                    void setLocale(code as Locale);
+                    props.onNavigate(null);
+                  }}
+                >
+                  <span class="settings-row-label" lang={code}>{LOCALE_NAMES[code]}</span>
+                  <span class="settings-language-check" aria-hidden="true">{locale() === code ? "✓" : ""}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </Show>
+      }>
+        <div class="settings-language-page">
+          <div class="settings-list" role="group" aria-label={t("settings.interface")}>
+            {(["system", "light", "dark"] as const).map((mode) => (
+              <button
+                type="button"
+                class={`settings-row action settings-language-option${props.theme === mode ? " selected" : ""}`}
+                aria-pressed={props.theme === mode}
+                onClick={() => {
+                  props.onSelectTheme(mode);
+                  props.onNavigate(null);
+                }}
+              >
+                <span class="settings-row-label">{t(`settings.${mode}`)}</span>
+                <span class="settings-language-check" aria-hidden="true">{props.theme === mode ? "✓" : ""}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Show>
     </div>
   );
 };

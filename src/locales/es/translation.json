@@ -1,5 +1,6 @@
 {
   "language": "Idioma",
+  "settings.general": "General",
   "error.operationFailed": "No se pudo completar la operación",
   "nav.back": "Volver",
   "nav.settings": "Configuración",
@@ -68,6 +69,7 @@
   "settings.interface": "Apariencia",
   "settings.dark": "Oscuro",
   "settings.light": "Claro",
+  "settings.system": "Sistema",
   "settings.updates": "Actualizaciones",
   "settings.version": "Versión",
   "settings.versionCaption": "Versión {{version}}",

@@ -1,5 +1,6 @@
 {
   "language": "语言",
+  "settings.general": "常规",
   "error.operationFailed": "操作失败",
   "nav.back": "返回",
   "nav.settings": "设置",
@@ -68,6 +69,7 @@
   "settings.interface": "外观",
   "settings.dark": "深色",
   "settings.light": "浅色",
+  "settings.system": "跟随系统",
   "settings.updates": "更新",
   "settings.version": "版本",
   "settings.versionCaption": "版本 {{version}}",

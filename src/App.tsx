@@ -45,7 +45,6 @@ import { getAppInfo } from "./lib/app";
 import {
   applyTheme,
   getStoredTheme,
-  toggleTheme,
   type ThemeMode,
 } from "./lib/theme";
 import { makeToast, type ToastItem } from "./lib/toast";
@@ -62,6 +61,7 @@ type PendingEqAction =
 
 const App: Component = () => {
   const [view, setView] = createSignal<View>("home");
+  const [settingsSubpage, setSettingsSubpage] = createSignal<"language" | "appearance" | null>(null);
   const [theme, setTheme] = createSignal<ThemeMode>("dark");
   const [toasts, setToasts] = createSignal<ToastItem[]>([]);
   const [appVersion, setAppVersion] = createSignal("…");
@@ -520,10 +520,9 @@ const App: Component = () => {
     stopLinkPoll();
   };
 
-  const handleTheme = () => {
-    const next = toggleTheme(theme());
-    setTheme(next);
-    notify(next === "dark" ? t("theme.dark") : t("theme.light"), "info");
+  const handleTheme = (mode: ThemeMode) => {
+    applyTheme(mode);
+    setTheme(mode);
   };
 
   return (
@@ -539,17 +538,19 @@ const App: Component = () => {
                 type="button"
                 class="screen-back"
                 aria-label={t("nav.back")}
-                onClick={() => setView("home")}
+                onClick={() => settingsSubpage() ? setSettingsSubpage(null) : setView("home")}
               >
                 <IconBack size={20} />
               </button>
-              <span class="screen-title">{t("nav.settings")}</span>
+              <span class="screen-title">{settingsSubpage() === "language" ? t("settings.language") : settingsSubpage() === "appearance" ? t("settings.interface") : t("nav.settings")}</span>
               <div class="screen-nav-spacer" />
             </div>
             <Settings
               theme={theme()}
-              onToggleTheme={handleTheme}
+              onSelectTheme={handleTheme}
               onNotify={notify}
+              activeSubpage={settingsSubpage()}
+              onNavigate={setSettingsSubpage}
             />
           </section>
         </Show>
