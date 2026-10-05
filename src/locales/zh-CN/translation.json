@@ -140,5 +140,6 @@
   "linkMessage.serviceMissing": "缺少 GATT 控制服务 — 设备可能不使用 BP1 协议，或 Windows 配对尚未完成",
   "linkMessage.live": "连接正常 · {{notifications}} 条通知 · {{writes}} 次写入",
   "linkMessage.waiting": "GATT 写入已就绪，正在等待通知或电池数据。请打开充电盒或佩戴耳机。",
-  "linkMessage.handshakeFailed": "BLE 已连接，但控制握手失败。请尝试扫描列表中同名的另一个设备，或取消配对后重新配对。"
+  "linkMessage.handshakeFailed": "BLE 已连接，但控制握手失败。请尝试扫描列表中同名的另一个设备，或取消配对后重新配对。",
+  "device.applying": "正在应用…"
 }

@@ -11,6 +11,8 @@ export interface DeviceSnapshot {
   sessionId: number;
   revision: number;
   modelId: string | null;
+  deviceId: string | null;
+  mock: boolean;
   battery: {
     left: BatteryReading | null;
     right: BatteryReading | null;

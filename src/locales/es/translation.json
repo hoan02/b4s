@@ -140,5 +140,6 @@
   "linkMessage.serviceMissing": "Falta el servicio de control GATT — puede que el dispositivo no use el protocolo BP1 o que el emparejamiento de Windows esté incompleto",
   "linkMessage.live": "Enlace activo · {{notifications}} notificaciones · {{writes}} escrituras",
   "linkMessage.waiting": "La escritura GATT está lista; esperando notificaciones o datos de batería. Abre el estuche o ponte los auriculares.",
-  "linkMessage.handshakeFailed": "BLE conectado, pero falló la negociación de control. Prueba la otra entrada con el mismo nombre o elimina el emparejamiento y vuelve a emparejar."
+  "linkMessage.handshakeFailed": "BLE conectado, pero falló la negociación de control. Prueba la otra entrada con el mismo nombre o elimina el emparejamiento y vuelve a emparejar.",
+  "device.applying": "Aplicando…"
 }

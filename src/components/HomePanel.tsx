@@ -7,6 +7,7 @@ import type { AncMode, NoiseEnvironment, SpatialMode, TransparencyMode } from ".
 import type { LinkHealth } from "../lib/ble";
 import { resolveDeviceImage } from "../lib/deviceImages";
 import { t } from "../lib/i18n";
+import OperationStatus from "./OperationStatus";
 import {
   IconNormal,
   IconAmbient,
@@ -41,6 +42,8 @@ interface Props {
   adaptiveSupported: boolean;
   transparencyVoiceSupported: boolean;
   gameMode: boolean;
+  gamePending?: boolean;
+  gameError?: string | null;
   findActive: boolean;
   spatialOn: boolean;
   spatialMode: SpatialMode;
@@ -74,14 +77,14 @@ const AdaptiveEnvironmentCards = (props: {
   </div>
 );
 
-function pctClass(p: number) {
-  if (p <= 0) return "unk";
+function pctClass(p: number | null) {
+  if (p === null) return "unk";
   if (p <= 20) return "low";
   if (p <= 50) return "mid";
   return "ok";
 }
-function fmt(p: number) {
-  return p <= 0 ? "—" : `${Math.min(100, p)}%`;
+function fmt(p: number | null) {
+  return p === null ? "—" : `${Math.min(100, p)}%`;
 }
 
 const HomePanel: Component<Props> = (props) => {
@@ -281,11 +284,15 @@ const HomePanel: Component<Props> = (props) => {
             <div class="list-text">
               <span class="list-title">{t("home.gameMode")}</span>
               <span class="list-sub">{t("home.lowLatency")}</span>
+              <OperationStatus pending={props.gamePending} error={props.gameError} />
             </div>
             <label class="toggle sm">
               <input
                 type="checkbox"
                 checked={props.gameMode}
+                disabled={props.gamePending}
+                aria-busy={props.gamePending}
+                aria-label={t("home.gameMode")}
                 onChange={(e) =>
                   props.onGameMode((e.currentTarget as HTMLInputElement).checked)
                 }

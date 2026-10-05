@@ -7,6 +7,8 @@ import EqPanel from "./components/EqPanel";
 import Settings from "./components/Settings";
 import ToastHost from "./components/ToastHost";
 import ConfirmDialog from "./components/ConfirmDialog";
+import { getDeviceSnapshot, onDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot";
+import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth } from "./lib/ble";
 import {
@@ -70,9 +72,9 @@ const App: Component = () => {
   const [autoReconnectAvailable, setAutoReconnectAvailable] = createSignal(true);
   const [device, setDevice] = createSignal<BleDevice | null>(null);
   const [battery, setBattery] = createSignal<BatteryData>({
-    left: 0,
-    right: 0,
-    case: 0,
+    left: null,
+    right: null,
+    case: null,
   });
   const [ancMode, setAncModeUi] = createSignal<AncMode>("off");
   const [ancStrength, setAncStrength] = createSignal(70);
@@ -83,6 +85,10 @@ const App: Component = () => {
   const [eqActive, setEqActive] = createSignal<EqPresetId>("classic");
   const [eqCustomBands, setEqCustomBands] = createSignal(defaultCustomBands());
   const [eqCustomActive, setEqCustomActive] = createSignal(false);
+  const [eqPending, setEqPending] = createSignal(false);
+  const [gamePending, setGamePending] = createSignal(false);
+  const [eqError, setEqError] = createSignal<string | null>(null);
+  const [gameError, setGameError] = createSignal<string | null>(null);
   const [gameOn, setGameOn] = createSignal(false);
   const [findActive, setFindActive] = createSignal(false);
   const [findConfirmOpen, setFindConfirmOpen] = createSignal(false);
@@ -97,6 +103,52 @@ const App: Component = () => {
   const [controlError, setControlError] = createSignal<string | null>(null);
   const noiseCaps = () => device()?.deviceProfile?.noise;
   const noiseProfile = () => profileNoise(noiseCaps());
+
+  const applySnapshot = (snapshot: DeviceSnapshot | null) => {
+    setBattery({
+      left: snapshot?.battery.left?.percentage ?? null,
+      right: snapshot?.battery.right?.percentage ?? null,
+      case: snapshot?.battery.case?.percentage ?? null,
+      leftCharging: snapshot?.battery.left?.charging,
+      rightCharging: snapshot?.battery.right?.charging,
+      caseCharging: snapshot?.battery.case?.charging,
+    });
+    if (!snapshot) {
+      setEqPending(false);
+      setGamePending(false);
+      setEqError(null);
+      setGameError(null);
+      setBassBoostUi(0);
+      setHearingProtect(false);
+      setSpatialOn(false);
+      setEqCustomActive(false);
+      setEqCustomBands(defaultCustomBands());
+      setAncModeUi("off");
+      setEqActive("classic");
+      setGameOn(false);
+      setLdac(false);
+      return;
+    }
+    if (snapshot.anc !== null) setAncModeUi(snapshot.anc);
+    if (snapshot.game !== null) setGameOn(snapshot.game);
+    if (snapshot.ldac !== null) setLdac(snapshot.ldac);
+    const eqIds: Record<string, string> = {
+      balanced: "classic", bassBoost: "bass", voice: "voice", clear: "clear",
+      hifiLive: "hifi", pop: "pop", jazzRock: "jazz", classical: "classical", acoustic: "acoustic",
+    };
+    if (snapshot.eq !== null && eqIds[snapshot.eq]) setEqActive(eqIds[snapshot.eq]);
+  };
+  const session = createDeviceSession(applySnapshot);
+  const refreshSnapshot = async () => {
+    const generation = session.capture();
+    const snapshot = await getDeviceSnapshot();
+    if (session.isCurrent(generation)) session.accept(snapshot);
+  };
+  let disposed = false;
+  const track = (unsubscribe: () => void) => {
+    if (disposed) unsubscribe();
+    else unsubs.push(unsubscribe);
+  };
 
   let unsubs: Array<() => void> = [];
   let linkPoll: number | undefined;
@@ -154,16 +206,20 @@ const App: Component = () => {
     }
     try {
       const state = await getConnection();
+      if (disposed) return;
       if (state.link) applyLink(state.link);
       if (state.connected && state.device) {
         setAutoReconnectAvailable(false);
+        session.selectDevice(state.device.id);
         setDevice(state.device);
         setConnected(true);
         startLinkPoll();
         try {
-          setBattery(toBatteryData(await queryBattery()));
+          await queryBattery();
+          await refreshSnapshot();
         } catch {
-          setBattery(toBatteryData(await fetchBattery()));
+          if (link().mock) setBattery(toBatteryData(await fetchBattery()));
+          else await refreshSnapshot();
         }
       }
     } catch {
@@ -171,11 +227,12 @@ const App: Component = () => {
     }
 
     try {
-      unsubs.push(
+      track(
         await onDisconnected(() => {
+          session.selectDevice(null);
           setConnected(false);
           setDevice(null);
-          setBattery({ left: 0, right: 0, case: 0 });
+          setBattery({ left: null, right: null, case: null });
           setLink(emptyLink());
           setControlError(null);
           setView("home");
@@ -183,23 +240,28 @@ const App: Component = () => {
           notify(t("toast.disconnected"), "info");
         })
       );
-      unsubs.push(
+      track(
         await onConnection((state) => {
+          session.selectDevice(state.connected ? state.device?.id ?? null : null);
+          if (state.connected) void refreshSnapshot().catch(() => {});
           setConnected(state.connected);
           setDevice(state.device);
           if (state.link) applyLink(state.link);
           if (!state.connected) {
-            setBattery({ left: 0, right: 0, case: 0 });
+            setBattery({ left: null, right: null, case: null });
             setLink(emptyLink());
             stopLinkPoll();
           } else startLinkPoll();
         })
       );
-      unsubs.push(await onLinkHealth((l) => applyLink(l)));
-      unsubs.push(await onBattery((b) => setBattery(toBatteryData(b))));
-      unsubs.push(await onAnc((m) => setAncModeUi(m)));
-      unsubs.push(
+      track(await onLinkHealth((l) => applyLink(l)));
+      track(await onDeviceSnapshot((snapshot) => session.accept(snapshot)));
+      await refreshSnapshot();
+      track(await onBattery((b) => { if (link().mock) setBattery(toBatteryData(b)); }));
+      track(await onAnc((m) => { if (link().mock) setAncModeUi(m); }));
+      track(
         await onEq((p) => {
+          if (!link().mock) return;
           const map: Record<string, EqPresetId> = {
             balanced: "classic",
             classic: "classic",
@@ -217,23 +279,26 @@ const App: Component = () => {
           setEqActive(map[key] ?? "classic");
         })
       );
-      unsubs.push(await onGameMode((on) => setGameOn(on)));
-      unsubs.push(await onBassBoost((level) => setBassBoostUi(level)));
-      unsubs.push(await onLdac((on) => setLdac(on)));
-      unsubs.push(await onHearingProtection((state) => setHearingProtect(state.enabled)));
+      track(await onGameMode((on) => { if (link().mock) setGameOn(on); }));
+      track(await onBassBoost((level) => setBassBoostUi(level)));
+      track(await onLdac((on) => { if (link().mock) setLdac(on); }));
+      track(await onHearingProtection((state) => setHearingProtect(state.enabled)));
     } catch (e) {
       console.warn("[App] events", e);
     }
-    setConnectionReady(true);
+    if (!disposed) setConnectionReady(true);
   });
 
   onCleanup(() => {
+    disposed = true;
+    session.selectDevice(null);
     unsubs.forEach((u) => u());
     stopLinkPoll();
     toastTimers.forEach((id) => window.clearTimeout(id));
   });
 
   const handleConnected = async (dev: BleDevice) => {
+    session.selectDevice(dev.id);
     setDevice(dev);
     setConnected(true);
     setFindActive(false);
@@ -245,9 +310,11 @@ const App: Component = () => {
       const state = await getConnection();
       if (state.link) applyLink(state.link);
       try {
-        setBattery(toBatteryData(await queryBattery()));
+        await queryBattery();
+          await refreshSnapshot();
       } catch {
-        setBattery(toBatteryData(await fetchBattery()));
+        if (link().mock) setBattery(toBatteryData(await fetchBattery()));
+          else await refreshSnapshot();
       }
     } catch {
       /* */
@@ -255,7 +322,6 @@ const App: Component = () => {
   };
 
   const handleAncMode = async (mode: AncMode) => {
-    setAncModeUi(mode);
     setControlError(null);
     try {
       await setListeningState({
@@ -288,14 +354,23 @@ const App: Component = () => {
   };
 
   const applyEqPreset = async (preset: EqPresetId) => {
-    setEqActive(preset);
-    setEqCustomActive(false);
+    if (eqPending()) return;
+    const generation = session.capture();
+    setEqPending(true);
+    setEqError(null);
     try {
       await setEqIndex(presetSort(preset));
+      if (!session.isCurrent(generation)) return;
+      setEqCustomActive(false);
+      await refreshSnapshot();
       applyLink(await getLinkHealth());
       notify(`EQ · ${t(`eqPreset.${preset}`)}`, "success");
     } catch (e) {
+      if (!session.isCurrent(generation)) return;
+      setEqError(formatError(e));
       notify(formatError(e), "error");
+    } finally {
+      if (session.isCurrent(generation)) setEqPending(false);
     }
   };
 
@@ -354,12 +429,21 @@ const App: Component = () => {
   };
 
   const handleGameMode = async (enabled: boolean) => {
-    setGameOn(enabled);
+    if (gamePending()) return;
+    const generation = session.capture();
+    setGamePending(true);
+    setGameError(null);
     try {
       await setGameMode(enabled);
+      if (!session.isCurrent(generation)) return;
+      await refreshSnapshot();
       notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info");
     } catch (e) {
+      if (!session.isCurrent(generation)) return;
+      setGameError(formatError(e));
       notify(formatError(e), "error");
+    } finally {
+      if (session.isCurrent(generation)) setGamePending(false);
     }
   };
 
@@ -565,6 +649,8 @@ const App: Component = () => {
           <section class="section section-scroll">
             <EqPanel
               eqActive={eqActive()}
+              pending={eqPending()}
+              error={eqError()}
               customBands={eqCustomBands()}
               customActive={eqCustomActive()}
               storageKey={device()?.address || device()?.modelId || "default"}
@@ -633,6 +719,8 @@ const App: Component = () => {
                 adaptiveSupported={noiseCaps()?.supportsAdaptive ?? false}
                 transparencyVoiceSupported={noiseCaps()?.supportsTransparencyVoice ?? false}
                 gameMode={gameOn()}
+                gamePending={gamePending()}
+                gameError={gameError()}
                 findActive={findActive()}
                 spatialOn={spatialOn()}
                 spatialMode={spatialMode()}

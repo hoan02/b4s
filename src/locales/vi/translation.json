@@ -196,5 +196,6 @@
   "linkMessage.serviceMissing": "Thiếu dịch vụ điều khiển GATT — thiết bị có thể không dùng giao thức BP1 hoặc Windows chưa ghép đôi hoàn tất",
   "linkMessage.live": "Đang nhận dữ liệu · {{notifications}} thông báo · {{writes}} lệnh gửi",
   "linkMessage.waiting": "GATT đã sẵn sàng gửi lệnh, đang chờ thông báo hoặc dữ liệu pin. Hãy mở hộp sạc hoặc đeo tai nghe.",
-  "linkMessage.handshakeFailed": "Đã kết nối BLE nhưng bắt tay điều khiển thất bại. Hãy thử mục quét khác cùng tên hoặc xóa ghép đôi rồi kết nối lại."
+  "linkMessage.handshakeFailed": "Đã kết nối BLE nhưng bắt tay điều khiển thất bại. Hãy thử mục quét khác cùng tên hoặc xóa ghép đôi rồi kết nối lại.",
+  "device.applying": "Đang áp dụng…"
 }

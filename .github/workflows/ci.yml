@@ -63,6 +63,9 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Frontend session controller tests
+        run: npm run test:session
+
       - name: Cargo check
         working-directory: src-tauri
         run: cargo check

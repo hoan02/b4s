@@ -15,15 +15,15 @@ interface Props {
   onDisconnect?: () => void;
 }
 
-function pctClass(p: number) {
-  if (p <= 0) return "unk";
+function pctClass(p: number | null) {
+  if (p === null) return "unk";
   if (p <= 20) return "low";
   if (p <= 50) return "mid";
   return "ok";
 }
 
-function fmtPct(p: number) {
-  if (p <= 0) return "—";
+function fmtPct(p: number | null) {
+  if (p === null) return "—";
   return `${Math.min(100, p)}%`;
 }
 
@@ -164,7 +164,7 @@ const DeviceHeader: Component<Props> = (props) => {
         </div>
       </div>
 
-      <Show when={props.battery.left === 0 && props.battery.right === 0}>
+      <Show when={props.battery.left === null && props.battery.right === null}>
         <div class="battery-warn">
           {t("device.batteryMissing")}
         </div>

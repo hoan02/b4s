@@ -957,6 +957,8 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     if !state.session.accepts(token) {
         return Err("Connection attempt was cancelled".into());
     }
+    state.snapshot.device_id = Some(device_id.clone());
+    state.snapshot.model_id = state.devices.get(&device_id).and_then(|device| device.model_id.clone());
     state.connected_id = Some(device_id.clone());
     let mut device = if let Some(d) = state.devices.get_mut(&device_id) {
         d.connected = true;
@@ -1195,6 +1197,7 @@ async fn handle_notification(
                     {
                         let mut state = BLE.lock().await;
                         if !state.session.accepts(token) { return; }
+                        state.snapshot.device_id = Some(device_id.to_string());
                         state.snapshot.model_id = state.devices.get(device_id).and_then(|device| device.model_id.clone());
                         state.snapshot.observe(fr.cmd, &event, now_ms());
                         let _ = app.emit("device://snapshot", &state.snapshot);
@@ -1978,6 +1981,14 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
         case_charging: true,
     };
     let bat = state.battery.clone();
+    state.snapshot.device_id = Some(device.id.clone());
+    state.snapshot.model_id = device.model_id.clone();
+    state.snapshot.mock = true;
+    state.snapshot.observe(2, &DeviceEvent::Battery(bat.clone()), now_ms());
+    state.snapshot.observe(0x27, &DeviceEvent::Battery(bat.clone()), now_ms());
+    state.snapshot.observe(0x34, &DeviceEvent::Anc(AncMode::Anc), now_ms());
+    state.snapshot.observe(0x42, &DeviceEvent::Eq(EqPreset::Balanced), now_ms());
+    state.snapshot.observe(0x23, &DeviceEvent::GameMode(false), now_ms());
     let token = state.session.token();
     drop(state);
 

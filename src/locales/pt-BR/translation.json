@@ -140,5 +140,6 @@
   "linkMessage.serviceMissing": "Serviço de controle GATT ausente — o dispositivo pode não usar o protocolo BP1 ou o pareamento do Windows pode estar incompleto",
   "linkMessage.live": "Conexão ativa · {{notifications}} notificações · {{writes}} gravações",
   "linkMessage.waiting": "A gravação GATT está pronta; aguardando notificações ou dados da bateria. Abra o estojo ou coloque os fones.",
-  "linkMessage.handshakeFailed": "BLE conectado, mas a negociação de controle falhou. Tente a outra entrada com o mesmo nome ou remova o pareamento e pareie novamente."
+  "linkMessage.handshakeFailed": "BLE conectado, mas a negociação de controle falhou. Tente a outra entrada com o mesmo nome ou remova o pareamento e pareie novamente.",
+  "device.applying": "Aplicando…"
 }

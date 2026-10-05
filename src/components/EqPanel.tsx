@@ -16,9 +16,12 @@ import {
 } from "../lib/eq";
 import { IconBack } from "./Icons";
 import { t } from "../lib/i18n";
+import OperationStatus from "./OperationStatus";
 
 interface Props {
   eqActive: EqPresetId;
+  pending?: boolean;
+  error?: string | null;
   customBands: number[];
   customActive: boolean;
   storageKey: string;
@@ -157,11 +160,13 @@ const EqPanel: Component<Props> = (props) => {
 
       <Show when={tab() === "preset"}>
         <p class="more-label">{t("eq.choosePreset")}</p>
-        <div class="eq-preset-grid">
+        <OperationStatus pending={props.pending} error={props.error} />
+        <div class="eq-preset-grid" aria-busy={props.pending}>
           <For each={EQ_PRESETS}>
             {(p) => (
               <button
                 type="button"
+                disabled={props.pending}
                 class={`eq-preset-card ${
                   !props.customActive && props.eqActive === p.id ? "active" : ""
                 }`}
