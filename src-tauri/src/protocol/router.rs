@@ -82,7 +82,7 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
     // silently clamping it into another command. Profile-scoped constraints
     // will replace these legacy bounds during the profile-v2 migration.
     match &command {
-        FeatureCommand::SetBassBoost(level) if *level > 3 => {
+        FeatureCommand::SetBassBoost(level) if *level > 1 => {
             return Err("Bass level is outside the current protocol range".into());
         }
         FeatureCommand::SetHearingProtection { level, .. } if *level > 3 => {
@@ -254,8 +254,8 @@ mod tests {
     fn bp1_profile_routes_common_feature_commands() {
         let profile = profile_for(Some("bass-bp1-pro"), None, None);
         assert_eq!(
-            encode_feature(&profile, FeatureCommand::SetBassBoost(2)).unwrap(),
-            vec![0xBA, 0x54, 0x01, 0x02]
+            encode_feature(&profile, FeatureCommand::SetBassBoost(1)).unwrap(),
+            vec![0xBA, 0x54, 0x01]
         );
         assert_eq!(
             encode_feature(&profile, FeatureCommand::FindBuds(true)).unwrap(),

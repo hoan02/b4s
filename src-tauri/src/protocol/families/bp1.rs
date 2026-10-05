@@ -51,7 +51,7 @@ impl Bp1ProAnc {
                 _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
             },
 
-            0x54 => Self::bass_level_from_payload(&frame.payload)
+            0x53 => Self::bass_level_from_payload(&frame.payload)
                 .map(DeviceEvent::BassBoost).ok_or(DecodeError::UnknownOpcode(frame.cmd)),
             0x74 => match frame.payload.as_slice() {
                 [0] => Ok(DeviceEvent::Ldac(true)),
@@ -181,11 +181,8 @@ impl Bp1ProAnc {
         Self::cmd_set_eq_filters(dict_sort, bands)
     }
     fn bass_level_from_payload(payload: &[u8]) -> Option<u8> {
-        // Preserve the legacy layouts, but never clamp ACK/error codes into state.
         match payload {
-            [level @ 0..=3] => Some(*level),
-            [0, 0] => Some(0),
-            [1, level @ 0..=3] => Some(*level),
+            [enabled @ 0..=1] => Some(*enabled),
             _ => None,
         }
     }
@@ -368,15 +365,16 @@ mod tests {
 
     #[test]
     fn bass_boost_uses_dedicated_ba54_command() {
-        assert_eq!(encode_command(Command::SetBassBoost(2)), vec![0xBA, 0x54, 0x01, 0x02]);
-        assert_eq!(encode_command(Command::SetBassBoost(0)), vec![0xBA, 0x54, 0x00, 0x00]);
+        assert_eq!(encode_command(Command::SetBassBoost(1)), vec![0xBA, 0x54, 0x01]);
+        assert_eq!(encode_command(Command::SetBassBoost(0)), vec![0xBA, 0x54, 0x00]);
     }
 
     #[test]
-    fn bass_boost_state_accepts_compact_and_enabled_level_payloads() {
-        assert_eq!(dec(&[0xAA, 0x54, 0x03]).unwrap(), DeviceEvent::BassBoost(3));
-        assert_eq!(dec(&[0xAA, 0x54, 0x01, 0x02]).unwrap(), DeviceEvent::BassBoost(2));
-        assert_eq!(dec(&[0xAA, 0x54, 0x00, 0x00]).unwrap(), DeviceEvent::BassBoost(0));
+    fn bass_query_is_binary_and_set_ack_is_not_state() {
+        assert_eq!(dec(&[0xAA, 0x53, 1]).unwrap(), DeviceEvent::BassBoost(1));
+        assert_eq!(dec(&[0xAA, 0x53, 0]).unwrap(), DeviceEvent::BassBoost(0));
+        assert!(dec(&[0xAA, 0x54, 1]).is_err());
+        assert!(dec(&[0xAA, 0x53, 2]).is_err());
     }
 
     #[test]

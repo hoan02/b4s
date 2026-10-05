@@ -102,7 +102,7 @@ const App: Component = () => {
   const [findDialogMode, setFindDialogMode] = createSignal<"confirm" | "active">("confirm");
   const [spatialOn, setSpatialOn] = createSignal(false);
   const [spatialMode, setSpatialModeUi] = createSignal<SpatialMode>("music");
-  const [bassBoost, setBassBoostUi] = createSignal(0);
+  const [bassBoost, setBassBoostUi] = createSignal<number | null>(null);
   const [ldac, setLdac] = createSignal<boolean | null>(null);
   const [soundPending, setSoundPending] = createSignal(false);
   const [soundError, setSoundError] = createSignal<string | null>(null);
@@ -128,7 +128,7 @@ const App: Component = () => {
       advancedSound.reset();
       setGamePending(false);
       setGameError(null);
-      setBassBoostUi(0);
+      setBassBoostUi(null);
       setHearingProtect(null);
       setSpatialOn(false);
       setEqCustomActive(false);
@@ -142,7 +142,7 @@ const App: Component = () => {
     if (snapshot.anc !== null) setAncModeUi(snapshot.anc);
     if (snapshot.game !== null) setGameOn(snapshot.game);
     setLdac(snapshot.ldac ?? null);
-    if (snapshot.bassBoost != null) setBassBoostUi(snapshot.bassBoost);
+    setBassBoostUi(snapshot.bassBoost ?? null);
     setHearingProtect(snapshot.hearing?.enabled ?? null);
     const eqIds: Record<string, string> = {
       balanced: "classic", bassBoost: "bass", voice: "voice", clear: "clear",
@@ -476,12 +476,9 @@ const App: Component = () => {
   };
 
   const handleBassBoost = async (level: number) => {
-    setBassBoostUi(level);
-    try {
-      await setBassBoost(level);
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
+    await advancedSound.run(() => setBassBoost(level), () => {
+      if (link().mock) setBassBoostUi(level);
+    }, (message) => notify(message, "error"));
   };
 
   const startFindBuds = async () => {

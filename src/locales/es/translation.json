@@ -143,5 +143,6 @@
   "linkMessage.handshakeFailed": "BLE conectado, pero falló la negociación de control. Prueba la otra entrada con el mismo nombre o elimina el emparejamiento y vuelve a emparejar.",
   "device.applying": "Aplicando…",
   "eq.storageError": "No se pudieron guardar los cambios en este equipo.",
-  "control.unknown": "Aún no se ha recibido el estado del dispositivo"
+  "control.unknown": "Aún no se ha recibido el estado del dispositivo",
+  "more.on": "Activado"
 }

@@ -64,8 +64,7 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             Frame::write(0x43, &[mode.to_byte()]).encode_write()
         }
         Command::SetBassBoost(level) => {
-            let level = level.min(3);
-            Frame::write(0x54, &[if level > 0 { 0x01 } else { 0x00 }, level]).encode_write()
+            Frame::write(0x54, &[level]).encode_write()
         }
         Command::SetLdac(enabled) => {
             // LdacSettingActivity.K0: BA75 + 00 when enabled, 01 when disabled.

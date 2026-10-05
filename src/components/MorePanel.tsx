@@ -13,7 +13,7 @@ interface Props {
   bassSupported: boolean;
   ldacSupported: boolean;
   hearingSupported: boolean;
-  bassBoost: number;
+  bassBoost: number | null;
   ldac: boolean | null;
   hearingProtect: boolean | null;
   onBack: () => void;
@@ -39,13 +39,14 @@ const MorePanel: Component<Props> = (props) => (
         <div class="setting-row">
           <div>
             <span class="setting-title">{t("more.bassBoost")}</span>
-            <span class="setting-desc">{t("listen.bassRange")}</span>
+            <span class="setting-desc">{props.bassBoost === null ? t("control.unknown") : t("more.bassBoost")}</span>
           </div>
           <div class="level-pills" aria-label={t("listen.bassLevel")}>
-            <For each={[{ value: 0, key: "more.off" }, { value: 1, key: "more.mild" }, { value: 2, key: "more.medium" }, { value: 3, key: "more.strong" }]}>
+            <For each={[{ value: 0, key: "more.off" }, { value: 1, key: "more.on" }]}>
               {(lv) => (
                 <button
                   type="button"
+                  disabled={props.pending}
                   class={props.bassBoost === lv.value ? "active" : ""}
                   aria-pressed={props.bassBoost === lv.value}
                   onClick={() => props.onBassBoost(lv.value)}

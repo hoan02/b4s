@@ -1516,7 +1516,7 @@ pub async fn send_custom_eq(bands: Vec<protocol::EqBand>, dict_sort: u8, anc: bo
 
 pub async fn send_bass_boost(level: u8) -> Result<(), String> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetBassBoost(level)).await?;
-    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+    with_connected_peripheral(|p| Box::pin(async move { write_and_readback(&p, &data, &[0xBA, 0x53], crate::device::confirmation::ExpectedState::Bass(level)).await })).await
 }
 
 fn model_presentation(model_id: Option<&str>) -> (Option<String>, String, Vec<String>) {

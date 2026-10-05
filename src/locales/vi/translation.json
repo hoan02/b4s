@@ -199,5 +199,6 @@
   "linkMessage.handshakeFailed": "Đã kết nối BLE nhưng bắt tay điều khiển thất bại. Hãy thử mục quét khác cùng tên hoặc xóa ghép đôi rồi kết nối lại.",
   "device.applying": "Đang áp dụng…",
   "eq.storageError": "Không thể lưu thay đổi trên máy tính này.",
-  "control.unknown": "Chưa nhận được trạng thái từ thiết bị"
+  "control.unknown": "Chưa nhận được trạng thái từ thiết bị",
+  "more.on": "Bật"
 }

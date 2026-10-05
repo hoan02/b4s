@@ -143,5 +143,6 @@
   "linkMessage.handshakeFailed": "BLE 已连接，但控制握手失败。请尝试扫描列表中同名的另一个设备，或取消配对后重新配对。",
   "device.applying": "正在应用…",
   "eq.storageError": "无法在此电脑上保存更改。",
-  "control.unknown": "尚未收到设备状态"
+  "control.unknown": "尚未收到设备状态",
+  "more.on": "开启"
 }

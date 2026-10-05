@@ -236,5 +236,6 @@
   "linkMessage.handshakeFailed": "BLE connected, but the control handshake failed. Try the other scan entry with the same name, or forget and re-pair the earbuds.",
   "device.applying": "Applying…",
   "eq.storageError": "Could not save changes on this computer.",
-  "control.unknown": "Device state has not been received yet"
+  "control.unknown": "Device state has not been received yet",
+  "more.on": "On"
 }
