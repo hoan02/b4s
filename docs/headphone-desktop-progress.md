@@ -202,3 +202,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Reviewed local marker inventory against EQ, transport/framing and Classic SDK paths. DeviceManager.l(String) is undecompiled and directly feeds min/max slider thresholds in NoiseReducePopWindowV2; this is an explicit source gap for ANC range reconstruction.
 - Indexed native-loader ownership for Thingclips BleLib, generic CommandFactory native-lib and BES OTA JNI. Native presence alone is not a dependency of the BP1 offline path; call graphs remain required.
 - Added source triage dossier with exact local pointers and recovery requirements. No speculative range/command changes, local builds or broad decompiler reruns. P1.2 remains in progress pending DEX recovery and resource/native caller coverage.
+
+
+## Increment 21 — recover ANC range instructions
+
+- Targeted JADX 1.5.6 raw-instruction fallback recovered DeviceManager.l without rerunning the whole APK. Exact model-name branches return minimum 1 and maximum 3/5/10; BP1 Pro/Ultra target 5.
+- Existing BP1 Pro maxCustomLevel=5 agrees with source, so no speculative runtime expansion was made. The default Android range 10 does not grant permission to unknown B4S models.
+- Raw output remains ignored; source triage dossier records tool/method/branch interpretation and distinguishes same-engine raw inspection from an independent decompiler result. Capture/firmware acceptance, range wire/readback and remaining failed-method/resource inventory stay open.

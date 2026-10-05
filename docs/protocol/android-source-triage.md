@@ -10,9 +10,9 @@ Input: completed local inventory report in ignored `.tmp/android-source-inventor
 | BluetoothDataWriteManager | No markers | Dispatch/framing contract documented separately; priority branch still needs caller/capture audit |
 | HeadPhoneDataResolveManager | No markers | Wrapper source trace available; capture validation still required |
 | classicbluetoothsdk | No markers | Socket lifecycle traced; stream framing/readiness/application callback coverage incomplete |
-| DeviceManager | Undecompiled l(String), local line 2208 | Relevant blocker for source-derived ANC slider limits; verify DEX/smali or alternate engine |
+| DeviceManager | Undecompiled l(String), local line 2208 | Recovered with JADX raw-instruction fallback; see range contract below |
 
-`NoiseReducePopWindowV2.k`, local lines 150–151, calls DeviceManager.l(current model) and uses the returned pair for seek thresholds. The method body is skipped in this dump (310 instruction units). Do not treat the surrounding model lists or current B4S legacy maximum as reconstruction of this pair. Existing profile limits remain existing compatibility assumptions until model-specific source/capture evidence resolves them.
+`NoiseReducePopWindowV2.k`, local lines 150–151, calls DeviceManager.l(current model) and uses the returned pair for seek thresholds. The normal method body is skipped (310 instruction units). A targeted raw-instruction fallback recovered its exact-name branches; the interpreted range contract below replaces the earlier source gap. Device acceptance still needs captures.
 
 ## Native dependency ownership
 
@@ -23,7 +23,22 @@ Input: completed local inventory report in ignored `.tmp/android-source-inventor
 
 ## Remaining triage work
 
-1. Recover DeviceManager.l from the actual DEX with a second engine or smali and record model branches/ranges before changing ANC limits.
+1. Cross-check the recovered range branches with model captures; investigate any conflicting firmware behavior before changing runtime limits.
 2. Extend call-path inventory to gestures, in-ear, multipoint, codec/hearing, SoundFit and firmware guards; prioritize marked methods actually reached by those entrypoints.
 3. Index asset/resource configuration and reflection/JNI callers. Preserve package/version/tool/input provenance and original logs locally.
 4. Record explicit unknowns per feature dossier. Marker-free source, successful compilation and metadata flags do not close hardware acceptance.
+
+
+## Recovered ANC slider range contract
+
+Tool: local JADX 1.5.6, one class only, `--decompilation-mode fallback --comments-level debug`. Run completed successfully against the existing base APK. Raw output remains ignored at `.tmp/device-manager-fallback.java`; no third-party code is copied into this document. This is raw-instruction inspection using the same engine, not a claimed independent decompiler result.
+
+The initial minimum is 1. Exact-name branches target one of three return sites:
+
+| Return site | Minimum / maximum | Model scope |
+| --- | --- | --- |
+| Laa | 1 / 3 | BH1 NC Lite, EH10 NC Lite, Bowie MC2 NC, Bass BS2 NC |
+| Ld0 | 1 / 5 | Bass BP1 Pro, BP1 Ultra, EP10 Pro, EP10 Ultra, BS1 NC, BH1 NC, EH10 NC; Bowie M3s, M4s, MH1, MP1, MS1; Inspire XC1, XH1, XP1 |
+| Ldb | 1 / 10 | Null/unmatched Android model name |
+
+Branch equality checks precede each return. BP1 Pro and Ultra both jump to Ld0. The existing BP1 Pro profile's maxCustomLevel=5 therefore agrees with this source; no runtime range expansion is needed. The Android fallback 10 must not authorize an unknown B4S model. This pair describes UI slider thresholds, not wire opcode, firmware support, runtime readiness or hardware acceptance.
