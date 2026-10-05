@@ -198,5 +198,6 @@
   "linkMessage.waiting": "GATT đã sẵn sàng gửi lệnh, đang chờ thông báo hoặc dữ liệu pin. Hãy mở hộp sạc hoặc đeo tai nghe.",
   "linkMessage.handshakeFailed": "Đã kết nối BLE nhưng bắt tay điều khiển thất bại. Hãy thử mục quét khác cùng tên hoặc xóa ghép đôi rồi kết nối lại.",
   "device.applying": "Đang áp dụng…",
-  "eq.storageError": "Không thể lưu thay đổi trên máy tính này."
+  "eq.storageError": "Không thể lưu thay đổi trên máy tính này.",
+  "control.unknown": "Chưa nhận được trạng thái từ thiết bị"
 }

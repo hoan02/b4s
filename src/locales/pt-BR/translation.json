@@ -142,5 +142,6 @@
   "linkMessage.waiting": "A gravação GATT está pronta; aguardando notificações ou dados da bateria. Abra o estojo ou coloque os fones.",
   "linkMessage.handshakeFailed": "BLE conectado, mas a negociação de controle falhou. Tente a outra entrada com o mesmo nome ou remova o pareamento e pareie novamente.",
   "device.applying": "Aplicando…",
-  "eq.storageError": "Não foi possível salvar as alterações neste computador."
+  "eq.storageError": "Não foi possível salvar as alterações neste computador.",
+  "control.unknown": "O estado do dispositivo ainda não foi recebido"
 }

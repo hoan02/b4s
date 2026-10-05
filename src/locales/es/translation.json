@@ -142,5 +142,6 @@
   "linkMessage.waiting": "La escritura GATT está lista; esperando notificaciones o datos de batería. Abre el estuche o ponte los auriculares.",
   "linkMessage.handshakeFailed": "BLE conectado, pero falló la negociación de control. Prueba la otra entrada con el mismo nombre o elimina el emparejamiento y vuelve a emparejar.",
   "device.applying": "Aplicando…",
-  "eq.storageError": "No se pudieron guardar los cambios en este equipo."
+  "eq.storageError": "No se pudieron guardar los cambios en este equipo.",
+  "control.unknown": "Aún no se ha recibido el estado del dispositivo"
 }

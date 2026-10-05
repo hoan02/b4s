@@ -223,3 +223,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Moved the tested operation controller into `features/shared/confirmedOperation.ts`. EQ and advanced sound now share admission/session/refresh guards without duplicating pending/error logic.
 - LDAC/hearing no longer optimistically toggle or invert state on failure. Real-device values come from snapshots; pending disables repeated toggles and inline status/error is visible. Demo publication remains explicit. Session reset invalidates old advanced operations.
 - Frontend typecheck and seven session/controller tests passed. Bass/spatial still need their own readback/constraint migration, and full unknown-state UI plus hardware acceptance remain open.
+
+
+## Increment 24 — unknown advanced toggle state
+
+- Frontend LDAC/hearing values are nullable, reset to unknown on session loss and follow nullable snapshots. Missing readback no longer initializes a confirmed off state.
+- Supported controls show localized unknown-state text and accessible mixed checkbox state until observations arrive. Users can submit an explicit toggle, while pending retains the observed/unknown value and rejects repetition.
+- Frontend typecheck, 238-key five-locale parity and whitespace checks passed. Screen-reader/scaling acceptance and remaining advanced/listening unknown states remain open.

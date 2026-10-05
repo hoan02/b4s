@@ -103,10 +103,10 @@ const App: Component = () => {
   const [spatialOn, setSpatialOn] = createSignal(false);
   const [spatialMode, setSpatialModeUi] = createSignal<SpatialMode>("music");
   const [bassBoost, setBassBoostUi] = createSignal(0);
-  const [ldac, setLdac] = createSignal(false);
+  const [ldac, setLdac] = createSignal<boolean | null>(null);
   const [soundPending, setSoundPending] = createSignal(false);
   const [soundError, setSoundError] = createSignal<string | null>(null);
-  const [hearingProtect, setHearingProtect] = createSignal(false);
+  const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
   const [pendingEqAction, setPendingEqAction] = createSignal<PendingEqAction | null>(null);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
@@ -129,21 +129,21 @@ const App: Component = () => {
       setGamePending(false);
       setGameError(null);
       setBassBoostUi(0);
-      setHearingProtect(false);
+      setHearingProtect(null);
       setSpatialOn(false);
       setEqCustomActive(false);
       setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
       setAncModeUi("off");
       setEqActive("classic");
       setGameOn(false);
-      setLdac(false);
+      setLdac(null);
       return;
     }
     if (snapshot.anc !== null) setAncModeUi(snapshot.anc);
     if (snapshot.game !== null) setGameOn(snapshot.game);
-    if (snapshot.ldac !== null) setLdac(snapshot.ldac);
+    setLdac(snapshot.ldac ?? null);
     if (snapshot.bassBoost != null) setBassBoostUi(snapshot.bassBoost);
-    if (snapshot.hearing != null) setHearingProtect(snapshot.hearing.enabled);
+    setHearingProtect(snapshot.hearing?.enabled ?? null);
     const eqIds: Record<string, string> = {
       balanced: "classic", bassBoost: "bass", voice: "voice", clear: "clear",
       hifiLive: "hifi", pop: "pop", jazzRock: "jazz", classical: "classical", acoustic: "acoustic",

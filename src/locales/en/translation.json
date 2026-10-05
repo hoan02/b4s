@@ -235,5 +235,6 @@
   "linkMessage.waiting": "GATT write ready, waiting for notifications or battery data. Open the case or wear the earbuds.",
   "linkMessage.handshakeFailed": "BLE connected, but the control handshake failed. Try the other scan entry with the same name, or forget and re-pair the earbuds.",
   "device.applying": "Applying…",
-  "eq.storageError": "Could not save changes on this computer."
+  "eq.storageError": "Could not save changes on this computer.",
+  "control.unknown": "Device state has not been received yet"
 }

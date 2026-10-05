@@ -14,8 +14,8 @@ interface Props {
   ldacSupported: boolean;
   hearingSupported: boolean;
   bassBoost: number;
-  ldac: boolean;
-  hearingProtect: boolean;
+  ldac: boolean | null;
+  hearingProtect: boolean | null;
   onBack: () => void;
   onBassBoost: (n: number) => void;
   onLdac: (on: boolean) => void;
@@ -70,13 +70,15 @@ const MorePanel: Component<Props> = (props) => (
         <div class="setting-row">
           <div>
             <span class="setting-title">LDAC</span>
-            <span class="setting-desc">{t("more.hiRes")}</span>
+            <span class="setting-desc">{props.ldac === null ? t("control.unknown") : t("more.hiRes")}</span>
           </div>
           <label class="toggle sm">
             <input
               type="checkbox"
               disabled={props.pending}
-              checked={props.ldac}
+              aria-label="LDAC"
+              aria-checked={props.ldac === null ? "mixed" : props.ldac}
+              checked={props.ldac === true}
               onChange={(e) =>
                 props.onLdac((e.currentTarget as HTMLInputElement).checked)
               }
@@ -89,13 +91,15 @@ const MorePanel: Component<Props> = (props) => (
         <div class="setting-row">
           <div>
             <span class="setting-title">{t("more.hearingProtection")}</span>
-            <span class="setting-desc">{t("more.hearingProtection")}</span>
+            <span class="setting-desc">{props.hearingProtect === null ? t("control.unknown") : t("more.hearingProtection")}</span>
           </div>
           <label class="toggle sm">
             <input
               type="checkbox"
               disabled={props.pending}
-              checked={props.hearingProtect}
+              aria-label={t("more.hearingProtection")}
+              aria-checked={props.hearingProtect === null ? "mixed" : props.hearingProtect}
+              checked={props.hearingProtect === true}
               onChange={(e) =>
                 props.onHearingProtect(
                   (e.currentTarget as HTMLInputElement).checked
