@@ -34,6 +34,17 @@ pub fn validate() -> Result<(), String> {
 fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
     let mut ids = std::collections::HashSet::new();
     for profile in profiles {
+        if profile.capabilities.hearing_protection && profile.hearing.is_none() {
+            return Err(format!("missing hearing constraints in {}", profile.id));
+        }
+        if let Some(hearing) = &profile.hearing {
+            let unique: std::collections::HashSet<_> = hearing.thresholds.iter().collect();
+            if hearing.provenance.trim().is_empty() || hearing.thresholds.is_empty() ||
+                unique.len() != hearing.thresholds.len() ||
+                hearing.thresholds.iter().any(|value| ![75, 80, 85, 90, 95, 100].contains(value)) {
+                return Err(format!("invalid hearing constraints in {}", profile.id));
+            }
+        }
         if !(1..=2).contains(&profile.schema_version) {
             return Err(format!("unsupported profile schema in {}", profile.id));
         }
@@ -157,4 +168,18 @@ mod tests {
             .replace("gameMode", "gameMod");
         assert!(serde_json::from_str::<ModelProfile>(&source).is_err());
     }
+    #[test]
+    fn hearing_capability_requires_explicit_valid_threshold_constraints() {
+        let mut model = profile_for("bass-bp1-pro").unwrap();
+        model.capabilities.hearing_protection = true;
+        assert!(validate_profiles(&[model.clone()]).is_err());
+        model.hearing = Some(types::HearingProfile {
+            thresholds: vec![75, 85, 100], preserve_threshold_sentinel: false,
+            provenance: "synthetic validation fixture".into(),
+        });
+        assert!(validate_profiles(&[model.clone()]).is_ok());
+        model.hearing.as_mut().unwrap().thresholds = vec![1];
+        assert!(validate_profiles(&[model]).is_err());
+    }
+
 }

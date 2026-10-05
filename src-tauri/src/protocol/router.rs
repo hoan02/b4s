@@ -85,8 +85,12 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::SetBassBoost(level) if *level > 1 => {
             return Err("Bass level is outside the current protocol range".into());
         }
-        FeatureCommand::SetHearingProtection { level, .. } if *level > 3 => {
-            return Err("Hearing protection level is outside the current protocol range".into());
+        FeatureCommand::SetHearingProtection { level, .. } => {
+            let hearing = profile.model_id.as_deref().and_then(crate::catalog::profile_for)
+                .and_then(|model| model.hearing).ok_or("No reviewed hearing threshold schema")?;
+            if !hearing.thresholds.contains(level) && !(*level == 0xFF && hearing.preserve_threshold_sentinel) {
+                return Err("Hearing threshold is outside the reviewed model schema".into());
+            }
         }
         _ => {}
     }

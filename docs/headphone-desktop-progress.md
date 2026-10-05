@@ -258,3 +258,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Traced hearing UI threshold list and setter: 75/80/85/90/95/100 dB, with -1 encoded as FF. AA94 is ACK; AA93 is state query and has region/model UI guards.
 - Recorded mismatch with legacy B4S setter 0–3/default 1 as an explicit implementation gap. Existing BP1 Pro hearing capability remains disabled; no global permissive range change or unsupported model activation.
 - Added source dossier with consumer pointers and per-model threshold/sentinel/readback/capture requirements. Documentation only, no redundant build. P6.3 remains in progress.
+
+
+## Increment 29 — model hearing threshold constraints
+
+- Added optional hearing profile with explicit threshold list, FF-preservation permission and provenance. Validator requires constraints for an enabled hearing capability and rejects missing/duplicate/non-source threshold values.
+- Backend setter replaces the 0–3 legacy bound with exact model threshold/sentinel membership. Frontend toggling preserves the observed threshold instead of inventing level 1; absent threshold returns an unknown-state error.
+- Five catalog tests and frontend typecheck passed. Added missing/valid/invalid threshold-schema test for CI. No model capability is newly enabled; threshold editor, sentinel semantics and model/firmware acceptance remain open.

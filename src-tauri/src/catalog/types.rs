@@ -78,6 +78,14 @@ pub struct NoiseProfile {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct HearingProfile {
+    pub thresholds: Vec<u8>,
+    pub preserve_threshold_sentinel: bool,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ModelProfile {
     #[serde(default = "legacy_schema")]
     pub schema_version: u8,
@@ -93,6 +101,8 @@ pub struct ModelProfile {
     pub capabilities: Capabilities,
     pub noise: NoiseProfile,
     pub eq: Option<EqProfile>,
+    #[serde(default)]
+    pub hearing: Option<HearingProfile>,
     pub image: Option<String>,
 }
 

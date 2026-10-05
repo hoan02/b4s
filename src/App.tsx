@@ -106,6 +106,7 @@ const App: Component = () => {
   const [ldac, setLdac] = createSignal<boolean | null>(null);
   const [soundPending, setSoundPending] = createSignal(false);
   const [soundError, setSoundError] = createSignal<string | null>(null);
+  const [hearingThreshold, setHearingThreshold] = createSignal<number | null>(null);
   const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
   const [pendingEqAction, setPendingEqAction] = createSignal<PendingEqAction | null>(null);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
@@ -130,6 +131,7 @@ const App: Component = () => {
       setGameError(null);
       setBassBoostUi(null);
       setHearingProtect(null);
+      setHearingThreshold(null);
       setSpatialOn(false);
       setEqCustomActive(false);
       setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
@@ -144,6 +146,7 @@ const App: Component = () => {
     setLdac(snapshot.ldac ?? null);
     setBassBoostUi(snapshot.bassBoost ?? null);
     setHearingProtect(snapshot.hearing?.enabled ?? null);
+    setHearingThreshold(snapshot.hearing?.level ?? null);
     const eqIds: Record<string, string> = {
       balanced: "classic", bassBoost: "bass", voice: "voice", clear: "clear",
       hifiLive: "hifi", pop: "pop", jazzRock: "jazz", classical: "classical", acoustic: "acoustic",
@@ -586,7 +589,11 @@ const App: Component = () => {
   };
 
   const handleHearingProtection = async (enabled: boolean) => {
-    await advancedSound.run(() => sendHearingProtection(enabled, 1), () => {
+    await advancedSound.run(() => {
+      const threshold = hearingThreshold();
+      if (threshold === null) throw new Error(t("control.unknown"));
+      return sendHearingProtection(enabled, threshold);
+    }, () => {
       if (link().mock) setHearingProtect(enabled);
     }, (message) => notify(message, "error"));
   };
