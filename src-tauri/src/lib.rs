@@ -87,6 +87,11 @@ fn get_model_profile(model_id: String) -> Result<catalog::ModelProfile, String> 
 }
 
 #[tauri::command]
+async fn get_device_snapshot() -> device::snapshot::DeviceSnapshot {
+    ble::get_device_snapshot().await
+}
+
+#[tauri::command]
 async fn get_battery() -> Result<BatteryState, String> {
     Ok(ble::get_battery_state().await)
 }
@@ -403,6 +408,7 @@ pub fn run() {
             list_model_profiles,
             get_model_profile,
             get_battery,
+            get_device_snapshot,
             query_battery,
             set_anc_mode,
             set_listening_state,

@@ -115,73 +115,16 @@ impl Bp1ProAnc {
     }
 
     fn decode_battery(payload: &[u8]) -> Result<DeviceEvent, DecodeError> {
-        // Official BleUtils.d (app 2.14.1) — STRICT only:
-        //   regex AA02([0-9A-F]{2})00([0-9A-F]{2})01
-        // Full notify: AA 02 LL 00 RR 01  → payload = [LL, 00, RR, 01]
-        //
-        // Loose formats (compact 2-byte, junk salvage) caused % to jump when
-        // mode/EQ ACKs were misread as battery. Do not re-introduce them here.
-
-        if payload.len() >= 4 && payload[1] == 0x00 && payload[3] == 0x01 {
-            if Self::is_pct_byte(payload[0]) && Self::is_pct_byte(payload[2]) {
-                let (left, lc) = Self::pct_and_charge(payload[0]);
-                let (right, rc) = Self::pct_and_charge(payload[2]);
-                // Mode ACKs often forge tiny % (1–3). Real buds report ≥5 once linked.
-                // Require both sides present and non-trivial (official always sends L+R).
-                if left >= 5 && right >= 5 {
-                    return Ok(DeviceEvent::Battery(BatteryState {
-                        left,
-                        right,
-                        case: 0,
-                        left_charging: lc,
-                        right_charging: rc,
-                        case_charging: false,
-                    }));
-                }
-            }
+        // Exact AA02 LL 00 RR 01 layout; percentages do not determine validity.
+        if payload.len() == 4 && payload[1] == 0 && payload[3] == 1
+            && Self::is_pct_byte(payload[0]) && Self::is_pct_byte(payload[2]) {
+            let (left, left_charging) = Self::pct_and_charge(payload[0]);
+            let (right, right_charging) = Self::pct_and_charge(payload[2]);
+            return Ok(DeviceEvent::Battery(BatteryState {
+                left, right, case: 0, left_charging, right_charging, case_charging: false,
+            }));
         }
-
-        // Salvage only the exact LL 00 RR 01 sub-pattern with both sides > 0
-        if let Some(ev) = Self::scan_lr_pattern(payload) {
-            return Ok(ev);
-        }
-
-        Err(DecodeError::PayloadTooShort {
-            opcode: 0x02,
-            need: 4,
-            got: payload.len(),
-        })
-    }
-
-    /// Find exact LL 00 RR 01 with both L,R in 1..=100 (or charge bit).
-    fn scan_lr_pattern(payload: &[u8]) -> Option<DeviceEvent> {
-        if payload.len() < 4 {
-            return None;
-        }
-        for i in 0..payload.len().saturating_sub(3) {
-            if payload[i + 1] == 0x00 && payload.get(i + 3) == Some(&0x01) {
-                let l = payload[i];
-                let r = payload[i + 2];
-                if !Self::is_pct_byte(l) || !Self::is_pct_byte(r) {
-                    continue;
-                }
-                let (left, lc) = Self::pct_and_charge(l);
-                let (right, rc) = Self::pct_and_charge(r);
-                // Require both sides present and non-trivial — avoids mode-ACK noise
-                // like 01 00 00 01 or 03 00 01 01 from BA34/BA43 echoes
-                if left >= 5 && right >= 5 {
-                    return Some(DeviceEvent::Battery(BatteryState {
-                        left,
-                        right,
-                        case: 0,
-                        left_charging: lc,
-                        right_charging: rc,
-                        case_charging: false,
-                    }));
-                }
-            }
-        }
-        None
+        Err(DecodeError::PayloadTooShort { opcode: 2, need: 4, got: payload.len() })
     }
 
     fn decode_case(payload: &[u8]) -> Result<DeviceEvent, DecodeError> {
@@ -202,14 +145,6 @@ impl Bp1ProAnc {
             });
         }
         let (case, ch_hi) = Self::pct_and_charge(payload[0]);
-        // Ignore case=0 unless charging flag — avoids wiping case on junk AA27
-        if case == 0 && !ch_hi && payload.get(1).copied().unwrap_or(0) == 0 {
-            return Err(DecodeError::PayloadTooShort {
-                opcode: 0x27,
-                need: 1,
-                got: payload.len(),
-            });
-        }
         let case_charging = payload.get(1).copied().unwrap_or(0) != 0 || ch_hi;
         Ok(DeviceEvent::Battery(BatteryState {
             left: 0,
@@ -299,24 +234,18 @@ mod tests {
     }
 
     #[test]
-    fn battery_salvage_wrapped_junk_prefix() {
-        // 789C leftover still has LL 00 RR 01 with both ≥ 5
-        let ev = dec(&[0xAA, 0x02, 0x01, 0x05, 0x02, 0x64, 0x00, 0x50, 0x01]).unwrap();
-        match ev {
-            DeviceEvent::Battery(b) => {
-                assert_eq!(b.left, 100);
-                assert_eq!(b.right, 80);
-            }
-            _ => panic!("expected battery"),
-        }
+    fn battery_rejects_junk_prefix_and_compact_ack() {
+        assert!(dec(&[0xAA, 2, 1, 5, 2, 100, 0, 80, 1]).is_err());
+        assert!(dec(&[0xAA, 2, 3, 1]).is_err());
     }
 
     #[test]
-    fn battery_reject_mode_ack_noise() {
-        // Typical junk: AA02 01 00 00 01 (looks like pattern, both sides tiny)
-        assert!(dec(&[0xAA, 0x02, 0x01, 0x00, 0x00, 0x01]).is_err());
-        // Compact 2-byte no longer accepted (was main flicker source)
-        assert!(dec(&[0xAA, 0x02, 0x03, 0x01]).is_err());
+    fn exact_low_battery_and_zero_are_values() {
+        for percentage in 0..=4 {
+            let DeviceEvent::Battery(battery) = dec(&[0xAA, 2, percentage, 0, percentage, 1]).unwrap() else { panic!("battery expected"); };
+            assert_eq!(battery.left, percentage);
+            assert_eq!(battery.right, percentage);
+        }
     }
 
     #[test]

@@ -21,6 +21,9 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
 /// Set once from lib.rs setup for event emit helpers.
+static OBSERVATIONS: Lazy<tokio::sync::broadcast::Sender<crate::device::confirmation::StateObservation>> =
+    Lazy::new(|| tokio::sync::broadcast::channel(64).0);
+
 static COMMAND_EXECUTOR: Lazy<crate::device::executor::CommandExecutor> = Lazy::new(Default::default);
 
 static CONNECT_ATTEMPT: Mutex<()> = Mutex::const_new(());
@@ -147,6 +150,7 @@ struct BleInner {
     scanning: bool,
     scan_generation: u64,
     session: crate::device::session::SessionEpoch,
+    snapshot: crate::device::snapshot::DeviceSnapshot,
     devices: HashMap<String, BleDevice>,
     /// Live battery merged from 0x02 + 0x27 notifies
     battery: BatteryState,
@@ -179,6 +183,7 @@ impl BleInner {
             scanning: false,
             scan_generation: 0,
             session: Default::default(),
+            snapshot: crate::device::snapshot::DeviceSnapshot::new(0),
             devices: HashMap::new(),
             battery: BatteryState::default(),
             last_anc: None,
@@ -200,6 +205,7 @@ impl BleInner {
 
     fn reset_link(&mut self) {
         self.session.invalidate();
+        self.snapshot = crate::device::snapshot::DeviceSnapshot::new(self.session.token().id());
         self.has_write_uuid = false;
         self.has_notify_uuid = false;
         self.handshake_ok = false;
@@ -1186,7 +1192,15 @@ async fn handle_notification(
             Ok(fr) => match protocol::decode_frame(family, &fr, last_anc) {
                 Ok(event) => {
                     log::info!("DeviceEvent: {:?}", event);
-                    apply_event(app, event, token).await;
+                    {
+                        let mut state = BLE.lock().await;
+                        if !state.session.accepts(token) { return; }
+                        state.snapshot.model_id = state.devices.get(device_id).and_then(|device| device.model_id.clone());
+                        state.snapshot.observe(fr.cmd, &event, now_ms());
+                        let _ = app.emit("device://snapshot", &state.snapshot);
+                        let _ = OBSERVATIONS.send(crate::device::confirmation::StateObservation { session: token, opcode: fr.cmd, event: event.clone() });
+                    }
+                    apply_event(app, event, token, fr.cmd).await;
                     any_decoded = true;
                 }
                 Err(e) => log::debug!("Decode skip: {e}  raw={:02X?}", frame),
@@ -1203,141 +1217,26 @@ async fn handle_notification(
     }
 }
 
-/// Reject junk battery readings that appear when switching ANC/EQ (mode ACKs
-/// mis-parsed as AA02). Keep last good % sticky.
-fn should_accept_buds(prev: &BatteryState, next: &BatteryState) -> bool {
-    // Need at least one bud %
-    if next.left == 0 && next.right == 0 {
-        return false;
-    }
-    // Both sides must be plausible
-    if next.left > 100 || next.right > 100 {
-        return false;
-    }
-    // First reading — accept if either side looks real
-    if prev.left == 0 && prev.right == 0 {
-        return next.left >= 5 || next.right >= 5;
-    }
-    // Already have good values: reject sudden free-fall (e.g. 87% → 3%)
-    // that is typical of mode-ACK noise, not real discharge
-    let prev_avg = ((prev.left as u16 + prev.right as u16) / 2) as i16;
-    let next_avg = {
-        let l = if next.left > 0 { next.left } else { next.right };
-        let r = if next.right > 0 { next.right } else { next.left };
-        ((l as u16 + r as u16) / 2) as i16
-    };
-    if prev_avg >= 20 && next_avg + 25 < prev_avg {
-        log::warn!(
-            "Reject battery jump L/R {}/{} → {}/{} (likely mode ACK noise)",
-            prev.left,
-            prev.right,
-            next.left,
-            next.right
-        );
-        return false;
-    }
-    // Reject tiny one-sided garbage when other side collapses
-    if prev.left >= 20 && next.left > 0 && next.left < 5 {
-        return false;
-    }
-    if prev.right >= 20 && next.right > 0 && next.right < 5 {
-        return false;
-    }
-    true
-}
-
-fn should_accept_case(prev: &BatteryState, next: &BatteryState) -> bool {
-    if next.case == 0 && !next.case_charging {
-        return false;
-    }
-    if next.case > 100 {
-        return false;
-    }
-    if prev.case >= 20 && next.case > 0 && next.case + 25 < prev.case {
-        log::warn!(
-            "Reject case battery jump {} → {} (likely noise)",
-            prev.case,
-            next.case
-        );
-        return false;
-    }
-    true
-}
-
-async fn apply_event(app: &AppHandle, event: DeviceEvent, token: crate::device::session::SessionToken) {
+async fn apply_event(app: &AppHandle, event: DeviceEvent, token: crate::device::session::SessionToken, opcode: u8) {
     let mut state = BLE.lock().await;
     if !state.session.accepts(token) { return; }
     match &event {
         DeviceEvent::Battery(partial) => {
-            let prev = state.battery.clone();
-            let looks_like_case = partial.left == 0
-                && partial.right == 0
-                && (partial.case != 0 || partial.case_charging);
-            let looks_like_buds = partial.left != 0 || partial.right != 0;
-
-            let mut changed = false;
-
-            if looks_like_case && should_accept_case(&prev, partial) {
-                if state.battery.case != partial.case
-                    || state.battery.case_charging != partial.case_charging
-                {
+            // Packet identity distinguishes independent reports; zero is a value.
+            match opcode {
+                0x02 => {
+                    state.battery.left = partial.left;
+                    state.battery.right = partial.right;
+                    state.battery.left_charging = partial.left_charging;
+                    state.battery.right_charging = partial.right_charging;
+                }
+                0x27 => {
                     state.battery.case = partial.case;
                     state.battery.case_charging = partial.case_charging;
-                    changed = true;
                 }
-            } else if looks_like_buds && should_accept_buds(&prev, partial) {
-                // Merge per-side: keep previous if new side is 0 (partial report)
-                let new_l = if partial.left > 0 {
-                    partial.left
-                } else {
-                    state.battery.left
-                };
-                let new_r = if partial.right > 0 {
-                    partial.right
-                } else {
-                    state.battery.right
-                };
-                if state.battery.left != new_l
-                    || state.battery.right != new_r
-                    || state.battery.left_charging != partial.left_charging
-                    || state.battery.right_charging != partial.right_charging
-                {
-                    state.battery.left = new_l;
-                    state.battery.right = new_r;
-                    if partial.left > 0 {
-                        state.battery.left_charging = partial.left_charging;
-                    }
-                    if partial.right > 0 {
-                        state.battery.right_charging = partial.right_charging;
-                    }
-                    changed = true;
-                }
-            } else if looks_like_buds || looks_like_case {
-                log::debug!(
-                    "Battery update ignored (sticky): got L={} R={} C={} prev L={} R={} C={}",
-                    partial.left,
-                    partial.right,
-                    partial.case,
-                    prev.left,
-                    prev.right,
-                    prev.case
-                );
+                _ => return,
             }
-
-            if !changed {
-                return;
-            }
-            let bat = state.battery.clone();
-            log::info!(
-                "Battery state L={} R={} case={} (chg L/R/C={}/{}/{})",
-                bat.left,
-                bat.right,
-                bat.case,
-                bat.left_charging,
-                bat.right_charging,
-                bat.case_charging
-            );
-            let _ = app.emit("device://battery", &bat);
+            let _ = app.emit("device://battery", &state.battery);
         }
         DeviceEvent::Anc(mode) => {
             // Only update last_anc + UI when mode actually changes (avoid flicker)
@@ -1523,6 +1422,22 @@ where
     result
 }
 
+async fn write_and_readback(
+    peripheral: &Peripheral,
+    data: &[u8],
+    query: &[u8],
+    expected: crate::device::confirmation::ExpectedState,
+) -> Result<(), String> {
+    let token = BLE.lock().await.session.token();
+    let mut replies = OBSERVATIONS.subscribe();
+    write_bytes(peripheral, data).await?;
+    write_bytes(peripheral, query).await?;
+    loop {
+        let observation = replies.recv().await.map_err(|error| format!("State readback lost: {error}"))?;
+        if expected.matches(token, &observation) { return Ok(()); }
+    }
+}
+
 pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
     let profile = {
         let state = BLE.lock().await;
@@ -1577,7 +1492,7 @@ pub async fn send_eq(preset: EqPreset) -> Result<(), String> {
     drop(state);
     with_connected_peripheral(|p| {
         let d = data.clone();
-        Box::pin(async move { write_bytes(&p, &d).await })
+        Box::pin(async move { write_and_readback(&p, &d, &[0xBA, 0x42], crate::device::confirmation::ExpectedState::Eq(preset)).await })
     })
     .await
 }
@@ -1595,7 +1510,7 @@ pub async fn send_game_mode(on: bool) -> Result<(), String> {
     drop(state);
     with_connected_peripheral(|p| {
         let d = data.clone();
-        Box::pin(async move { write_bytes(&p, &d).await })
+        Box::pin(async move { write_and_readback(&p, &d, &[0xBA, 0x23], crate::device::confirmation::ExpectedState::Game(on)).await })
     })
     .await
 }
@@ -1621,6 +1536,7 @@ pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {
 }
 
 pub async fn send_eq_index(index: u8) -> Result<(), String> {
+    let preset = EqPreset::from_byte(index).ok_or("EQ index has no confirmed-state decoder")?;
     let data = encode_connected_feature(protocol::FeatureCommand::SetEqIndex(index)).await?;
     let state = BLE.lock().await;
     if state.mock {
@@ -1631,7 +1547,7 @@ pub async fn send_eq_index(index: u8) -> Result<(), String> {
         return Ok(());
     }
     drop(state);
-    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+    with_connected_peripheral(|p| Box::pin(async move { write_and_readback(&p, &data, &[0xBA, 0x42], crate::device::confirmation::ExpectedState::Eq(preset)).await })).await
 }
 
 pub async fn send_custom_eq(bands: Vec<protocol::EqBand>, dict_sort: u8, anc: bool) -> Result<(), String> {
@@ -1678,7 +1594,7 @@ pub async fn send_ldac(enabled: bool) -> Result<(), String> {
         return Ok(());
     }
     drop(state);
-    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+    with_connected_peripheral(|p| Box::pin(async move { write_and_readback(&p, &data, &[0xBA, 0x74], crate::device::confirmation::ExpectedState::Ldac(enabled)).await })).await
 }
 
 pub async fn send_hearing_protection(enabled: bool, level: u8) -> Result<(), String> {
@@ -1695,7 +1611,7 @@ pub async fn send_hearing_protection(enabled: bool, level: u8) -> Result<(), Str
         return Ok(());
     }
     drop(state);
-    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+    with_connected_peripheral(|p| Box::pin(async move { write_and_readback(&p, &data, &[0xBA, 0x93], crate::device::confirmation::ExpectedState::Hearing { enabled, level }).await })).await
 }
 
 async fn encode_connected_feature(command: protocol::FeatureCommand) -> Result<Vec<u8>, String> {
@@ -1707,6 +1623,10 @@ async fn encode_connected_feature(command: protocol::FeatureCommand) -> Result<V
         .map(|device| device.device_profile.clone())
         .ok_or("Connected device profile is missing")?;
     protocol::encode_feature(&profile, command)
+}
+
+pub async fn get_device_snapshot() -> crate::device::snapshot::DeviceSnapshot {
+    BLE.lock().await.snapshot.clone()
 }
 
 pub async fn get_battery_state() -> BatteryState {
@@ -1775,58 +1695,26 @@ async fn send_battery_queries(peripheral: &Peripheral) -> Result<(), String> {
 
 /// Explicit refresh requests the earbud/case reports and waits for notifications.
 pub async fn query_battery() -> Result<BatteryState, String> {
-    // Demo mode: return seeded mock values
     {
         let state = BLE.lock().await;
-        if state.mock {
-            return Ok(state.battery.clone());
-        }
-        if state.connected_id.is_none() {
-            return Err("Not connected".into());
-        }
+        if state.mock { return Ok(state.battery.clone()); }
     }
-
-    let before_notify = BLE.lock().await.notify_count;
-    let before = BLE.lock().await.battery.clone();
-
-    with_connected_peripheral(|p| {
-        Box::pin(async move { send_battery_queries(&p).await })
-    })
-    .await?;
-
-    // Poll for notify-driven battery update (AA02 can take a few hundred ms)
-    for _ in 0..12 {
-        tokio::time::sleep(Duration::from_millis(150)).await;
-        let state = BLE.lock().await;
-        let changed = state.battery.left != before.left
-            || state.battery.right != before.right
-            || state.battery.case != before.case
-            || state.notify_count > before_notify;
-        let has_pct =
-            state.battery.left != 0 || state.battery.right != 0 || state.battery.case != 0;
-        if changed && has_pct {
-            return Ok(state.battery.clone());
+    with_connected_peripheral(|peripheral| Box::pin(async move {
+        let token = BLE.lock().await.session.token();
+        let mut replies = OBSERVATIONS.subscribe();
+        send_battery_queries(&peripheral).await?;
+        loop {
+            let observation = replies.recv().await.map_err(|error| format!("Battery readback lost: {error}"))?;
+            if crate::device::confirmation::ExpectedState::Battery.matches(token, &observation) {
+                if let DeviceEvent::Battery(mut battery) = observation.event {
+                    let state = BLE.lock().await;
+                    battery.case = state.battery.case;
+                    battery.case_charging = state.battery.case_charging;
+                    return Ok(battery);
+                }
+            }
         }
-        // If we got new notifies but still 0/0/0, keep waiting a bit
-        if state.notify_count > before_notify + 1 && has_pct {
-            return Ok(state.battery.clone());
-        }
-    }
-
-    // Second burst if first round silent
-    let _ = with_connected_peripheral(|p| {
-        Box::pin(async move { send_battery_queries(&p).await })
-    })
-    .await;
-    for _ in 0..8 {
-        tokio::time::sleep(Duration::from_millis(150)).await;
-        let state = BLE.lock().await;
-        if state.battery.left != 0 || state.battery.right != 0 || state.battery.case != 0 {
-            return Ok(state.battery.clone());
-        }
-    }
-
-    Ok(BLE.lock().await.battery.clone())
+    })).await
 }
 
 // ---------------------------------------------------------------------------

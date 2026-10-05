@@ -4,6 +4,10 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SessionToken(u64);
 
+impl SessionToken {
+    pub fn id(self) -> u64 { self.0 }
+}
+
 pub struct SessionEpoch {
     generation: u64,
     changes: tokio::sync::watch::Sender<u64>,
