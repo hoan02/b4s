@@ -82,8 +82,28 @@ The lists are independent. Absence from one guard only selects the Android defau
 
 ## Remaining gates
 
-- Trace constructor UUID source, socket read/write ownership, callback routing and startup readiness before Windows transport implementation.
+- Constructor UUID, socket read/write ownership and SDK callback routing are traced below; application receive decoding/startup readiness and Windows acceptance remain outstanding.
 - Triage relevant JADX errors using DEX/smali or a second engine before trusting incomplete branches.
 - Record package/tool/input hashes and ARM64/native dependencies separately; this inventory covers dispatch guards only.
 - U01 must establish actual BP1 Ultra transport, endpoint/UUID, framing and firmware. The runtime remains scan-only until that evidence and Windows acceptance exist.
 - Priority-path framing divergence requires actual caller coverage; do not silently reproduce or repair an Android behavior without evidence.
+
+
+## Classic socket lifecycle and correlation
+
+Further inspection resolves the constructor UUID: `ClassicBluetoothManager.v`, local line 307, passes `00001101-0000-1000-8000-00805F9B34FB` to `ClassicBtConnectManager`. This is the Android path's SPP service UUID; it is not proof of a service advertised by the available BP1 Ultra firmware on Windows.
+
+| Stage | Local source pointer | Evidence and implication |
+| --- | --- | --- |
+| Connect admission | ClassicBluetoothManager.v, 293–310 | Per-address connecting/connected maps suppress duplicate attempts; connect manager is reused per address |
+| Connected socket | v listener / s, 206–216, 330–337 | Connect callback installs the socket read/write manager and clears timeout/connecting state; this is socket connection, not feature readiness |
+| RX | ClassicBtDataRwManager.a, 53–91 | Blocking input read into a 2048-byte buffer; each positive read emits its copied chunk. Chunk boundaries are not protocol frame boundaries |
+| TX | ClassicBtDataRwManager.g, 176–198 | OutputStream write invokes transport-success callback; this is not decoded command confirmation |
+| Cancel | ClassicBtDataRwManager.b, 94–130 | Socket close and connect-manager cleanup clear stream/socket references; read exceptions enter cancellation |
+| Application callbacks | ClassicBluetoothManager.s listener.c, 234–242 | RX is forwarded to SDK receive listeners with remote address/device context |
+| Queue release | s listener.c, 243–249 | Compares the first four hex characters of RX with RequestParam.c, then releases address queue. No request ID/state equality is established here |
+| Queue submission | ClassicBluetoothManager.x, 350–359 | Priority WriteTask is submitted per address with 200 ms argument; its exact timeout/spacing meaning still requires queue implementation tracing |
+
+B4S transport acceptance must exercise arbitrary split/coalesced 789C frames, EOF/read errors, cancel of blocked reads, connect timeout and same-address reconnect. Do not import GATT's bare-AA message-boundary assumption into a socket stream. The current GATT receiver is not a completed SPP adapter. Match confirmed state after frame validation rather than adopting SDK prefix-based queue release as feature success.
+
+This resolves the UUID-source question from the initial inventory. Remaining unknowns include application decoder callback wiring, handshake/readiness sequence, queue parameter semantics, firmware guards, Android HCI proof and Windows service/socket accessibility.
