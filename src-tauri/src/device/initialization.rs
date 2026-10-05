@@ -9,10 +9,11 @@ pub enum StartupQuery {
 }
 
 pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<StartupQuery> {
-    let mut plan = vec![StartupQuery::Battery];
+    let mut plan = Vec::new();
     let Some(model) = model else {
         return plan;
     };
+    plan.push(StartupQuery::Battery);
     if model.capabilities.eq {
         plan.push(StartupQuery::Eq);
     }
@@ -47,9 +48,9 @@ mod tests {
     }
 
     #[test]
-    fn unknown_device_only_gets_safe_battery_query() {
+    fn unknown_device_gets_no_speculative_query() {
         let profile = profile_for(None, None, None);
-        assert_eq!(plan_for(None, &profile), vec![StartupQuery::Battery]);
+        assert!(plan_for(None, &profile).is_empty());
     }
 
     #[test]

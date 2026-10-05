@@ -134,7 +134,8 @@ async fn set_anc_mode(
     let anc = match mode.to_lowercase().as_str() {
         "off" => AncMode::Off,
         "transparency" | "ambient" => AncMode::Transparency,
-        _ => AncMode::Anc,
+        "anc" => AncMode::Anc,
+        _ => return Err(format!("Unknown ANC mode: {mode}")),
     };
     let parameter = parameter.unwrap_or_else(|| anc.level_from_percent(strength.unwrap_or(70)));
     let command = match anc {
@@ -149,7 +150,7 @@ async fn set_anc_mode(
 
 #[tauri::command]
 async fn set_eq_preset(preset: String) -> Result<(), String> {
-    let eq = EqPreset::from_ui(&preset);
+    let eq = EqPreset::from_ui(&preset)?;
     ble::send_eq(eq).await
 }
 
@@ -169,7 +170,8 @@ async fn set_spatial_mode(mode: String) -> Result<(), String> {
         "music" | "01" => SpatialMode::Music,
         "cinema" | "movie" | "02" => SpatialMode::Cinema,
         "game" | "03" => SpatialMode::Game,
-        _ => SpatialMode::Off,
+        "off" | "00" => SpatialMode::Off,
+        _ => return Err(format!("Unknown spatial mode: {mode}")),
     };
     ble::send_spatial(m).await
 }

@@ -127,9 +127,9 @@ impl EqPreset {
     }
 
     /// Map UI id / label → preset (Baseus app-style names).
-    pub fn from_ui(s: &str) -> Self {
+    pub fn from_ui(s: &str) -> Result<Self, String> {
         let k = s.to_lowercase().replace([' ', '-', '_'], "");
-        match k.as_str() {
+        Ok(match k.as_str() {
             "bass" | "bassboost" | "powerfulbass" | "powerful" => Self::BassBoost,
             "voice" => Self::Voice,
             "clear" | "cleartreble" | "treble" => Self::Clear,
@@ -140,9 +140,9 @@ impl EqPreset {
             "acoustic" => Self::Acoustic,
             "bassreduce" | "reducebass" | "lessbass" => Self::BassReduce,
             "treblereduce" | "reducetreble" | "lesstreble" => Self::TrebleReduce,
-            // classic / baseusclassic / balanced
-            _ => Self::Balanced,
-        }
+            "classic" | "baseusclassic" | "balanced" => Self::Balanced,
+            _ => return Err(format!("Unknown EQ preset: {s}")),
+        })
     }
 }
 
@@ -230,4 +230,16 @@ pub enum DecodeError {
     UnknownOpcode(u8),
     #[error("payload too short for opcode 0x{opcode:02X}: need {need}, got {got}")]
     PayloadTooShort { opcode: u8, need: usize, got: usize },
+}
+
+#[cfg(test)]
+mod intent_tests {
+    use super::EqPreset;
+
+    #[test]
+    fn invalid_eq_does_not_become_balanced() {
+        assert!(EqPreset::from_ui("not-a-preset").is_err());
+        assert_eq!(EqPreset::from_ui("balanced").unwrap(), EqPreset::Balanced);
+        assert_eq!(EqPreset::from_ui("powerful bass").unwrap(), EqPreset::BassBoost);
+    }
 }

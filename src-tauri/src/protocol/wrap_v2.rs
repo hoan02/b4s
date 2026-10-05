@@ -146,41 +146,13 @@ pub fn unwrap_notify(data: &[u8]) -> Vec<Vec<u8>> {
             let crc_rx = u16::from_be_bytes([pkt[total - 2], pkt[total - 1]]);
             if crc16(body) == crc_rx && total > 7 {
                 extract_789c_inner(pkt, &mut out);
-            } else if total > 7 {
-                // CRC mismatch — still try to salvage AA02/AA27 / length-prefix parse
-                log::debug!(
-                    "789C CRC mismatch (rx={crc_rx:04X} calc={:04X}), salvage parse",
-                    crc16(body)
-                );
-                extract_789c_inner(pkt, &mut out);
             }
             i += total;
         }
     }
 
-    // Scan for full official battery frames only (partial AA02 is mode-ACK noise)
-    // BleUtils.d: AA02 LL 00 RR 01  (exactly 6 bytes)
-    let mut i = 0usize;
-    while i + 5 < data.len() {
-        if data[i] == 0xAA
-            && data[i + 1] == 0x02
-            && data[i + 3] == 0x00
-            && data[i + 5] == 0x01
-        {
-            push_unique_aa(&mut out, data[i..i + 6].to_vec());
-            i += 6;
-        } else if data[i] == 0xAA && data[i + 1] == 0x27 {
-            let end = (i + 4).min(data.len());
-            push_unique_aa(&mut out, data[i..end].to_vec());
-            i = end;
-        } else {
-            i += 1;
-        }
-    }
+    // Never decode unvalidated bytes from framed input.
 
-    if out.is_empty() && !data.is_empty() {
-        out.push(data.to_vec());
-    }
     out
 }
 
@@ -285,6 +257,18 @@ mod tests {
     fn wrap_handshake() {
         let w = wrap_ba_command(&[0xBA, 0x05, 0x00]).unwrap();
         assert_eq!(w, vec![0x78, 0x9C, 0x00, 0x09, 0x02, 0x05, 0x00, 0x97, 0x5F]);
+    }
+
+    #[test]
+    fn rejects_corrupt_and_truncated_frames_with_embedded_battery() {
+        let mut body = vec![0x78, 0x9C, 0, 13, 2, 0xAA, 2, 64, 0, 64, 1];
+        let crc = crc16(&body);
+        body.extend_from_slice(&crc.to_be_bytes());
+        assert!(!unwrap_notify(&body).is_empty());
+        body[12] ^= 1;
+        assert!(unwrap_notify(&body).is_empty());
+        assert!(unwrap_notify(&body[..11]).is_empty());
+        assert!(unwrap_notify(&[0, 0xAA, 2, 64, 0, 64, 1]).is_empty());
     }
 
     #[test]

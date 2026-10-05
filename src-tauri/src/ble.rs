@@ -1148,47 +1148,12 @@ async fn handle_notification(app: &AppHandle, data: &[u8], _char_uuid: Option<St
         }
     }
 
-    // Salvage AA02 only when we still have no bud % — never on every mode ACK
-    // (false AA02-looking bytes in ANC/EQ replies made % jump down)
-    let need_battery = {
-        let s = BLE.lock().await;
-        s.battery.left == 0 && s.battery.right == 0
-    };
-    if need_battery {
-        if let Some(bat) = salvage_battery_from_raw(data) {
-            log::info!("Battery salvaged from raw notify: {:?}", bat);
-            apply_event(app, DeviceEvent::Battery(bat)).await;
-            any_decoded = true;
-        }
-    }
-
     if !any_decoded {
         let _ = app.emit(
             "ble://raw",
             &serde_json::json!({ "hex": hex_encode(data) }),
         );
     }
-}
-
-/// Official BleUtils.d only: AA 02 LL 00 RR 01 with both sides ≥ 5%.
-fn salvage_battery_from_raw(data: &[u8]) -> Option<BatteryState> {
-    for w in data.windows(6) {
-        if w[0] == 0xAA && w[1] == 0x02 && w[3] == 0x00 && w[5] == 0x01 {
-            let left = if w[2] > 100 { w[2] & 0x7F } else { w[2] }.min(100);
-            let right = if w[4] > 100 { w[4] & 0x7F } else { w[4] }.min(100);
-            if left >= 5 && right >= 5 {
-                return Some(BatteryState {
-                    left,
-                    right,
-                    case: 0,
-                    left_charging: w[2] > 100,
-                    right_charging: w[4] > 100,
-                    case_charging: false,
-                });
-            }
-        }
-    }
-    None
 }
 
 /// Reject junk battery readings that appear when switching ANC/EQ (mode ACKs
