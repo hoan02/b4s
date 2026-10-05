@@ -46,7 +46,7 @@ import {
   onHearingProtection,
   toBatteryData,
 } from "./lib/device";
-import { EQ_BANDS, defaultCustomBands } from "./lib/eq";
+import { defaultCustomBands } from "./lib/eq";
 import { getAppInfo } from "./lib/app";
 import {
   applyTheme,
@@ -399,11 +399,15 @@ const App: Component = () => {
   const handleApplyCustomEq = async (bands = eqCustomBands(), label = t("eq.customize")) => {
     if (!requestEqAction({ kind: "applyCustom" })) return;
     const customLabel = label.trim() || t("eq.customize");
-    await equalizer.run(() => setCustomEq(
-      bands.map((gain, index) => ({
-        frequency: EQ_BANDS[index].frequency, qValue: 1, gain, filter: 1,
-      }))
-    ), () => {
+    await equalizer.run(() => {
+      const schema = modelEq();
+      if (!schema || bands.length !== schema.bands.length) {
+        throw new Error("Custom EQ draft does not match the model schema");
+      }
+      return setCustomEq(bands.map((gain, index) => ({
+        frequency: schema.bands[index], qValue: 1, gain, filter: 1,
+      })));
+    }, () => {
       if (link().mock) setEqCustomActive(true);
       notify(t("toast.customEqSaved"), "success", `EQ custom · ${customLabel}`);
     }, (message) => notify(message, "error", customLabel));
@@ -638,13 +642,17 @@ const App: Component = () => {
         <Show when={view() === "eq" && connected()}>
           <section class="section section-scroll">
             <EqPanel
+              frequencies={modelEq()?.bands ?? []}
+              minGain={modelEq()?.minGain ?? -12}
+              maxGain={modelEq()?.maxGain ?? 12}
+              customSupported={device()?.deviceProfile?.capabilities.customEq ?? false}
               presets={(modelEq()?.presets ?? []).map((preset) => ({ ...preset, sub: preset.description }))}
               eqActive={eqActive()}
               pending={eqPending()}
               error={eqError()}
               customBands={eqCustomBands()}
               customActive={eqCustomActive()}
-              storageKey={device()?.address || device()?.modelId || "default"}
+              storageKey={`${device()?.address ?? "default"}.${device()?.modelId ?? "unknown"}.${modelEq()?.bands.join("-") ?? "none"}`}
               onBack={() => setView("home")}
               onEq={handleEq}
               onCustomBands={handleCustomBands}

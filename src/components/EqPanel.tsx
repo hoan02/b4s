@@ -5,11 +5,8 @@
 import { Component, For, Show, createSignal, createEffect } from "solid-js";
 import type { EqPresetId } from "../lib/device";
 import {
-  EQ_BANDS,
   type EqPresetMeta,
   type CustomEqPreset,
-  clampBand,
-  defaultCustomBands,
   loadCustomEqPresets,
   saveCustomEqPresets,
 } from "../lib/eq";
@@ -19,6 +16,10 @@ import OperationStatus from "./OperationStatus";
 
 interface Props {
   presets: EqPresetMeta[];
+  frequencies: number[];
+  minGain: number;
+  maxGain: number;
+  customSupported: boolean;
   eqActive: EqPresetId;
   pending?: boolean;
   error?: string | null;
@@ -37,20 +38,24 @@ const EqPanel: Component<Props> = (props) => {
     props.customActive ? "custom" : "preset"
   );
   const [localBands, setLocalBands] = createSignal(
-    props.customBands.length === EQ_BANDS.length
+    props.customBands.length === props.frequencies.length
       ? props.customBands.slice()
-      : defaultCustomBands()
+      : props.frequencies.map(() => 0)
   );
   const [customPresets, setCustomPresets] = createSignal<CustomEqPreset[]>(
-    loadCustomEqPresets(props.storageKey)
+    loadCustomEqPresets(props.storageKey, props.frequencies.length, props.minGain, props.maxGain)
   );
   const [customName, setCustomName] = createSignal("");
   const [customError, setCustomError] = createSignal("");
 
   createEffect(() => {
-    if (props.customBands.length === EQ_BANDS.length) {
-      setLocalBands(props.customBands.slice());
-    }
+    setLocalBands(props.customBands.length === props.frequencies.length
+      ? props.customBands.slice() : props.frequencies.map(() => 0));
+  });
+  createEffect(() => {
+    setCustomPresets(loadCustomEqPresets(props.storageKey, props.frequencies.length, props.minGain, props.maxGain));
+    setCustomName("");
+    setCustomError("");
   });
 
   const selectCustom = (preset: CustomEqPreset) => {
@@ -93,7 +98,7 @@ const EqPanel: Component<Props> = (props) => {
 
   const setBand = (i: number, v: number) => {
     const next = localBands().slice();
-    next[i] = clampBand(v);
+    next[i] = Math.max(props.minGain, Math.min(props.maxGain, Math.round(v)));
     if (props.onCustomBands(next)) {
       setLocalBands(next);
     }
@@ -120,7 +125,7 @@ const EqPanel: Component<Props> = (props) => {
                   <div
                     class="eq-preview-fill"
                     style={{
-                      height: `${((g + 6) / 12) * 100}%`,
+                      height: `${((g - props.minGain) / (props.maxGain - props.minGain)) * 100}%`,
                     }}
                   />
                 </div>
@@ -129,8 +134,8 @@ const EqPanel: Component<Props> = (props) => {
           </For>
         </div>
         <div class="eq-preview-labels">
-          <For each={[...EQ_BANDS]}>
-            {(b) => <span>{b.label}</span>}
+          <For each={props.frequencies}>
+            {(frequency) => <span>{frequency}</span>}
           </For>
         </div>
         <p class="eq-preview-hint">
@@ -155,6 +160,7 @@ const EqPanel: Component<Props> = (props) => {
         <button
           type="button"
           class={tab() === "custom" ? "active" : ""}
+          disabled={!props.customSupported}
           onClick={() => setTab("custom")}
         >
           {t("eq.customize")}
@@ -198,7 +204,7 @@ const EqPanel: Component<Props> = (props) => {
         <p class="eq-footnote">{t("eq.presetFootnote")}</p>
       </Show>
 
-      <Show when={tab() === "custom"}>
+      <Show when={tab() === "custom" && props.customSupported}>
         <p class="more-label">{t("eq.customize")}</p>
         <Show when={customPresets().length > 0}>
           <div class="eq-saved-list">
@@ -224,8 +230,8 @@ const EqPanel: Component<Props> = (props) => {
         <Show when={customError()}><p class="eq-inline-error">{customError()}</p></Show>
         <div class="eq-custom-card">
           <div class="eq-sliders">
-            <For each={[...EQ_BANDS]}>
-              {(b, i) => (
+            <For each={props.frequencies}>
+              {(frequency, i) => (
                 <div class="eq-slider-col">
                   <span class="eq-gain">
                     {localBands()[i()] > 0 ? "+" : ""}
@@ -233,12 +239,12 @@ const EqPanel: Component<Props> = (props) => {
                   </span>
                   <input
                     type="range"
-                    min={-12}
-                    max={12}
+                    min={props.minGain}
+                    max={props.maxGain}
                     step={1}
                     value={localBands()[i()]}
                     class="eq-vslider"
-                    aria-label={`${b.label} ${b.unit}`}
+                    aria-label={`${frequency} Hz`}
                     onInput={(e) =>
                       setBand(
                         i(),
@@ -246,8 +252,8 @@ const EqPanel: Component<Props> = (props) => {
                       )
                     }
                   />
-                  <span class="eq-freq">{b.label}</span>
-                  <span class="eq-unit">{b.unit}</span>
+                  <span class="eq-freq">{frequency}</span>
+                  <span class="eq-unit">Hz</span>
                 </div>
               )}
             </For>

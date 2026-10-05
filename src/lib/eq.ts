@@ -64,7 +64,7 @@ export function defaultCustomBands(): number[] {
   return Array.from({ length: EQ_BANDS.length }, () => 0);
 }
 
-export function loadCustomEqPresets(storageKey: string): CustomEqPreset[] {
+export function loadCustomEqPresets(storageKey: string, bandCount: number = EQ_BANDS.length, minGain = -12, maxGain = 12): CustomEqPreset[] {
   try {
     const raw = localStorage.getItem(`b4s.eq.custom.${storageKey}`);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -72,7 +72,8 @@ export function loadCustomEqPresets(storageKey: string): CustomEqPreset[] {
     return parsed.filter(
       (item): item is CustomEqPreset =>
         item && typeof item.id === "string" && typeof item.label === "string" &&
-        Array.isArray(item.bands) && item.bands.length === EQ_BANDS.length
+        Array.isArray(item.bands) && item.bands.length === bandCount &&
+        item.bands.every((gain: unknown) => typeof gain === "number" && Number.isFinite(gain) && gain >= minGain && gain <= maxGain)
     );
   } catch {
     return [];
