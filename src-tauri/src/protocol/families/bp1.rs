@@ -50,10 +50,24 @@ impl Bp1ProAnc {
 
             0x54 => Ok(DeviceEvent::BassBoost(Self::bass_level_from_payload(&frame.payload))),
             0x74 | 0x75 => Ok(DeviceEvent::Ldac(frame.payload.first().copied().unwrap_or(1) == 0)),
-            0x94 => Ok(DeviceEvent::HearingProtection {
-                enabled: frame.payload.first().copied().unwrap_or(0) != 0,
-                level: frame.payload.get(1).copied().unwrap_or(0),
-            }),
+            // App 2.17.0.1 HearingProtectionPopWindow.z consumes AA93 +
+            // enabled + level. AA94 01 is only a write-success acknowledgement.
+            0x93 | 0x94 => {
+                if frame.payload.len() < 2 {
+                    return Err(DecodeError::PayloadTooShort {
+                        opcode: frame.cmd,
+                        need: 2,
+                        got: frame.payload.len(),
+                    });
+                }
+                if frame.payload[0] > 1 {
+                    return Err(DecodeError::UnknownOpcode(frame.cmd));
+                }
+                Ok(DeviceEvent::HearingProtection {
+                    enabled: frame.payload[0] == 1,
+                    level: frame.payload[1],
+                })
+            }
 
             // Keepalive / identity / case event — ignore or unknown
             0x12 | 0x24 | 0x30 | 0x80 => Err(DecodeError::UnknownOpcode(frame.cmd)),
@@ -430,6 +444,31 @@ mod tests {
             encode_command(Command::SetHearingProtection { enabled: true, level: 3 }),
             vec![0xBA, 0x94, 0x01, 0x03]
         );
+    }
+
+    #[test]
+    fn hearing_query_updates_state_but_short_write_ack_does_not() {
+        assert_eq!(
+            encode_command(Command::QueryHearingProtection),
+            vec![0xBA, 0x93]
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x93, 0x01, 85]).unwrap(),
+            DeviceEvent::HearingProtection {
+                enabled: true,
+                level: 85,
+            }
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x93, 0x00, 0xFF]).unwrap(),
+            DeviceEvent::HearingProtection {
+                enabled: false,
+                level: 0xFF,
+            }
+        );
+        assert!(dec(&[0xAA, 0x93]).is_err());
+        assert!(dec(&[0xAA, 0x94, 0x01]).is_err());
+        assert!(dec(&[0xAA, 0x93, 0x02, 85]).is_err());
     }
 
     #[test]

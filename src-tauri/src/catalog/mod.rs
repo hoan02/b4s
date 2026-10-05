@@ -1,4 +1,5 @@
 mod types;
+pub mod public;
 
 pub use types::ModelProfile;
 

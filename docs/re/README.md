@@ -13,6 +13,17 @@ Goal: expand **listening** control for many earbud lines (not only BP1-class).
 ```
 
 See [findings-2.14.1.md](./findings-2.14.1.md) for results used by B4S.
+See [findings-2.17.0.1.md](./findings-2.17.0.1.md) for the newer APK analysis,
+live public catalog endpoints, region coverage, and decoder corrections.
+
+To refresh the public model metadata (CN, US and EU; no account required):
+
+```powershell
+python scripts/sync-baseus-catalog.py
+```
+
+The reviewed metadata snapshot is embedded for offline discovery. New models
+remain recognition-only until their control protocol is configured and tested.
 
 ## What to extract for multi-model support
 

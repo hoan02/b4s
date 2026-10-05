@@ -1,5 +1,15 @@
 # Model catalog
 
+The offline discovery list also embeds `src-tauri/catalog/baseus-public.json`,
+a public metadata snapshot merged across Baseus CN/US/EU category APIs. Run
+`python scripts/sync-baseus-catalog.py` to refresh it explicitly. It records
+server identities, categories, regional image URLs and color codes; it does
+not supply protocol capabilities. New audio identities remain `scanOnly` with
+an `unknown` protocol and cannot initiate a control connection. CDN images
+are not fetched automatically. Existing reviewed profiles and legacy support
+levels are preserved. See [2.17.0.1 findings](re/findings-2.17.0.1.md) for scope
+and completeness limits.
+
 The catalog follows the same separation used by the APK: model data selects a
 protocol family, while the family adapter owns packet encoding. A model profile
 must not contain BLE packet-building code.

@@ -678,6 +678,18 @@ fn has_control_chars(peripheral: &Peripheral) -> (bool, bool) {
 }
 
 pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, String> {
+    // Public product metadata supplies recognition, not a command transport.
+    // Reject before disconnecting a working device or probing an unknown GATT.
+    {
+        let state = BLE.lock().await;
+        let device = state
+            .devices
+            .get(&device_id)
+            .ok_or("Device is no longer in the scan list")?;
+        if device.device_profile.protocol == protocol::ProtocolFamily::Unknown {
+            return Err("This model is recognized only; its Bluetooth control protocol is not configured".into());
+        }
+    }
     let _ = stop_scan(app.clone()).await;
 
     // If already connected to something, disconnect cleanly first

@@ -203,7 +203,7 @@ pub fn profile_for(
     }
 }
 
-/// Full listening catalog from Baseus app 2.14.1.
+/// Reviewed profiles and legacy registry enriched by the public server snapshot.
 pub fn all_models() -> Vec<ModelInfo> {
     let mut models = legacy_models();
     for profile in crate::catalog::all_profiles() {
@@ -237,7 +237,50 @@ pub fn all_models() -> Vec<ModelInfo> {
         models.retain(|existing| existing.id != model.id);
         models.push(model);
     }
+    merge_public_models(&mut models);
     models
+}
+
+fn merge_public_models(models: &mut Vec<ModelInfo>) {
+    use crate::catalog::public::{audio_models, identity_key};
+
+    for public in audio_models() {
+        // Match full identities, never the legacy substring aliases. For example,
+        // metadata for "BP1 Pro+" must not enable BP1 Pro's command adapter.
+        if let Some(existing) = models
+            .iter_mut()
+            .find(|model| identity_key(&model.display_name) == identity_key(&public.model))
+        {
+            for pattern in public.name_patterns() {
+                if !existing.name_patterns.contains(&pattern) {
+                    existing.name_patterns.push(pattern);
+                }
+            }
+            existing.color_variants = public.color_codes();
+            continue;
+        }
+
+        let patterns = public.name_patterns();
+        let aliases: Vec<_> = patterns.iter().map(String::as_str).collect();
+        let mut model = m(
+            &public.id,
+            &public.model,
+            &aliases,
+            SupportLevel::ScanOnly,
+            ProtocolFamily::Unknown,
+            false,
+            false,
+            false,
+            "audio",
+            &public.group(),
+        );
+        // Category metadata is not GATT/transport evidence.
+        model.transport.service_uuid = None;
+        model.transport.write_uuid = None;
+        model.transport.notify_uuid = None;
+        model.color_variants = public.color_codes();
+        models.push(model);
+    }
 }
 
 // Compatibility catalog: migrate entries only when model-specific data is available.
@@ -373,8 +416,16 @@ fn legacy_models() -> Vec<ModelInfo> {
 /// Match BLE advertising name → best model (longest pattern wins).
 pub fn identify(ble_name: &str) -> Option<ModelInfo> {
     let lower = ble_name.to_lowercase();
+    // Exact server model identity wins over broad legacy aliases like "ma10".
+    let models = all_models();
+    if let Some(model) = models.iter().find(|model| {
+        crate::catalog::public::identity_key(&model.display_name)
+            == crate::catalog::public::identity_key(ble_name)
+    }) {
+        return Some(model.clone());
+    }
     let mut best: Option<(usize, ModelInfo)> = None;
-    for model in all_models() {
+    for model in models {
         for pat in &model.name_patterns {
             if lower.contains(pat.as_str()) {
                 let score = pat.len();
@@ -404,6 +455,46 @@ pub fn catalog_json() -> Vec<ModelInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn public_metadata_keeps_reviewed_support_and_adds_safe_discovery() {
+        let bp1 = identify("Baseus Bass BP1 Pro").unwrap();
+        assert_eq!(bp1.id, "bass-bp1-pro");
+        assert_eq!(bp1.support, SupportLevel::Verified);
+        assert_eq!(bp1.protocol, ProtocolFamily::Bp1Pro);
+        let new = identify("Baseus Sleep SK1").unwrap();
+        assert_eq!(new.support, SupportLevel::ScanOnly);
+        assert_eq!(new.protocol, ProtocolFamily::Unknown);
+        assert!(!new.capabilities.eq);
+        assert!(!new.capabilities.spatial);
+        assert!(new.transport.write_uuid.is_none());
+        assert!(new.image_url.is_none()); // Offline discovery does not contact a CDN.
+        let profile = profile_for(Some(&new.id), None, None);
+        assert!(crate::protocol::encode_feature(
+            &profile,
+            crate::protocol::FeatureCommand::FindBuds(true)
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn server_variant_does_not_inherit_a_shorter_legacy_alias() {
+        let variant = identify("Baseus Bowie MC2 S 先锋版").unwrap();
+        assert_eq!(variant.support, SupportLevel::ScanOnly);
+        assert_eq!(variant.protocol, ProtocolFamily::Unknown);
+        assert_ne!(variant.id, "bowie-mc2-s");
+    }
+
+    #[test]
+    fn every_public_audio_identity_is_discoverable_without_enabling_non_audio() {
+        for public in crate::catalog::public::audio_models() {
+            let resolved = identify(&public.model).unwrap();
+            assert_eq!(
+                crate::catalog::public::identity_key(&resolved.display_name),
+                crate::catalog::public::identity_key(&public.model)
+            );
+        }
+    }
 
     #[test]
     fn json_profile_drives_registry_capabilities_and_aliases() {
