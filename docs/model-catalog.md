@@ -18,9 +18,10 @@ must not contain BLE packet-building code.
    command.
 
 The profile's `protocolFamily` must be an existing family such as `bp1`. The
-router then reuses that family adapter without changing the UI or model data.
+router then reuses that family adapter. A profile alone does not implement new
+wire behavior or guarantee that every UI control works on the model.
 
-Currently registered values are `bp1`, `baseusAaBaExperimental`, and `unknown`.
+Currently registered family values are `bp1`, `baseusAaBaExperimental`, and `unknown`.
 Support values are `verified`, `experimental`, and `scanOnly`. For recognition
 only, use `scanOnly` and `unknown`. JSON profiles override matching legacy IDs
 and supply runtime ANC settings and capabilities. Transport defaults and some
@@ -43,8 +44,9 @@ Register the JSON family name in catalog validation and runtime model resolution
 as well. Route reply decoding alongside writes, and review startup queries,
 handshake, UUID selection and wrapping for the new family.
 
-The current hardware test target is Baseus Bass BP1 Ultra. It belongs to the
-`bp1` protocol family, but it must remain a separate model profile from BP1 Pro
-because framing and firmware behavior can differ. The existing profile is the
-first extracted BP1 profile:
-`src-tauri/catalog/models/bass-bp1-pro.json`.
+Baseus Bass BP1 Pro and BP1 Ultra are the verified hardware targets for the
+`bp1` family. They remain separate model records because framing and firmware
+behavior can differ. Only BP1 Pro currently has an extracted JSON profile at
+`src-tauri/catalog/models/bass-bp1-pro.json`; BP1 Ultra and legacy entries are
+still represented by the discovery registry. Do not infer that the JSON catalog
+is complete from the verified status of a registry entry.

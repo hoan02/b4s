@@ -3,6 +3,7 @@
  */
 import { Component, For, Show, createSignal } from "solid-js";
 import type { AncMode, EqPresetId, SpatialMode } from "../lib/device";
+import { t } from "../lib/i18n";
 
 export type { AncMode, EqPresetId, SpatialMode };
 
@@ -29,23 +30,18 @@ interface Props {
 }
 
 const NOISE: { id: AncMode; label: string; sub: string }[] = [
-  { id: "off", label: "Bình thường", sub: "Normal" },
-  { id: "transparency", label: "Xuyên âm", sub: "Ambient" },
-  { id: "anc", label: "Giảm ồn", sub: "ANC" },
+  { id: "off", label: "home.normal", sub: "home.normal" },
+  { id: "transparency", label: "home.transparency", sub: "home.transparency" },
+  { id: "anc", label: "home.anc", sub: "home.anc" },
 ];
 
 const EQ_LIST: { id: EqPresetId; label: string }[] = [
-  { id: "classic", label: "Classic" },
-  { id: "bass", label: "Powerful Bass" },
-  { id: "hifi", label: "Hi-Fi Live" },
-  { id: "pop", label: "Pop" },
-  { id: "jazz", label: "Jazz Rock" },
-  { id: "classical", label: "Trường cổ điển" },
-  { id: "clear", label: "Clear Treble" },
-  { id: "acoustic", label: "Acoustic" },
-  { id: "bassReduce", label: "Giảm âm trầm" },
-  { id: "trebleReduce", label: "Giảm âm bổng" },
-  { id: "voice", label: "Voice" },
+  { id: "classic", label: "eqPreset.classic" }, { id: "bass", label: "eqPreset.bass" },
+  { id: "hifi", label: "eqPreset.hifi" }, { id: "pop", label: "eqPreset.pop" },
+  { id: "jazz", label: "eqPreset.jazz" }, { id: "classical", label: "eqPreset.classical" },
+  { id: "clear", label: "eqPreset.clear" }, { id: "acoustic", label: "eqPreset.acoustic" },
+  { id: "bassReduce", label: "eqPreset.bassReduce" }, { id: "trebleReduce", label: "eqPreset.trebleReduce" },
+  { id: "voice", label: "eqPreset.voice" },
 ];
 
 const ListeningPanel: Component<Props> = (props) => {
@@ -56,8 +52,8 @@ const ListeningPanel: Component<Props> = (props) => {
       {/* —— Noise control —— */}
       <section class="listen-card">
         <div class="listen-card-head">
-          <h3>Kiểm soát tiếng ồn</h3>
-          <span class="listen-card-hint">Noise Control</span>
+          <h3>{t("listen.noise")}</h3>
+          <span class="listen-card-hint">{t("listen.noiseHint")}</span>
         </div>
         <div class="noise-modes">
           <For each={NOISE}>
@@ -67,7 +63,7 @@ const ListeningPanel: Component<Props> = (props) => {
                 class={`noise-btn mode-${m.id} ${props.ancMode === m.id ? "active" : ""}`}
                 onClick={() => props.onAncMode(m.id)}
               >
-                <span class="noise-label">{m.label}</span>
+                <span class="noise-label">{t(m.label)}</span>
                 <span class="noise-sub">{m.sub}</span>
               </button>
             )}
@@ -76,7 +72,7 @@ const ListeningPanel: Component<Props> = (props) => {
         <Show when={props.ancMode === "anc"}>
           <div class="anc-level">
             <div class="anc-level-row">
-              <span>Mức giảm ồn</span>
+              <span>{t("listen.noiseLevel")}</span>
               <strong>{props.ancStrength}%</strong>
             </div>
             <input
@@ -97,8 +93,8 @@ const ListeningPanel: Component<Props> = (props) => {
       <section class="listen-card">
         <div class="listen-card-head row">
           <div>
-            <h3>Âm học không gian</h3>
-            <span class="listen-card-hint">Spatial / Panoramic Sound</span>
+            <h3>{t("listen.spatial")}</h3>
+            <span class="listen-card-hint">{t("listen.spatialHint")}</span>
           </div>
           <label class="toggle sm">
             <input
@@ -118,14 +114,14 @@ const ListeningPanel: Component<Props> = (props) => {
               class={props.spatialMode === "music" ? "active" : ""}
               onClick={() => props.onSpatialMode("music")}
             >
-              Âm nhạc
+              {t("listen.music")}
             </button>
             <button
               type="button"
               class={props.spatialMode === "cinema" ? "active" : ""}
               onClick={() => props.onSpatialMode("cinema")}
             >
-              Điện ảnh
+              {t("listen.cinema")}
             </button>
           </div>
         </Show>
@@ -134,8 +130,8 @@ const ListeningPanel: Component<Props> = (props) => {
       {/* —— EQ —— */}
       <section class="listen-card">
         <div class="listen-card-head">
-          <h3>EQ</h3>
-          <span class="listen-card-hint">Equalizer</span>
+          <h3>{t("eq.title")}</h3>
+          <span class="listen-card-hint">{t("listen.equalizer")}</span>
         </div>
         <div class="eq-chips">
           <For each={EQ_LIST}>
@@ -145,7 +141,7 @@ const ListeningPanel: Component<Props> = (props) => {
                 class={`eq-chip ${props.eqActive === eq.id ? "active" : ""}`}
                 onClick={() => props.onEq(eq.id)}
               >
-                {eq.label}
+                {t(eq.label)}
               </button>
             )}
           </For>
@@ -157,11 +153,11 @@ const ListeningPanel: Component<Props> = (props) => {
         <div class="row-card-left">
           <div>
             <h3>SoundFit</h3>
-            <p>Cá nhân hóa âm thanh theo thính lực</p>
+          <p>{t("listen.soundFitDescription")}</p>
           </div>
         </div>
         <button type="button" class="row-action" onClick={() => props.onSoundFit?.()}>
-          Mở
+          {t("listen.open")}
         </button>
       </section>
 
@@ -173,22 +169,22 @@ const ListeningPanel: Component<Props> = (props) => {
           onClick={() => setSoundOpen(!soundOpen())}
         >
           <div>
-            <h3>Cài đặt âm thanh</h3>
-            <span class="listen-card-hint">Sound settings</span>
+            <h3>{t("listen.soundSettings")}</h3>
+            <span class="listen-card-hint">{t("listen.soundSettings")}</span>
           </div>
           <span class="chev">{soundOpen() ? "−" : "+"}</span>
         </button>
 
         <Show when={soundOpen()}>
           <div class="sound-block">
-            <h4>Âm thanh điện tử</h4>
+            <h4>{t("listen.electronic")}</h4>
             <div class="setting-row">
               <div>
-                <span class="setting-title">Tăng âm trầm</span>
-                <span class="setting-desc">Bass boost · 0–3</span>
+                <span class="setting-title">{t("more.bassBoost")}</span>
+                <span class="setting-desc">{t("listen.bassRange")}</span>
               </div>
-                <div class="level-pills" aria-label="Mức tăng âm trầm">
-                <For each={[{ value: 0, label: "Tắt" }, { value: 1, label: "Nhẹ" }, { value: 2, label: "Vừa" }, { value: 3, label: "Mạnh" }]}>
+                <div class="level-pills" aria-label={t("listen.bassLevel")}>
+                <For each={[{ value: 0, key: "more.off" }, { value: 1, key: "more.mild" }, { value: 2, key: "more.medium" }, { value: 3, key: "more.strong" }]}>
                   {(lv) => (
                     <button
                       type="button"
@@ -196,7 +192,7 @@ const ListeningPanel: Component<Props> = (props) => {
                       aria-pressed={props.bassBoost === lv.value}
                       onClick={() => props.onBassBoost(lv.value)}
                     >
-                      <span>{lv.label}</span>
+                      <span>{t(lv.key)}</span>
                       <small>{lv.value}</small>
                     </button>
                   )}
@@ -205,8 +201,8 @@ const ListeningPanel: Component<Props> = (props) => {
             </div>
             <div class="setting-row">
               <div>
-                <span class="setting-title">Độ trễ thấp</span>
-                <span class="setting-desc">Game Mode</span>
+                <span class="setting-title">{t("listen.gameMode")}</span>
+                <span class="setting-desc">{t("home.lowLatency")}</span>
               </div>
               <label class="toggle sm">
                 <input
@@ -222,11 +218,11 @@ const ListeningPanel: Component<Props> = (props) => {
           </div>
 
           <div class="sound-block">
-            <h4>Âm thanh tự nhiên</h4>
+            <h4>{t("listen.natural")}</h4>
             <div class="setting-row">
               <div>
                 <span class="setting-title">LDAC</span>
-                <span class="setting-desc">Âm thanh độ phân giải cao</span>
+                <span class="setting-desc">{t("listen.hiRes")}</span>
               </div>
               <label class="toggle sm">
                 <input
@@ -239,14 +235,11 @@ const ListeningPanel: Component<Props> = (props) => {
                 <span class="slider" />
               </label>
             </div>
-            <p class="setting-note">
-              LDAC thường do stack Bluetooth Windows/Android quản lý — toggle lưu UI;
-              PC có thể không đổi codec được như app điện thoại.
-            </p>
+            <p class="setting-note">{t("listen.ldacNote")}</p>
             <div class="setting-row">
               <div>
-                <span class="setting-title">Bảo vệ thính giác</span>
-                <span class="setting-desc">Hearing protection</span>
+                <span class="setting-title">{t("more.hearingProtection")}</span>
+                <span class="setting-desc">{t("more.hearingProtection")}</span>
               </div>
               <label class="toggle sm">
                 <input

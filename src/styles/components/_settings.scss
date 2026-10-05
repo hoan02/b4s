@@ -104,6 +104,16 @@
     color: var(--text-3);
     font-size: 18px;
   }
+
+  select {
+    max-width: 58%;
+    padding: 7px 30px 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: $radius-md;
+    background: var(--bg-card);
+    color: var(--text);
+    font: inherit;
+  }
 }
 
 .settings-status {

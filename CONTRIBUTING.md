@@ -42,6 +42,12 @@ Attach minimal, sanitized hex frames and expected output to tests or protocol
 documentation. Remove addresses, serial numbers and account information. Do not
 commit APKs, decompiled proprietary source, firmware, secrets or generated files.
 
+## Translations
+
+Follow the [translation guide](docs/translations.md) when adding or changing UI
+text. Run `npm run check:i18n` and `npm run build`; include native-speaker review
+and a screenshot of the changed view when possible.
+
 ## Pull requests
 
 Describe the user-visible change, validation results and remaining limitations.

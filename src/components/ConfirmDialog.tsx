@@ -1,4 +1,5 @@
 import { Component } from "solid-js";
+import { t } from "../lib/i18n";
 
 interface Props {
   title: string;
@@ -17,8 +18,8 @@ const ConfirmDialog: Component<Props> = (props) => (
       <h2 id="confirm-title">{props.title}</h2>
       <p>{props.message}</p>
       <div class={`confirm-dialog-actions ${props.showCancel === false ? "single" : ""}`}>
-        {props.showCancel !== false && <button type="button" class="confirm-btn secondary" onClick={props.onCancel}>{props.cancelLabel ?? "Hủy"}</button>}
-        <button type="button" class="confirm-btn primary" onClick={props.onConfirm}>{props.confirmLabel ?? "Tắt và tiếp tục"}</button>
+        {props.showCancel !== false && <button type="button" class="confirm-btn secondary" onClick={props.onCancel}>{props.cancelLabel ?? t("dialog.cancel")}</button>}
+        <button type="button" class="confirm-btn primary" onClick={props.onConfirm}>{props.confirmLabel ?? t("dialog.turnOffContinue")}</button>
       </div>
     </section>
   </div>

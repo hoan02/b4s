@@ -10,6 +10,7 @@ import {
   checkAdapter,
 } from "../lib/ble";
 import { resolveDeviceThumb } from "../lib/deviceImages";
+import { formatError, t } from "../lib/i18n";
 
 interface Props {
   onConnected: (device: BleDevice) => void;
@@ -42,7 +43,7 @@ const BlePairing: Component<Props> = (props) => {
         if (scanning()) await stopScan();
         setScanning(false);
         setDevices([]);
-        setError("Bật Bluetooth rồi quét lại.");
+        setError(t("pair.bluetoothHint"));
       } else if (!scanning()) {
         setError(null);
       }
@@ -96,14 +97,14 @@ const BlePairing: Component<Props> = (props) => {
       const ok = await checkAdapter();
       setAdapterOk(ok);
       if (!ok) {
-        setError("Bật Bluetooth rồi quét lại.");
+        setError(t("pair.bluetoothHint"));
         return;
       }
     }
     try {
       await startScan(useMock());
     } catch (e) {
-      setError(String(e));
+      setError(formatError(e));
     }
   };
 
@@ -114,7 +115,7 @@ const BlePairing: Component<Props> = (props) => {
     try {
       await startScan(true);
     } catch (e) {
-      setError(String(e));
+      setError(formatError(e));
     }
   };
 
@@ -127,14 +128,14 @@ const BlePairing: Component<Props> = (props) => {
       if (!isMock) {
         const ok = await checkAdapter();
         if (!ok) {
-          setError("Bluetooth đang tắt.");
+          setError(t("pair.bluetoothDisabled"));
           setConnectingId(null);
           return;
         }
       }
       props.onConnected(await connect(device.id, isMock));
     } catch (e) {
-      setError(String(e));
+      setError(formatError(e));
       setConnectingId(null);
     }
   };
@@ -161,13 +162,13 @@ const BlePairing: Component<Props> = (props) => {
         <div class="ble-pairing">
           <div class={`ble-hero ${adapterOk() === false && !useMock() ? "bluetooth-off" : ""}`}>
             <img class="ble-app-logo" src="/b4s-logo.png" alt="B4S" />
-            <h2>Kết nối</h2>
+            <h2>{t("pair.title")}</h2>
             <p class="ble-subtitle">
               {adapterOk() === false && !useMock()
-                ? "Bật Bluetooth để quét"
+                ? t("pair.bluetoothOff")
                 : useMock()
-                  ? "Demo — thiết bị giả"
-                  : "Tai nghe gần / mở nắp hộp"}
+                  ? t("pair.demoSub")
+                  : t("pair.nearby")}
             </p>
           </div>
 
@@ -181,12 +182,12 @@ const BlePairing: Component<Props> = (props) => {
                   onClick={() => stopScan()}
                 >
                   <span class="spinner" />
-                  Dừng
+                  {t("pair.stop")}
                 </button>
               }
             >
               <button class="ble-btn primary" type="button" onClick={handleScan}>
-                Quét thiết bị
+                {t("pair.scan")}
               </button>
             </Show>
           </div>
@@ -197,23 +198,23 @@ const BlePairing: Component<Props> = (props) => {
 
           <Show when={adapterOk() === false && !useMock()}>
             <div class="ble-bt-off">
-              <p>Bluetooth tắt — không điều khiển được tai nghe thật.</p>
+              <p>{t("pair.bluetoothWarning")}</p>
               <button class="ble-btn secondary" type="button" onClick={enableDemo}>
-                Mở demo UI
+                {t("pair.openDemo")}
               </button>
             </div>
           </Show>
 
           <Show when={hasDual() && !useMock()}>
             <p class="ble-tip">
-              Cùng tên 2 dòng: chọn RSSI mạnh trước (thường là BLE control).
+              {t("pair.dualHint")}
             </p>
           </Show>
 
           <div class="ble-list">
             <Show when={matched().length > 0}>
               <div class="ble-group-label">
-                {useMock() ? "Demo" : "Thiết bị"}
+                {useMock() ? t("pair.demo") : t("pair.devices")}
               </div>
               <For each={matched()}>
                 {(device) => (
@@ -227,7 +228,7 @@ const BlePairing: Component<Props> = (props) => {
             </Show>
 
             <Show when={others().length > 0 && !useMock()}>
-              <div class="ble-group-label">Khác</div>
+              <div class="ble-group-label">{t("pair.other")}</div>
               <For each={others()}>
                 {(device) => (
                   <DeviceRow
@@ -248,8 +249,8 @@ const BlePairing: Component<Props> = (props) => {
               }
             >
               <div class="ble-empty">
-                <p>Chưa thấy thiết bị</p>
-                <span>Đưa tai vào chế độ ghép · quét lại</span>
+                <p>{t("pair.empty")}</p>
+                <span>{t("pair.emptyHint")}</span>
               </div>
             </Show>
 
@@ -257,10 +258,10 @@ const BlePairing: Component<Props> = (props) => {
               <div class="ble-empty scanning">
                 <div class="ble-scan-status" role="status" aria-live="polite">
                   <span class="scan-bars" aria-hidden="true"><i /><i /><i /></span>
-                  <span>Đang quét thiết bị</span>
+                  <span>{t("pair.scanning")}</span>
                 </div>
-                <p>Đang tìm tai nghe ở gần</p>
-                <span>Đưa tai vào chế độ ghép nối và mở nắp hộp</span>
+                <p>{t("pair.searching")}</p>
+                <span>{t("pair.scanHint")}</span>
               </div>
             </Show>
           </div>
@@ -274,7 +275,7 @@ const BlePairing: Component<Props> = (props) => {
           class="pair-footer-settings"
           onClick={() => props.onOpenSettings?.()}
         >
-          Cài đặt
+          {t("nav.settings")}
         </button>
         <span class="pair-footer-ver">B4S v{props.appVersion ?? "…"}</span>
       </footer>
@@ -310,10 +311,10 @@ const DeviceRow: Component<{
             {title()}
           </span>
           <Show when={props.device.support === "verified"}>
-            <span class="tag ok">OK</span>
+            <span class="tag ok">{t("pair.verified")}</span>
           </Show>
           <Show when={props.device.support === "experimental"}>
-            <span class="tag">Beta</span>
+            <span class="tag">{t("pair.experimental")}</span>
           </Show>
         </div>
         <div class="device-meta">
@@ -322,13 +323,13 @@ const DeviceRow: Component<{
             {props.device.rssi}
           </span>
           <Show when={props.device.hint}>
-            <span class="hint-inline">2 entry</span>
+            <span class="hint-inline">{t("pair.deviceCount", { count: 2 })}</span>
           </Show>
         </div>
       </div>
       <div class="device-action">
         <Show when={!props.connecting} fallback={<span class="spinner small" />}>
-          <span class="connect-label">Kết nối</span>
+            <span class="connect-label">{t("pair.connect")}</span>
         </Show>
       </div>
     </button>

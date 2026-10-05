@@ -49,6 +49,7 @@ import {
   type ThemeMode,
 } from "./lib/theme";
 import { makeToast, type ToastItem } from "./lib/toast";
+import { formatError, t } from "./lib/i18n";
 import { IconBack } from "./components/Icons";
 import "./styles/main.scss";
 
@@ -139,9 +140,9 @@ const App: Component = () => {
   };
 
   onMount(async () => {
-    const t = getStoredTheme();
-    applyTheme(t);
-    setTheme(t);
+    const storedTheme = getStoredTheme();
+    applyTheme(storedTheme);
+    setTheme(storedTheme);
 
     try {
       const info = await getAppInfo();
@@ -176,7 +177,7 @@ const App: Component = () => {
           setControlError(null);
           setView("home");
           stopLinkPoll();
-          notify("Đã ngắt kết nối", "info");
+          notify(t("toast.disconnected"), "info");
         })
       );
       unsubs.push(
@@ -235,7 +236,7 @@ const App: Component = () => {
     setControlError(null);
     setView("home");
     startLinkPoll();
-    notify(`Đã kết nối ${dev.modelName || dev.name}`, "success");
+    notify(t("toast.connected", { name: dev.modelName || dev.name }), "success");
     try {
       const state = await getConnection();
       if (state.link) applyLink(state.link);
@@ -262,8 +263,8 @@ const App: Component = () => {
       });
       applyLink(await getLinkHealth());
     } catch (e) {
-      setControlError(String(e));
-      notify(String(e), "error", "Lỗi");
+      setControlError(formatError(e));
+      notify(formatError(e), "error", t("toast.error"));
     }
   };
 
@@ -278,7 +279,7 @@ const App: Component = () => {
         level: noiseLevel(),
       });
     } catch (e) {
-      setControlError(String(e));
+      setControlError(formatError(e));
     }
   };
 
@@ -288,9 +289,9 @@ const App: Component = () => {
     try {
       await setEqIndex(presetSort(preset));
       applyLink(await getLinkHealth());
-      notify(`EQ · ${EQ_LABEL[preset] ?? preset}`, "success");
+      notify(`EQ · ${t(`eqPreset.${preset}`)}`, "success");
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -311,10 +312,10 @@ const App: Component = () => {
     return true;
   };
 
-  const handleApplyCustomEq = async (bands = eqCustomBands(), label = "Tùy chỉnh") => {
+  const handleApplyCustomEq = async (bands = eqCustomBands(), label = t("eq.customize")) => {
     if (!requestEqAction({ kind: "applyCustom" })) return;
     setEqCustomActive(true);
-    const customLabel = label.trim() || "Tùy chỉnh";
+    const customLabel = label.trim() || t("eq.customize");
     // Official Self-Define uses multi-band frames; desktop best-effort:
     // reset path BA43 00 then stay on custom UI (curve kept locally).
     try {
@@ -327,12 +328,12 @@ const App: Component = () => {
         }))
       );
       notify(
-        "Đã lưu đường cong tùy chỉnh (BLE custom full còn best-effort)",
+        t("toast.customEqSaved"),
         "success",
         `EQ custom · ${customLabel}`
       );
     } catch (e) {
-      notify(String(e), "error", customLabel);
+      notify(formatError(e), "error", customLabel);
     }
   };
 
@@ -342,9 +343,9 @@ const App: Component = () => {
     setEqCustomActive(false);
     try {
       await setEqIndex(0);
-      notify("Đã đặt lại EQ", "info");
+      notify(t("toast.resetEq"), "info");
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -352,9 +353,9 @@ const App: Component = () => {
     setGameOn(enabled);
     try {
       await setGameMode(enabled);
-      notify(enabled ? "Game mode bật" : "Game mode tắt", "info");
+      notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info");
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -363,7 +364,7 @@ const App: Component = () => {
     try {
       await setSpatialMode(on ? spatialMode() : "off");
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -373,7 +374,7 @@ const App: Component = () => {
     try {
       await setSpatialMode(m);
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -382,7 +383,7 @@ const App: Component = () => {
     try {
       await setBassBoost(level);
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -391,9 +392,9 @@ const App: Component = () => {
       await findBuds(true);
       setFindActive(true);
       setFindDialogMode("active");
-      notify("Tai nghe đang phát âm thanh tìm kiếm", "info", "Đang tìm tai");
+      notify(t("toast.finding"), "info", t("toast.findingTitle"));
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -403,9 +404,9 @@ const App: Component = () => {
       setFindActive(false);
       setFindConfirmOpen(false);
       setFindDialogMode("confirm");
-      notify("Đã dừng âm thanh tìm tai nghe", "info", "Đã dừng");
+      notify(t("toast.findStopped"), "info", t("toast.stopped"));
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -421,12 +422,12 @@ const App: Component = () => {
       setFindActive(start);
       if (!start) setFindConfirmOpen(false);
       notify(
-        start ? "Tai nghe đang phát âm thanh tìm kiếm" : "Đã dừng âm thanh tìm tai nghe",
+        start ? t("toast.finding") : t("toast.findStopped"),
         "info",
-        start ? "Đang tìm tai" : "Đã dừng"
+        start ? t("toast.findingTitle") : t("toast.stopped")
       );
     } catch (e) {
-      notify(String(e), "error", "Đang tìm tai nghe");
+      notify(formatError(e), "error", t("home.find"));
     }
   };
 
@@ -441,8 +442,8 @@ const App: Component = () => {
         level: mode === "anc" && parameter < 100 ? parameter : noiseLevel(),
       });
     } catch (e) {
-      setControlError(String(e));
-      notify(String(e), "error", "Lỗi điều khiển");
+      setControlError(formatError(e));
+      notify(formatError(e), "error", t("toast.controlError"));
     }
   };
 
@@ -460,7 +461,7 @@ const App: Component = () => {
       if (action.kind === "applyCustom") await handleApplyCustomEq();
       if (action.kind === "resetCustom") await handleResetCustomEq();
     } catch (e) {
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -490,7 +491,7 @@ const App: Component = () => {
       await sendLdac(enabled);
     } catch (e) {
       setLdac(!enabled);
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -500,7 +501,7 @@ const App: Component = () => {
       await sendHearingProtection(enabled, 1);
     } catch (e) {
       setHearingProtect(!enabled);
-      notify(String(e), "error");
+      notify(formatError(e), "error");
     }
   };
 
@@ -522,7 +523,7 @@ const App: Component = () => {
   const handleTheme = () => {
     const next = toggleTheme(theme());
     setTheme(next);
-    notify(next === "dark" ? "Giao diện tối" : "Giao diện sáng", "info");
+    notify(next === "dark" ? t("theme.dark") : t("theme.light"), "info");
   };
 
   return (
@@ -537,12 +538,12 @@ const App: Component = () => {
               <button
                 type="button"
                 class="screen-back"
-                aria-label="Quay lại"
+                aria-label={t("nav.back")}
                 onClick={() => setView("home")}
               >
                 <IconBack size={20} />
               </button>
-              <span class="screen-title">Cài đặt</span>
+              <span class="screen-title">{t("nav.settings")}</span>
               <div class="screen-nav-spacer" />
             </div>
             <Settings
@@ -627,7 +628,7 @@ const App: Component = () => {
                 spatialMode={spatialMode()}
                 eqLabel={
                   eqCustomActive()
-                    ? "Tùy chỉnh"
+                    ? t("eq.customize")
                     : EQ_LABEL[eqActive()] ?? eqActive()
                 }
                 onAncMode={handleAncMode}
@@ -646,7 +647,7 @@ const App: Component = () => {
                 onSpatialMode={handleSpatialMode}
                 onSoundFit={() =>
                   notify(
-                    "Cần quy trình test thính lực trên app mobile",
+                    t("toast.soundFitUnavailable"),
                     "warn",
                     "SoundFit"
                   )
@@ -658,37 +659,37 @@ const App: Component = () => {
       </main>
       <Show when={pendingEqAction()}>
         <ConfirmDialog
-          title="Tắt Âm thanh không gian?"
-          message="EQ không thể chỉnh khi Âm thanh không gian đang bật. Tắt Âm thanh không gian để tiếp tục chỉnh EQ?"
+          title={t("dialog.turnOffSpatialTitle")}
+          message={t("dialog.turnOffSpatialMessage")}
           onCancel={() => setPendingEqAction(null)}
           onConfirm={confirmEqAction}
         />
       </Show>
       <Show when={findConfirmOpen() || findActive()}>
         <ConfirmDialog
-          title="Cảnh báo âm thanh lớn"
-          message="Tính năng sẽ phát âm thanh rất lớn để tìm tai nghe và có thể gây khó chịu hoặc tổn thương thính giác. Hãy tháo tai nghe khỏi tai trước khi tiếp tục."
+          title={t("dialog.loudSoundTitle")}
+          message={t("dialog.loudSoundMessage")}
           showCancel={findDialogMode() === "confirm"}
-          confirmLabel={findDialogMode() === "active" ? "Dừng tìm" : "Tôi đã sẵn sàng"}
+          confirmLabel={findDialogMode() === "active" ? t("dialog.stopFinding") : t("dialog.ready")}
           onCancel={() => setFindConfirmOpen(false)}
           onConfirm={() => (findDialogMode() === "active" ? stopFindBuds() : startFindBuds())}
         />
       </Show>
       <Show when={false}>
         <ConfirmDialog
-          title="Cảnh báo âm thanh lớn"
-          message="Tính năng sẽ phát âm thanh rất lớn để tìm tai nghe và có thể gây khó chịu hoặc tổn thương thính giác. Hãy tháo tai nghe khỏi tai trước khi tiếp tục."
-          confirmLabel="Tôi đã sẵn sàng"
+          title={t("dialog.loudSoundTitle")}
+          message={t("dialog.loudSoundMessage")}
+          confirmLabel={t("dialog.ready")}
           onCancel={() => setFindConfirmOpen(false)}
           onConfirm={startFindBuds}
         />
       </Show>
       <Show when={false}>
         <ConfirmDialog
-          title="Đang tìm tai nghe"
-          message="Tai nghe đang phát âm thanh tìm kiếm. Hãy để tai nghe ngoài tai và bấm Dừng tìm khi đã xác định được vị trí."
-          cancelLabel="Tiếp tục"
-          confirmLabel="Dừng tìm"
+          title={t("dialog.findingTitle")}
+          message={t("dialog.findingMessage")}
+          cancelLabel={t("dialog.continue")}
+          confirmLabel={t("dialog.stopFinding")}
           onCancel={() => undefined}
           onConfirm={handleFindBuds}
         />

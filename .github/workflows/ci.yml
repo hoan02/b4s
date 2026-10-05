@@ -57,6 +57,9 @@ jobs:
       - name: Typecheck frontend
         run: npx tsc --noEmit
 
+      - name: Validate translation resources
+        run: npm run check:i18n
+
       - name: Build frontend
         run: npm run build
 

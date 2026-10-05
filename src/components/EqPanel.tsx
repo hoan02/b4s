@@ -15,6 +15,7 @@ import {
   saveCustomEqPresets,
 } from "../lib/eq";
 import { IconBack } from "./Icons";
+import { t } from "../lib/i18n";
 
 interface Props {
   eqActive: EqPresetId;
@@ -59,15 +60,15 @@ const EqPanel: Component<Props> = (props) => {
   const saveCustom = () => {
     const label = customName().trim();
     if (!label) {
-      setCustomError("Hãy đặt tên cho cấu hình EQ");
+      setCustomError(t("eq.saveName"));
       return;
     }
     if (customPresets().some((p) => p.label.toLowerCase() === label.toLowerCase())) {
-      setCustomError("Tên EQ này đã tồn tại");
+      setCustomError(t("eq.duplicateName"));
       return;
     }
     if (customPresets().length >= 2) {
-      setCustomError("Bạn có thể lưu tối đa 2 cấu hình EQ tùy chỉnh");
+      setCustomError(t("eq.maxCustom"));
       return;
     }
     const next = [...customPresets(), { id: `custom-${Date.now()}`, label, bands: localBands().slice() }];
@@ -98,10 +99,10 @@ const EqPanel: Component<Props> = (props) => {
   return (
     <div class="eq-panel">
       <div class="screen-nav">
-        <button type="button" class="screen-back" aria-label="Quay lại" onClick={() => props.onBack()}>
+        <button type="button" class="screen-back" aria-label={t("nav.back")} onClick={() => props.onBack()}>
           <IconBack size={20} />
         </button>
-        <span class="screen-title">EQ</span>
+        <span class="screen-title">{t("eq.title")}</span>
         <div class="screen-nav-spacer" />
       </div>
 
@@ -130,9 +131,9 @@ const EqPanel: Component<Props> = (props) => {
         </div>
         <p class="eq-preview-hint">
           {tab() === "custom"
-            ? "Tùy chỉnh · 8 băng tần"
-            : EQ_PRESETS.find((p) => p.id === props.eqActive)?.label ??
-              "Preset"}
+            ? t("eq.customBands")
+            : (t(`eqPreset.${props.eqActive}`) || EQ_PRESETS.find((p) => p.id === props.eqActive)?.label) ??
+              t("eq.preset")}
         </p>
       </div>
 
@@ -143,19 +144,19 @@ const EqPanel: Component<Props> = (props) => {
           class={tab() === "preset" ? "active" : ""}
           onClick={() => setTab("preset")}
         >
-          Preset
+          {t("eq.preset")}
         </button>
         <button
           type="button"
           class={tab() === "custom" ? "active" : ""}
           onClick={() => setTab("custom")}
         >
-          Tùy chỉnh
+          {t("eq.customize")}
         </button>
       </div>
 
       <Show when={tab() === "preset"}>
-        <p class="more-label">Chọn preset</p>
+        <p class="more-label">{t("eq.choosePreset")}</p>
         <div class="eq-preset-grid">
           <For each={EQ_PRESETS}>
             {(p) => (
@@ -180,27 +181,24 @@ const EqPanel: Component<Props> = (props) => {
                     )}
                   </For>
                 </div>
-                <span class="eq-preset-name">{p.label}</span>
-                <span class="eq-preset-sub">{p.sub}</span>
+                          <span class="eq-preset-name">{t(`eqPreset.${p.id}`) || p.label}</span>
+                          <span class="eq-preset-sub">{t(`eqPresetSub.${p.id}`) || p.sub}</span>
               </button>
             )}
           </For>
         </div>
-        <p class="eq-footnote">
-          Gửi thiết bị qua BA43 + chỉ số preset (0–10). Tên theo catalog nghe
-          phổ biến.
-        </p>
+        <p class="eq-footnote">{t("eq.presetFootnote")}</p>
       </Show>
 
       <Show when={tab() === "custom"}>
-        <p class="more-label">Tùy chỉnh EQ</p>
+        <p class="more-label">{t("eq.customize")}</p>
         <Show when={customPresets().length > 0}>
           <div class="eq-saved-list">
             <For each={customPresets()}>
               {(preset) => (
                 <div class="eq-saved-item">
                   <button type="button" onClick={() => selectCustom(preset)}>{preset.label}</button>
-                  <button type="button" aria-label={`Xóa ${preset.label}`} onClick={() => deleteCustom(preset.id)}>×</button>
+                  <button type="button" aria-label={t("eq.delete", { name: preset.label })} onClick={() => deleteCustom(preset.id)}>×</button>
                 </div>
               )}
             </For>
@@ -209,11 +207,11 @@ const EqPanel: Component<Props> = (props) => {
         <div class="eq-name-row">
           <input
             value={customName()}
-            placeholder="Tên cấu hình, ví dụ: Nhạc của tôi"
+            placeholder={t("eq.namePlaceholder")}
             onInput={(e) => setCustomName(e.currentTarget.value)}
-            aria-label="Tên cấu hình EQ"
+            aria-label={t("eq.nameLabel")}
           />
-          <button type="button" class="eq-btn ghost" onClick={saveCustom}>Lưu</button>
+          <button type="button" class="eq-btn ghost" onClick={saveCustom}>{t("eq.save")}</button>
         </div>
         <Show when={customError()}><p class="eq-inline-error">{customError()}</p></Show>
         <div class="eq-custom-card">
@@ -254,22 +252,18 @@ const EqPanel: Component<Props> = (props) => {
                 props.onResetCustom();
               }}
             >
-              Đặt lại
+              {t("eq.reset")}
             </button>
             <button
               type="button"
               class="eq-btn primary"
-              onClick={() => props.onApplyCustom(localBands(), customName().trim() || "Tùy chỉnh")}
+              onClick={() => props.onApplyCustom(localBands(), customName().trim() || t("eq.customize"))}
             >
-              Áp dụng
+              {t("eq.apply")}
             </button>
           </div>
         </div>
-        <p class="eq-footnote">
-          Custom trên app official dùng màn Self-Define + BA4300 reset. B4S lưu
-          đường cong trên máy; gửi BLE custom đầy đủ còn best-effort (một số
-          firmware chỉ nhận preset).
-        </p>
+        <p class="eq-footnote">{t("eq.customFootnote")}</p>
       </Show>
     </div>
   );

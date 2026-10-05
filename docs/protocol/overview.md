@@ -1,76 +1,53 @@
-# B4S — protocol overview (multi-model)
+# Protocol overview
 
-B4S is an **unofficial desktop listening companion** for multi-model earbuds, not a single-SKU tool.
+B4S is structured for multiple models, but catalog recognition and working
+device control are separate. Most names in the discovery registry are not
+verified hardware targets. Use the support level in the model registry and the
+app before relying on a command.
 
-Official mobile app (`com.baseus.intelligent`) supports many product lines. Desktop support is layered:
+## Connection and protocol layers
 
-1. **Identify** BLE name → catalog entry (`protocol/models.rs`)  
-2. **Pick wire format** — bare `BA`/`AA` vs **789C+CRC** wrap (Ultra / several “N0” models)  
-3. **Send listening commands** — noise, EQ, spatial, game, battery query, find  
-4. **Decode notifies** — battery, ANC ack, EQ, game state  
+1. Match a BLE advertisement to a model entry in `src-tauri/src/protocol/models.rs`.
+2. Resolve its capabilities, protocol family and transport settings.
+3. Encode a logical command through the selected family adapter.
+4. Apply model-specific framing and send it over the discovered GATT link.
+5. Decode notifications and update the device state exposed to the frontend.
 
-## Product lines in catalog
+The current verified hardware targets are Baseus Bass BP1 Pro and BP1 Ultra.
+Other Baseus entries may share protocol hints or names without verified control.
+See the [registry overview](models-catalog.md) and [model contribution guide](../model-catalog.md).
 
-| Group | Examples |
-|-------|----------|
-| Bass BP1 / EP10 | BP1 Pro, BP1 Ultra, EP10 Pro/Ultra/NC |
-| Bowie MA | MA10 / MA10s / MA20… |
-| Bowie M | M2s, M3s, M4s, M2s Ultra… |
-| Bowie E / W / WM | E3, W04, WM01… |
-| Open-ear | MC1/MC2, AirGo, AS01… |
-| Inspire | XP1, XH1, XC1 |
-| Headset / neck | H1/H2, Max, P1, U2… |
+## BP1-family wire format
 
-See [models-catalog.md](./models-catalog.md).
+The logical commands use `BA`; device notifications use `AA`:
 
-## Wire formats
-
-### Bare BA/AA (classic BP1 Pro captures)
-
-```
-App → device:  BA <cmd> <payload…>
-Device → app:  AA <cmd> <payload…>
+```text
+App → device:  BA <command> <payload…>
+Device → app:  AA <command> <payload…>
 ```
 
-### 789C + CRC (official app `HeadPhoneDataResolveManager` for N0 models, e.g. BP1 Ultra)
+BP1 Pro uses the bare command format. BP1 Ultra uses the `789C` wrapper with
+length and CRC for the applicable commands. Framing is selected by the device
+profile; do not assume all models in the family use the same transport details.
 
-```
-78 9C | len_be16 | 02 | …payload… | crc16_be
-```
-
-Bare `BA…` is still the logical command; wrap is applied when the connected model needs it.
-
-### GATT UUIDs commonly used
-
-| Role | UUID |
-|------|------|
-| BP1-family service/write/notify | `53527aa4-…` / `ee684b1a-…` / `654b749c-…` |
-| Bluetrum CCSDK fallback | `02f00000-…fe00` / `…ff01` / `…ff02` |
-
-Not every Baseus model uses the same GATT. Check link health (write/notify UUIDs) after connect.
-
-## Listening command map (logical)
-
-| Feature | Logical TX | Notes |
-|---------|------------|--------|
-| Handshake | `BA 05 00` (+ `BA 05 01`) | After connect |
-| Battery query | `BA 02` | Expect `AA 02` / case `AA 27` |
-| Noise / ANC | `BA 34` mode + level | Off / ANC / Ambient |
-| EQ / spatial payload | `BA 43` + byte | Shared opcode space in app |
-| EQ query | `BA 42` | |
-| Game / low latency | `BA 24` | Query `BA 23` |
-| Find buds | `BA 10 02 01` | Both buds (app 2.14.1) |
-
-Full BP1-oriented table: [bp1-pro-anc.md](./bp1-pro-anc.md).
+The BP1 custom GATT service and packet reference are documented in
+[bp1-pro-anc.md](bp1-pro-anc.md). Other model families may use different UUIDs,
+transports or command formats.
 
 ## Support levels
 
-| Level | Meaning for users |
-|-------|-------------------|
-| Verified | Works on tested hardware with known framing |
-| Experimental | In catalog; best-effort BA/AA (+ 789C wrap) |
-| Scan only | Recognized name only |
+| Level | Meaning |
+|---|---|
+| `verified` | The model is explicitly identified as a hardware-tested target. |
+| `experimental` | A best-effort profile exists; model or firmware behavior is not fully verified. |
+| `scanOnly` | The name can be recognized, but control is not enabled. |
+
+Recognition, a successful GATT connection or a successful write alone does not
+prove that a control is supported. Promote a model only with hardware evidence
+for the relevant behavior.
 
 ## Reverse engineering
 
-Workflow and APK notes: [../re/README.md](../re/README.md).
+See the [research notes](../re/README.md) for the evidence workflow. Keep
+proprietary APKs, firmware and decompiled source out of the repository; commit
+only concise, independently useful protocol findings and sanitized captures.

@@ -2,6 +2,7 @@ import { Component, createSignal, onCleanup, onMount, Show } from "solid-js";
 import type { BatteryData } from "./Battery";
 import { resolveDeviceImage } from "../lib/deviceImages";
 import type { LinkHealth } from "../lib/ble";
+import { t } from "../lib/i18n";
 
 interface Props {
   name?: string;
@@ -71,16 +72,34 @@ const DeviceHeader: Component<Props> = (props) => {
   const statusLabel = () => {
     switch (level()) {
       case "live":
-        return "Đang kết nối · Live";
+        return t("device.live");
       case "waiting":
-        return "Đã ghép · chờ dữ liệu";
+        return t("device.waiting");
       case "demo":
-        return "Demo (không phải tai nghe thật)";
+        return t("device.demoStatus");
       case "dead":
-        return "Mất liên kết điều khiển";
+        return t("device.lost");
       default:
-        return isConnected() ? "Đã kết nối" : "Ngắt kết nối";
+        return isConnected() ? t("device.connected") : t("device.disconnected");
     }
+  };
+
+  const linkMessage = () => {
+    const health = link();
+    if (!health || level() === "offline") return t("linkMessage.offline");
+    if (health.mock) return t("linkMessage.demo");
+    if (!health.peripheralConnected) return t("linkMessage.dropped");
+    if (!health.hasWriteUuid || !health.hasNotifyUuid) {
+      return t("linkMessage.serviceMissing");
+    }
+    if (health.notifyCount > 0) {
+      return t("linkMessage.live", {
+        notifications: health.notifyCount,
+        writes: health.txCount,
+      });
+    }
+    if (health.handshakeOk) return t("linkMessage.waiting");
+    return t("linkMessage.handshakeFailed");
   };
 
   return (
@@ -127,27 +146,27 @@ const DeviceHeader: Component<Props> = (props) => {
             {fmtPct(props.battery.left)}
             {props.battery.leftCharging ? " ⚡" : ""}
           </div>
-          <div class="batt-tag">Trái</div>
+          <div class="batt-tag">{t("device.left")}</div>
         </div>
         <div class="batt-cell">
           <div class={`batt-pct ${pctClass(props.battery.case)}`}>
             {fmtPct(props.battery.case)}
             {props.battery.caseCharging ? " ⚡" : ""}
           </div>
-          <div class="batt-tag">Hộp</div>
+          <div class="batt-tag">{t("device.case")}</div>
         </div>
         <div class="batt-cell">
           <div class={`batt-pct ${pctClass(props.battery.right)}`}>
             {fmtPct(props.battery.right)}
             {props.battery.rightCharging ? " ⚡" : ""}
           </div>
-          <div class="batt-tag">Phải</div>
+          <div class="batt-tag">{t("device.right")}</div>
         </div>
       </div>
 
       <Show when={props.battery.left === 0 && props.battery.right === 0}>
         <div class="battery-warn">
-          Chưa nhận % pin — mở nắp hộp / đeo tai nghe để thiết bị gửi lại trạng thái
+          {t("device.batteryMissing")}
         </div>
       </Show>
 
@@ -158,15 +177,15 @@ const DeviceHeader: Component<Props> = (props) => {
           onClick={() => setShowDiag(!showDiag())}
         >
           <span class="link-banner-title">
-            {level() === "live" && "● Đang nhận dữ liệu từ tai nghe"}
-            {level() === "waiting" && "◐ BLE OK — chờ notify/pin"}
-            {level() === "demo" && "◇ Demo — không phải hardware"}
-            {level() === "dead" && "✕ Link điều khiển lỗi"}
-            {level() === "offline" && "○ Offline"}
+            {level() === "live" && `● ${t("device.receiving")}`}
+            {level() === "waiting" && `◐ ${t("device.bleWaiting")}`}
+            {level() === "demo" && `◇ ${t("device.demoHardware")}`}
+            {level() === "dead" && `✕ ${t("device.controlError")}`}
+            {level() === "offline" && `○ ${t("device.offline")}`}
           </span>
-          <span class="link-banner-msg">{link()!.message}</span>
+          <span class="link-banner-msg">{linkMessage()}</span>
           <span class="link-banner-hint">
-            {showDiag() ? "Ẩn chi tiết ▴" : "Chi tiết kết nối ▾"}
+            {showDiag() ? t("device.hideDetails") : t("device.connectionDetails")}
           </span>
         </button>
       </Show>
@@ -174,30 +193,30 @@ const DeviceHeader: Component<Props> = (props) => {
       <Show when={showDiag() && link()}>
         <div class="link-diag">
           <div class="link-row">
-            <span>Mode</span>
+            <span>{t("device.mode")}</span>
             <strong class={link()!.mock ? "bad" : "ok"}>
               {link()!.mock ? "DEMO" : "REAL BLE"}
             </strong>
           </div>
           <div class="link-row">
-            <span>RX notifies</span>
+            <span>{t("device.rx")}</span>
             <strong class={link()!.notifyCount > 0 ? "ok" : "warn"}>
               {link()!.notifyCount}
             </strong>
           </div>
           <div class="link-row">
-            <span>TX writes</span>
+            <span>{t("device.tx")}</span>
             <strong>{link()!.txCount}</strong>
           </div>
           <Show when={link()!.lastRxHex}>
             <div class="link-hex">
-              <span>Last RX</span>
+              <span>{t("device.lastRx")}</span>
               <code>{link()!.lastRxHex}</code>
             </div>
           </Show>
           <Show when={link()!.lastTxHex}>
             <div class="link-hex">
-              <span>Last TX</span>
+              <span>{t("device.lastTx")}</span>
               <code>{link()!.lastTxHex}</code>
             </div>
           </Show>
@@ -206,14 +225,14 @@ const DeviceHeader: Component<Props> = (props) => {
 
       <div class="quick-actions">
         <button class="quick-btn" type="button" onClick={() => props.onFindBuds?.()}>
-          <span class="quick-label">Tìm tai nghe</span>
+          <span class="quick-label">{t("device.find")}</span>
         </button>
         <button
           class="quick-btn danger"
           type="button"
           onClick={() => props.onDisconnect?.()}
         >
-          <span class="quick-label">Ngắt kết nối</span>
+          <span class="quick-label">{t("home.disconnect")}</span>
         </button>
       </div>
     </div>

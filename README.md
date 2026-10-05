@@ -1,76 +1,91 @@
 # B4S
 
-B4S là ứng dụng desktop độc lập để kết nối và điều khiển một số mẫu tai nghe Bluetooth LE trên Windows, macOS và Linux.
+English | [Tiếng Việt](README.vi.md) | [Español](README.es.md) | [简体中文](README.zh-CN.md) | [Português (Brasil)](README.pt-BR.md)
 
-| Quét & kết nối | Điều khiển thiết bị | Cài đặt |
+B4S is an independent desktop companion for controlling selected Bluetooth LE
+earbuds on Windows, macOS and Linux. It is built with SolidJS, Tauri and Rust.
+
+| Scan and connect | Device controls | Settings |
 |---|---|---|
-| ![Quét và kết nối thiết bị](assets/i1.png) | ![Điều khiển pin, ANC và âm thanh](assets/i2.png) | ![Màn hình cài đặt](assets/i3.png) |
+| ![Scan and connect](assets/i1.png) | ![Battery, ANC and audio controls](assets/i2.png) | ![Settings](assets/i3.png) |
 
-## Tình trạng hỗ trợ hiện tại
+Screenshots show the Vietnamese interface.
 
-Hiện tại phần cứng kiểm thử chính là **Baseus Bass BP1 Ultra**. Thiết bị này thuộc họ giao thức **BP1**; BP1 Pro và các model cùng họ có thể dùng chung family adapter nhưng vẫn phải có profile và kiểm thử riêng. Các model khác mới ở mức nhận diện catalog hoặc thử nghiệm, chưa được bảo đảm hoạt động đầy đủ.
+## Device support
 
-| Mức hỗ trợ | Ý nghĩa |
+Baseus Bass BP1 Pro and BP1 Ultra are the verified hardware targets for the
+shared BP1 protocol family. Other catalog entries may be experimental or
+recognition-only. A name match does not mean that control has been verified;
+check the support level shown by the app and the model catalog before relying on
+a feature.
+
+| Level | Meaning |
 |---|---|
-| Đã xác minh | Đã kiểm tra frame và chức năng trên phần cứng thực tế |
-| Thử nghiệm | Có profile hoặc giao thức tương tự, cần kiểm tra thêm trên từng firmware |
-| Chỉ nhận diện | Chỉ nhận biết tên thiết bị, chưa bật điều khiển |
+| Verified | Commands and behavior have been checked on real hardware. |
+| Experimental | A protocol profile exists, but model or firmware behavior needs more testing. |
+| Scan only | The app recognizes the device; control is not enabled. |
 
-Không nên xem các model ngoài BP1 Ultra là đã được hỗ trợ hoàn chỉnh.
+See [the model catalog](docs/model-catalog.md) and [protocol notes](docs/protocol/overview.md).
 
-## Chức năng
+## Features
 
-- Quét và kết nối Bluetooth LE.
-- Hiển thị pin trái, phải và hộp khi thiết bị cung cấp dữ liệu.
-- Chế độ bình thường, xuyên âm và giảm tiếng ồn.
-- ANC thích ứng với các môi trường được profile hỗ trợ.
-- EQ preset và EQ custom theo profile model.
-- Âm thanh không gian, game mode và tìm tai nghe khi firmware hỗ trợ.
-- Giao diện sáng/tối và kiểm tra cập nhật.
+- Scan for and connect to Bluetooth LE earbuds.
+- Show left, right and case battery levels when the device reports them.
+- Control noise cancellation, transparency and supported listening modes.
+- Adjust EQ presets and custom EQ where the model profile allows it.
+- Use spatial audio, game mode and find-earbuds controls on supported models.
+- Choose a light or dark theme and check for app updates.
 
-Một số chức năng có thể không tồn tại trên từng model hoặc firmware. B4S sẽ không tự gửi lệnh chưa được xác minh cho model chưa đủ thông tin.
+Controls vary by model and firmware. B4S avoids sending unsupported commands
+when the profile does not provide the required capability.
 
-## Cài đặt chạy thử
+## Development
 
-Yêu cầu:
+Requirements: Node.js 20, Rust stable, the Tauri platform prerequisites, and
+Bluetooth hardware for device testing. Install dependencies and start the app:
 
-- Node.js 18 trở lên.
-- Rust stable và Cargo.
-- Bluetooth được bật trên hệ điều hành.
-- Tai nghe ở chế độ ghép nối hoặc đang mở hộp.
-
-```bash
-npm install
+```sh
+npm ci
 npm run tauri:dev
 ```
 
-Ứng dụng hỗ trợ Windows, macOS và Linux thông qua btleplug. Trạng thái Bluetooth được kiểm tra theo adapter của từng nền tảng; khi hệ điều hành trả về trạng thái chưa xác định, app dùng phép thử scan dự phòng.
+Before submitting changes, run the checks in [Contributing](CONTRIBUTING.md).
 
-## Kiến trúc
+## Languages
 
-Hướng dẫn cộng đồng: [Contributing](CONTRIBUTING.md) ·
-[Kiến trúc và điểm mở rộng](docs/architecture.md) ·
-[Thêm model](docs/model-catalog.md).
+The app starts in English and includes Vietnamese, Simplified Chinese, Spanish
+and Brazilian Portuguese. Change the language in **Settings**. Translations are
+bundled with the app and work offline. See the [translation guide](docs/translations.md)
+to improve an existing locale or contribute another one.
 
-- `src/`: giao diện SolidJS, trạng thái thiết bị và profile frontend.
-- `src-tauri/src/ble.rs`: scan, connect, GATT và event.
-- `src-tauri/src/protocol/`: frame và protocol family.
-- `src-tauri/catalog/`: profile model, capability, ANC, EQ và ảnh.
-- `docs/model-catalog.md`: hướng dẫn thêm model mới.
+## Project guides
 
-## Miễn trừ trách nhiệm và sử dụng an toàn
+- [Contributing](CONTRIBUTING.md)
+- [Architecture and extension points](docs/architecture.md)
+- [Adding a model or protocol family](docs/model-catalog.md)
+- [Protocol overview](docs/protocol/overview.md)
+- [Release and auto-update](docs/release.md)
 
-B4S là phần mềm độc lập, không chính thức, không được tài trợ, chứng nhận hoặc liên kết với Baseus hay bất kỳ nhà sản xuất tai nghe nào. Tên sản phẩm, tên model và nhãn hiệu thuộc về chủ sở hữu tương ứng và chỉ được dùng để nhận diện khả năng tương thích.
+## Disclaimer and safe use
 
-B4S là mã nguồn mở, phi thương mại và được thiết kế để xử lý chức năng điều khiển cục bộ qua Bluetooth. Ứng dụng không yêu cầu tài khoản và không chủ động thu thập hoặc gửi dữ liệu sử dụng, dữ liệu thiết bị hay thông tin cá nhân về máy chủ. Chức năng điều khiển có thể dùng offline; việc kiểm tra cập nhật hoặc mở liên kết ngoài do người dùng chủ động thực hiện có thể cần Internet.
+B4S is independent, non-commercial open-source software. It is not sponsored,
+certified or officially affiliated with Baseus or any earbud manufacturer.
+Product names and trademarks belong to their respective owners and are used
+only to identify compatibility.
 
-B4S hiện dùng Baseus Bass BP1 Ultra làm mẫu kiểm thử chính thuộc họ BP1. Việc hiển thị hoặc nhận diện BP1 Pro hay model khác không đồng nghĩa model đó được nhà phát triển xác minh hoặc được nhà sản xuất hỗ trợ.
+Device controls run locally over Bluetooth. The app does not require an account
+or send device or personal data to a server. Internet access is only needed for
+actions you initiate, such as checking for updates or opening an external link.
 
-Người dùng tự chịu trách nhiệm khi kết nối, cập nhật firmware, thay đổi âm lượng, EQ, ANC, âm thanh không gian hoặc sử dụng chức năng tìm tai nghe. Chức năng tìm tai nghe có thể phát âm thanh lớn; hãy tháo tai nghe khỏi tai trước khi xác nhận. Không sử dụng nếu cảm thấy đau, ù tai hoặc khó chịu.
+You are responsible for device connections, firmware updates and changes to
+volume, EQ, ANC or spatial audio. Find-earbuds may play a loud sound: remove the
+earbuds before using it. Stop if you feel pain, ringing or discomfort. B4S is
+provided as-is and does not guarantee compatibility, uninterrupted operation,
+hardware safety or firmware recovery.
 
-B4S được cung cấp theo hiện trạng, không bảo đảm tương thích, tính liên tục, độ chính xác của dữ liệu, an toàn phần cứng, khả năng khôi phục firmware hoặc hoạt động không gián đoạn. Nhà phát triển không chịu trách nhiệm cho mất dữ liệu, hư hỏng thiết bị, ảnh hưởng thính giác hoặc thiệt hại phát sinh từ việc sử dụng phần mềm.
-
-Không đưa APK chính thức, khóa riêng, dữ liệu tài khoản, firmware hoặc bản decompile có bản quyền vào repository. Chỉ sử dụng dữ liệu protocol và profile cần thiết cho mục đích tương thích kỹ thuật độc lập. Người dùng cần tuân thủ pháp luật, điều khoản thiết bị và quyền sở hữu trí tuệ tại nơi sử dụng.
+Do not add official APKs, private keys, account data, firmware or copyrighted
+decompiled source to this repository. Follow applicable laws, device terms and
+intellectual-property rights.
 
 ## License
 

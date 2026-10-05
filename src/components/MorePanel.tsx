@@ -4,6 +4,7 @@
  */
 import { Component, For } from "solid-js";
 import { IconBack } from "./Icons";
+import { t } from "../lib/i18n";
 
 interface Props {
   bassBoost: number;
@@ -18,23 +19,23 @@ interface Props {
 const MorePanel: Component<Props> = (props) => (
   <div class="more-panel">
     <div class="screen-nav">
-      <button type="button" class="screen-back" aria-label="Quay lại" onClick={() => props.onBack()}>
+      <button type="button" class="screen-back" aria-label={t("nav.back")} onClick={() => props.onBack()}>
         <IconBack size={20} />
       </button>
-      <span class="screen-title">Âm thanh khác</span>
+      <span class="screen-title">{t("more.title")}</span>
       <div class="screen-nav-spacer" />
     </div>
 
     <section class="more-group">
-      <p class="more-label">Âm thanh điện tử</p>
+      <p class="more-label">{t("more.electronicAudio")}</p>
       <div class="more-card">
         <div class="setting-row">
           <div>
-            <span class="setting-title">Tăng âm trầm</span>
-            <span class="setting-desc">Bass boost · 0–3</span>
+            <span class="setting-title">{t("more.bassBoost")}</span>
+            <span class="setting-desc">{t("listen.bassRange")}</span>
           </div>
-              <div class="level-pills" aria-label="Mức tăng âm trầm">
-            <For each={[{ value: 0, label: "Tắt" }, { value: 1, label: "Nhẹ" }, { value: 2, label: "Vừa" }, { value: 3, label: "Mạnh" }]}>
+          <div class="level-pills" aria-label={t("listen.bassLevel")}>
+            <For each={[{ value: 0, key: "more.off" }, { value: 1, key: "more.mild" }, { value: 2, key: "more.medium" }, { value: 3, key: "more.strong" }]}>
               {(lv) => (
                 <button
                   type="button"
@@ -42,7 +43,7 @@ const MorePanel: Component<Props> = (props) => (
                   aria-pressed={props.bassBoost === lv.value}
                   onClick={() => props.onBassBoost(lv.value)}
                 >
-                  <span>{lv.label}</span>
+                  <span>{t(lv.key)}</span>
                   <small>{lv.value}</small>
                 </button>
               )}
@@ -53,12 +54,12 @@ const MorePanel: Component<Props> = (props) => (
     </section>
 
     <section class="more-group">
-      <p class="more-label">Codec & bảo vệ</p>
+              <p class="more-label">{t("more.codecProtection")}</p>
       <div class="more-card">
         <div class="setting-row">
           <div>
             <span class="setting-title">LDAC</span>
-            <span class="setting-desc">Hi-res (UI / OS)</span>
+            <span class="setting-desc">{t("more.hiRes")}</span>
           </div>
           <label class="toggle sm">
             <input
@@ -73,8 +74,8 @@ const MorePanel: Component<Props> = (props) => (
         </div>
         <div class="setting-row">
           <div>
-            <span class="setting-title">Bảo vệ thính giác</span>
-            <span class="setting-desc">Hearing protection</span>
+            <span class="setting-title">{t("more.hearingProtection")}</span>
+            <span class="setting-desc">{t("more.hearingProtection")}</span>
           </div>
           <label class="toggle sm">
             <input
@@ -91,8 +92,7 @@ const MorePanel: Component<Props> = (props) => (
         </div>
       </div>
       <p class="eq-footnote">
-        LDAC / hearing thường do stack Bluetooth OS xử lý — toggle lưu trên B4S;
-        PC có thể không đổi codec như app điện thoại.
+        {t("more.osCodecNote")}
       </p>
     </section>
   </div>

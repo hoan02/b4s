@@ -13,6 +13,7 @@ commands and events while improving the internal implementation.
 | Protocol router | Select command encoding and reply decoding by family | `src-tauri/src/protocol/router.rs` |
 | Protocol family | Wire commands and notification semantics | `src-tauri/src/protocol/families/` |
 | BLE transport | Discovery, connection, GATT subscription, writes, live events | `src-tauri/src/ble.rs`, `src-tauri/src/ble/` |
+| Localization | Bundled UI strings, locale selection and fallback | `src/lib/i18n.ts`, `src/locales/` |
 
 ## Profile loading
 
@@ -51,3 +52,10 @@ This is an incremental structure, not a claim that all devices are supported:
 
 Prefer completing one model's discovery-to-control path over declaring support
 for a large catalog at once.
+
+## Localization
+
+English is the first-launch default and fallback. The five shipped locales are
+bundled in the frontend and registered in `src/lib/i18n.ts`; visible UI strings
+belong in `src/locales/<locale>/translation.json`. The locale checker runs in CI.
+See the [translation guide](translations.md) before adding or changing strings.

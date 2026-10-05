@@ -6,6 +6,7 @@ import type { BatteryData } from "./Battery";
 import type { AncMode, NoiseEnvironment, SpatialMode, TransparencyMode } from "../lib/device";
 import type { LinkHealth } from "../lib/ble";
 import { resolveDeviceImage } from "../lib/deviceImages";
+import { t } from "../lib/i18n";
 import {
   IconNormal,
   IconAmbient,
@@ -66,10 +67,10 @@ const AdaptiveEnvironmentCards = (props: {
   onSelect: (value: NoiseEnvironment) => void;
 }) => (
   <div class="noise-environments noise-environments-card">
-    <button type="button" class={props.selected === 102 ? "active" : ""} onClick={() => props.onSelect(102)}><IconOffice size={24} /><span><strong>Trong nhà</strong><small>Nhà / văn phòng</small></span></button>
-    <button type="button" class={props.selected === 103 ? "active" : ""} onClick={() => props.onSelect(103)}><IconOutdoor size={24} /><span><strong>Ngoài trời</strong><small>Đường phố / công viên</small></span></button>
-    <button type="button" class={props.selected === 101 ? "active" : ""} onClick={() => props.onSelect(101)}><IconTransit size={24} /><span><strong>Di chuyển</strong><small>Tàu điện ngầm / xe buýt</small></span></button>
-    <button type="button" class={props.selected === 108 ? "active" : ""} onClick={() => props.onSelect(108)}><IconFlight size={24} /><span><strong>Đang di chuyển</strong><small>Máy bay / tàu hỏa</small></span></button>
+    <button type="button" class={props.selected === 102 ? "active" : ""} onClick={() => props.onSelect(102)}><IconOffice size={24} /><span><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></span></button>
+    <button type="button" class={props.selected === 103 ? "active" : ""} onClick={() => props.onSelect(103)}><IconOutdoor size={24} /><span><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></span></button>
+    <button type="button" class={props.selected === 101 ? "active" : ""} onClick={() => props.onSelect(101)}><IconTransit size={24} /><span><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></span></button>
+    <button type="button" class={props.selected === 108 ? "active" : ""} onClick={() => props.onSelect(108)}><IconFlight size={24} /><span><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></span></button>
   </div>
 );
 
@@ -89,15 +90,15 @@ const HomePanel: Component<Props> = (props) => {
   const statusText = () => {
     switch (level()) {
       case "live":
-        return "Đã kết nối";
+        return t("home.connected");
       case "waiting":
-        return "Chờ dữ liệu";
+        return t("home.waiting");
       case "demo":
-        return "Demo";
+        return t("home.demo");
       case "dead":
-        return "Mất link";
+        return t("home.linkLost");
       default:
-        return "Đã kết nối";
+        return t("home.connected");
     }
   };
 
@@ -136,25 +137,25 @@ const HomePanel: Component<Props> = (props) => {
           <div class={`pct ${pctClass(props.battery.left)}`}>
             {fmt(props.battery.left)}
           </div>
-          <div class="tag">L</div>
+          <div class="tag">{t("home.indicatorLeft")}</div>
         </div>
         <div class="home-batt-cell">
           <div class={`pct ${pctClass(props.battery.case)}`}>
             {fmt(props.battery.case)}
           </div>
-          <div class="tag">Case</div>
+          <div class="tag">{t("home.indicatorCase")}</div>
         </div>
         <div class="home-batt-cell">
           <div class={`pct ${pctClass(props.battery.right)}`}>
             {fmt(props.battery.right)}
           </div>
-          <div class="tag">R</div>
+          <div class="tag">{t("home.indicatorRight")}</div>
         </div>
       </div>
 
       {/* Noise — only square tiles */}
       <div>
-        <p class="home-section-label">Tiếng ồn</p>
+        <p class="home-section-label">{t("home.noise")}</p>
         <div class="noise-tiles">
           <button
             type="button"
@@ -162,7 +163,7 @@ const HomePanel: Component<Props> = (props) => {
             onClick={() => props.onAncMode("off")}
           >
             <IconNormal size={28} />
-            <span>Thường</span>
+            <span>{t("home.normal")}</span>
           </button>
           <button
             type="button"
@@ -170,7 +171,7 @@ const HomePanel: Component<Props> = (props) => {
             onClick={() => props.onAncMode("transparency")}
           >
             <IconAmbient size={28} />
-            <span>Xuyên âm</span>
+            <span>{t("home.transparency")}</span>
           </button>
           <button
             type="button"
@@ -179,38 +180,38 @@ const HomePanel: Component<Props> = (props) => {
             onClick={() => props.onAncMode("anc")}
           >
             <IconAnc size={28} />
-            <span>Giảm ồn</span>
+            <span>{t("home.anc")}</span>
           </button>
         </div>
         <Show when={props.ancMode === "transparency"}>
-          <div class="noise-options" aria-label="Tùy chọn xuyên âm">
-            <button type="button" class={props.transparencyMode === "full" ? "active" : ""} onClick={() => props.onTransparencyMode("full")}><span>Xuyên âm hoàn toàn</span><small>Mặc định</small></button>
-            <button type="button" class={props.transparencyMode === "voice" ? "active" : ""} onClick={() => props.onTransparencyMode("voice")}><span>Chế độ giọng nói</span><small>Ưu tiên giọng người</small></button>
+          <div class="noise-options" aria-label={t("home.transparencyOptions")}>
+            <button type="button" class={props.transparencyMode === "full" ? "active" : ""} onClick={() => props.onTransparencyMode("full")}><span>{t("home.fullTransparency")}</span><small>{t("home.default")}</small></button>
+            <button type="button" class={props.transparencyMode === "voice" ? "active" : ""} onClick={() => props.onTransparencyMode("voice")}><span>{t("home.voiceMode")}</span><small>{t("home.prioritizeVoice")}</small></button>
           </div>
         </Show>
         <Show when={props.ancMode === "anc"}>
           <Show when={props.adaptiveNoise}>
           <div class="noise-environments noise-environments-new">
-            <button type="button" class={props.noiseEnvironment === 102 ? "active" : ""} onClick={() => props.onNoiseEnvironment(102)}><IconOffice size={28} /><strong>Trong nhà</strong><small>Nhà / văn phòng</small></button>
-            <button type="button" class={props.noiseEnvironment === 103 ? "active" : ""} onClick={() => props.onNoiseEnvironment(103)}><IconOutdoor size={28} /><strong>Ngoài trời</strong><small>Đường phố / công viên</small></button>
-            <button type="button" class={props.noiseEnvironment === 101 ? "active" : ""} onClick={() => props.onNoiseEnvironment(101)}><IconTransit size={28} /><strong>Di chuyển</strong><small>Tàu điện ngầm / xe buýt</small></button>
-            <button type="button" class={props.noiseEnvironment === 108 ? "active" : ""} onClick={() => props.onNoiseEnvironment(108)}><IconFlight size={28} /><strong>Đang di chuyển</strong><small>Máy bay / tàu hỏa</small></button>
+            <button type="button" class={props.noiseEnvironment === 102 ? "active" : ""} onClick={() => props.onNoiseEnvironment(102)}><IconOffice size={28} /><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></button>
+            <button type="button" class={props.noiseEnvironment === 103 ? "active" : ""} onClick={() => props.onNoiseEnvironment(103)}><IconOutdoor size={28} /><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></button>
+            <button type="button" class={props.noiseEnvironment === 101 ? "active" : ""} onClick={() => props.onNoiseEnvironment(101)}><IconTransit size={28} /><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></button>
+            <button type="button" class={props.noiseEnvironment === 108 ? "active" : ""} onClick={() => props.onNoiseEnvironment(108)}><IconFlight size={28} /><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></button>
           </div>
           </Show>
           <div class="noise-options noise-reduction-panel">
             <Show when={props.adaptiveNoise}>
               <AdaptiveEnvironmentCards selected={props.noiseEnvironment} onSelect={props.onNoiseEnvironment} />
             </Show>
-            <div class="noise-adaptive-row"><div><strong>Tự động thích ứng</strong><small>Tự điều chỉnh theo môi trường</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported} checked={props.adaptiveNoise} onChange={(e) => props.onAdaptiveNoise((e.currentTarget as HTMLInputElement).checked)} /><span class="slider" /></label></div>
-            <Show when={props.adaptiveNoise} fallback={<div class="noise-levels"><div class="noise-level-heading"><span>Mức giảm tiếng ồn</span><strong>{props.noiseLevel}/{props.noiseMaxLevel}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>}>
-              <div class="noise-environments">{[[102, "Trong nhà", "Văn phòng"], [103, "Ngoài trời", "Đường phố · công viên"], [101, "Di chuyển", "Tàu điện ngầm · xe buýt"], [108, "Đang di chuyển", "Máy bay · tàu hỏa"]].map(([id, title, detail]) => <button type="button" class={props.noiseEnvironment === id ? "active" : ""} onClick={() => props.onNoiseEnvironment(id as NoiseEnvironment)}><span>{title}</span><small>{detail}</small></button>)}</div>
+            <div class="noise-adaptive-row"><div><strong>{t("home.adaptive")}</strong><small>{t("home.autoEnvironment")}</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported} checked={props.adaptiveNoise} onChange={(e) => props.onAdaptiveNoise((e.currentTarget as HTMLInputElement).checked)} /><span class="slider" /></label></div>
+            <Show when={props.adaptiveNoise} fallback={<div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel}/{props.noiseMaxLevel}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>}>
+              <div class="noise-environments">{[[102, t("home.indoor"), t("home.homeOffice")], [103, t("home.outdoor"), t("home.streetPark")], [101, t("home.commuting"), t("home.subwayBus")], [108, t("home.inTransit"), t("home.planeTrain")]].map(([id, title, detail]) => <button type="button" class={props.noiseEnvironment === id ? "active" : ""} onClick={() => props.onNoiseEnvironment(id as NoiseEnvironment)}><span>{title}</span><small>{detail}</small></button>)}</div>
             </Show>
           </div>
         </Show>
         <Show when={false}>
           <div class="home-anc-level">
             <div class="row">
-              <span>Mức</span>
+              <span>{t("home.level")}</span>
               <strong>{props.ancStrength}%</strong>
             </div>
             <input
@@ -236,8 +237,8 @@ const HomePanel: Component<Props> = (props) => {
             <IconSpatial size={22} />
           </span>
           <div class="list-text">
-            <span class="list-title">Âm học không gian</span>
-            <span class="list-sub">Spatial / Panoramic</span>
+            <span class="list-title">{t("home.spatial")}</span>
+            <span class="list-sub">{t("listen.spatialHint")}</span>
           </div>
           <label class="toggle sm">
             <input
@@ -257,14 +258,14 @@ const HomePanel: Component<Props> = (props) => {
               class={props.spatialMode === "music" ? "active" : ""}
               onClick={() => props.onSpatialMode("music")}
             >
-              Âm nhạc
+              {t("listen.music")}
             </button>
             <button
               type="button"
               class={props.spatialMode === "cinema" ? "active" : ""}
               onClick={() => props.onSpatialMode("cinema")}
             >
-              Điện ảnh
+              {t("listen.cinema")}
             </button>
           </div>
         </Show>
@@ -278,8 +279,8 @@ const HomePanel: Component<Props> = (props) => {
               <IconGame size={22} />
             </span>
             <div class="list-text">
-              <span class="list-title">Game mode</span>
-              <span class="list-sub">Độ trễ thấp</span>
+              <span class="list-title">{t("home.gameMode")}</span>
+              <span class="list-sub">{t("home.lowLatency")}</span>
             </div>
             <label class="toggle sm">
               <input
@@ -312,7 +313,7 @@ const HomePanel: Component<Props> = (props) => {
             <span class="list-ico list-ico-text">SF</span>
             <div class="list-text">
               <span class="list-title">SoundFit</span>
-              <span class="list-sub">Cá nhân hóa thính lực</span>
+              <span class="list-sub">{t("home.hearingPersonalization")}</span>
             </div>
             <span class="list-chev">›</span>
           </button>
@@ -322,8 +323,8 @@ const HomePanel: Component<Props> = (props) => {
               <IconMore size={22} />
             </span>
             <div class="list-text">
-              <span class="list-title">Âm thanh khác</span>
-              <span class="list-sub">Bass · LDAC · …</span>
+              <span class="list-title">{t("home.moreAudio")}</span>
+              <span class="list-sub">{t("home.bassLdac")}</span>
             </div>
             <span class="list-chev">›</span>
           </button>
@@ -333,8 +334,8 @@ const HomePanel: Component<Props> = (props) => {
           <button type="button" class={`list-row action find-row ${props.findActive ? "active" : ""}`} onClick={() => props.onFindBuds()} aria-pressed={props.findActive}>
             <span class="list-ico"><IconFind size={22} /></span>
             <div class="list-text">
-              <span class="list-title">{props.findActive ? "Đang tìm tai nghe" : "Tìm tai nghe"}</span>
-              <span class="list-sub">Phát âm thanh để xác định vị trí</span>
+              <span class="list-title">{props.findActive ? t("home.finding") : t("home.find")}</span>
+              <span class="list-sub">{t("home.playSound")}</span>
             </div>
             <span class="list-chev">›</span>
           </button>
@@ -347,7 +348,7 @@ const HomePanel: Component<Props> = (props) => {
               <IconSettings size={22} />
             </span>
             <div class="list-text">
-              <span class="list-title">Cài đặt</span>
+              <span class="list-title">{t("nav.settings")}</span>
             </div>
             <span class="list-chev">›</span>
           </button>
@@ -360,7 +361,7 @@ const HomePanel: Component<Props> = (props) => {
               <IconPower size={22} />
             </span>
             <div class="list-text">
-              <span class="list-title">Ngắt kết nối</span>
+              <span class="list-title">{t("home.disconnect")}</span>
             </div>
           </button>
         </div>

@@ -1,51 +1,41 @@
-# B4S — listening model catalog
+# Model discovery registry
 
-**B4S** targets multi-model audio earbuds (TWS, open-ear, headset, neckband), not a single SKU.
+The registry in `src-tauri/src/protocol/models.rs` contains BLE name patterns
+used to identify device models. It is primarily a discovery catalog: an entry
+does not by itself mean the device has tested or enabled listening controls.
 
-Source: public product strings + hardware checks. Names below are for BLE advertisement matching only.
+## Verified hardware targets
 
-Excluded: chargers, mice, scent/purifier, non-audio.
+- Baseus Bass BP1 Pro
+- Baseus Bass BP1 Ultra
+
+Both use the BP1 protocol family, with model-specific framing and firmware
+behavior. Consult the [BP1 packet reference](bp1-pro-anc.md) and the runtime
+profile before changing commands.
+
+## Example product groups in the registry
+
+| Group | Examples |
+|---|---|
+| Bass BP1 / EP10 | BP1 Pro / Ultra / NC, EP10 Pro / Ultra / NC |
+| Bowie MA | MA10, MA10s, MA20 |
+| Bowie M | M2s, M3s, M4s, M2s Ultra |
+| Bowie E / W / WM | E3, W04, WM01 |
+| Open-ear | MC1 / MC2, AirGo, AS01 |
+| Inspire | XP1, XH1, XC1 |
+| Headsets and neckbands | H1 / H2, Max, P1, U2 |
+
+These are registry examples, not a compatibility promise. Product names are
+used to match BLE advertisements; aliases and support levels can change as
+evidence is added.
 
 ## Support levels
 
 | Level | Meaning |
-|-------|---------|
-| **Verified** | Packet table + control proven on real hardware |
-| **Experimental** | Catalog match; B4S tries BA/AA (+ 789C wrap when flagged) |
-| **Scan only** | Name looks like Baseus; no control mapping yet |
+|---|---|
+| `verified` | Hardware behavior has been verified for the model. |
+| `experimental` | A best-effort protocol mapping exists and needs more testing. |
+| `scanOnly` | The app recognizes the name but does not enable control. |
 
-## Verified (listening control)
-
-- Baseus Bass **BP1 Ultra** (often 789C+CRC wrap)  
-- Baseus Bass **BP1 Pro** (often bare BA/AA)  
-
-## Groups (~120+ experimental entries)
-
-| Group | Examples |
-|-------|----------|
-| Bass BP1 / EP10 | BP1 Ultra/Pro/NC, EP10 Ultra/Pro/NC |
-| Bowie MA series | MA10 / MA10s / MA10 Pro / MA20 / MA20 Pro |
-| Bowie M series | M1–M4s, M2s Pro, M2s Ultra |
-| Bowie E series | E3/E5/E10/E12/E13, E9, EX |
-| Open-ear | MC1/MC2/MF1, AirGo AS01/AG20 |
-| Inspire | XP1 / XH1 / XC1 |
-| Bass line | BD1, BC1/2, BF1, BH1, BS1/2, Bass 1+ |
-| Bowie W / WM | W04 family, WM01–05, WX5, MZ10, EZ10 |
-| AirNora | AirNora / 2 / 3 |
-| Eli sport | Eli Sport, Eli Fit… |
-| Headset | H1/H2, 10/30/35 Max, D05, MH1 |
-| Neckband | P1 / P1x / P1 Lite, U2 |
-| AeQur | G10, GH02, N10… |
-
-Registry code: `src-tauri/src/protocol/models.rs`.
-
-## Promote Experimental → Verified
-
-1. Connect in **B4S** (Bluetooth ON)  
-2. Confirm **Live** link (notifies + battery when possible)  
-3. Exercise noise / EQ / game / battery; note AA notifies in logs
-4. Document differences in `docs/protocol/`  
-
-## Product images
-
-Product photos are not bundled per model; B4S uses a generic ear asset.
+See [how to add a model](../model-catalog.md) for profile and evidence guidance.
+Product images are not bundled per model; the app uses a generic fallback image.

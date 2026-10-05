@@ -1,8 +1,8 @@
 # Reference packet table — Bass BP1 Pro / Ultra family
 
-> Reference implementation for the **best-documented** Baseus listening path.  
-> **B4S** uses this table for verified BP1-class devices and as a template for other lines.  
-> Other Baseus models may share BA/AA opcodes, use **789C+CRC**, or different GATT UUIDs.
+> Reference packet table for the verified BP1 Pro and BP1 Ultra hardware targets.
+> Commands and framing remain model-specific; other Baseus models require their
+> own hardware evidence before these packets can be assumed to work.
 
 Sources: live BLE captures + official app analysis (elaxptr/baseus-desktop + APK 2.14.1).
 
