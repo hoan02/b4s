@@ -84,3 +84,57 @@ test("EQ readback resolves custom, model presets and unknown without inventing C
   assert.deepEqual(resolveEqSelection(10, presets, true), { kind: "preset", wireIndex: 10, id: "acoustic" });
   assert.deepEqual(resolveEqSelection(11, presets, true), { kind: "unknown", wireIndex: 11 });
 });
+
+
+const controllerSource = readFileSync(new URL("../src/features/equalizer/controller.ts", import.meta.url), "utf8");
+const controllerCompiled = ts.transpileModule(controllerSource, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+}).outputText;
+const { createEqualizerController } = await import(`data:text/javascript;base64,${Buffer.from(controllerCompiled).toString("base64")}`);
+
+function deferred() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+test("EQ controller rejects duplicate writes and session changes during refresh", async () => {
+  let generation = 1;
+  let writes = 0;
+  let confirmed = 0;
+  const refresh = deferred();
+  const controller = createEqualizerController({
+    session: { capture: () => generation, isCurrent: token => token === generation },
+    refresh: () => refresh.promise, pending: () => {}, error: () => {}, formatError: String,
+  });
+  const operation = controller.run(async () => { writes++; }, () => confirmed++, () => {});
+  await controller.run(async () => { writes++; }, () => confirmed++, () => {});
+  await Promise.resolve();
+  generation++;
+  refresh.resolve();
+  await operation;
+  assert.equal(writes, 1);
+  assert.equal(confirmed, 0);
+});
+
+test("EQ reset permits new operation and old completion cannot clear its pending state", async () => {
+  let pending = false;
+  let confirmed = 0;
+  const oldWrite = deferred();
+  const newWrite = deferred();
+  const controller = createEqualizerController({
+    session: { capture: () => 1, isCurrent: () => true }, refresh: async () => {},
+    pending: value => { pending = value; }, error: () => {}, formatError: String,
+  });
+  const oldOperation = controller.run(() => oldWrite.promise, () => confirmed++, () => {});
+  controller.reset();
+  const newOperation = controller.run(() => newWrite.promise, () => confirmed++, () => {});
+  oldWrite.resolve();
+  await oldOperation;
+  assert.equal(pending, true);
+  assert.equal(confirmed, 0);
+  newWrite.resolve();
+  await newOperation;
+  assert.equal(pending, false);
+  assert.equal(confirmed, 1);
+});

@@ -8,6 +8,7 @@ import Settings from "./components/Settings";
 import ToastHost from "./components/ToastHost";
 import ConfirmDialog from "./components/ConfirmDialog";
 import { getDeviceSnapshot, onDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot";
+import { createEqualizerController } from "./features/equalizer/controller";
 import { resolveEqSelection } from "./features/equalizer/selection";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
@@ -121,9 +122,8 @@ const App: Component = () => {
     });
     setEqWireIndex(snapshot?.eqIndex ?? null);
     if (!snapshot) {
-      setEqPending(false);
+      equalizer.reset();
       setGamePending(false);
-      setEqError(null);
       setGameError(null);
       setBassBoostUi(0);
       setHearingProtect(false);
@@ -158,6 +158,9 @@ const App: Component = () => {
     const snapshot = await getDeviceSnapshot();
     if (session.isCurrent(generation)) session.accept(snapshot);
   };
+  const equalizer = createEqualizerController({
+    session, refresh: refreshSnapshot, pending: setEqPending, error: setEqError, formatError,
+  });
   let disposed = false;
   const track = (unsubscribe: () => void) => {
     if (disposed) unsubscribe();
@@ -369,24 +372,11 @@ const App: Component = () => {
   };
 
   const applyEqPreset = async (preset: EqPresetId) => {
-    if (eqPending()) return;
-    const generation = session.capture();
-    setEqPending(true);
-    setEqError(null);
-    try {
-      await setEqPreset(preset);
-      if (!session.isCurrent(generation)) return;
-      setEqCustomActive(false);
-      await refreshSnapshot();
-      applyLink(await getLinkHealth());
-      notify(`EQ · ${t(`eqPreset.${preset}`)}`, "success");
-    } catch (e) {
-      if (!session.isCurrent(generation)) return;
-      setEqError(formatError(e));
-      notify(formatError(e), "error");
-    } finally {
-      if (session.isCurrent(generation)) setEqPending(false);
-    }
+    await equalizer.run(() => setEqPreset(preset), () => {
+      if (link().mock) setEqCustomActive(false);
+      const label = modelEq()?.presets.find((item) => item.id === preset)?.label ?? preset;
+      notify(`EQ · ${label}`, "success");
+    }, (message) => notify(message, "error"));
   };
 
   const requestEqAction = (action: PendingEqAction): boolean => {
@@ -408,57 +398,24 @@ const App: Component = () => {
 
   const handleApplyCustomEq = async (bands = eqCustomBands(), label = t("eq.customize")) => {
     if (!requestEqAction({ kind: "applyCustom" })) return;
-    if (eqPending()) return;
-    const generation = session.capture();
-    setEqPending(true);
-    setEqError(null);
     const customLabel = label.trim() || t("eq.customize");
-    // Only publish active custom state after current-session readback.
-    try {
-      await setCustomEq(
-        bands.map((gain, index) => ({
-          frequency: EQ_BANDS[index].frequency,
-          qValue: 1,
-          gain,
-          filter: 1,
-        }))
-      );
-      if (!session.isCurrent(generation)) return;
-      setEqCustomActive(true);
-      await refreshSnapshot();
-      notify(
-        t("toast.customEqSaved"),
-        "success",
-        `EQ custom · ${customLabel}`
-      );
-    } catch (e) {
-      if (!session.isCurrent(generation)) return;
-      setEqError(formatError(e));
-      notify(formatError(e), "error", customLabel);
-    } finally {
-      if (session.isCurrent(generation)) setEqPending(false);
-    }
+    await equalizer.run(() => setCustomEq(
+      bands.map((gain, index) => ({
+        frequency: EQ_BANDS[index].frequency, qValue: 1, gain, filter: 1,
+      }))
+    ), () => {
+      if (link().mock) setEqCustomActive(true);
+      notify(t("toast.customEqSaved"), "success", `EQ custom · ${customLabel}`);
+    }, (message) => notify(message, "error", customLabel));
   };
 
   const handleResetCustomEq = async () => {
-    if (eqPending() || !requestEqAction({ kind: "resetCustom" })) return;
-    const generation = session.capture();
-    setEqPending(true);
-    setEqError(null);
-    try {
-      await setEqIndex(0);
-      if (!session.isCurrent(generation)) return;
+    if (!requestEqAction({ kind: "resetCustom" })) return;
+    await equalizer.run(() => setEqIndex(0), () => {
       setEqCustomBands(defaultCustomBands());
-      setEqCustomActive(false);
-      await refreshSnapshot();
+      if (link().mock) setEqCustomActive(false);
       notify(t("toast.resetEq"), "info");
-    } catch (e) {
-      if (!session.isCurrent(generation)) return;
-      setEqError(formatError(e));
-      notify(formatError(e), "error");
-    } finally {
-      if (session.isCurrent(generation)) setEqPending(false);
-    }
+    }, (message) => notify(message, "error"));
   };
 
   const handleGameMode = async (enabled: boolean) => {
