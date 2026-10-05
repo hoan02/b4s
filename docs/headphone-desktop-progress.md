@@ -193,5 +193,5 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 ## Increment 19 — reproducible local Android inventory
 
 - Added Python CLI to hash APK/XAPK/DEX/native inputs, inspect native entries inside APKs without extraction and locate decompiler error/undecompiled-method markers without source snippets. Output is restricted to ignored repository `.tmp`.
-- Synthetic checks passed for native-entry SHA256 and marker locations/source exclusion. The real dump inventory is running; no completion/count claim until its process exits successfully. Input package/version/tool provenance, original JADX run errors, resource inventory and affected-method DEX verification remain open.
+- Synthetic checks passed for native-entry SHA256 and marker locations/source exclusion. Real dump inventory exited successfully: 3 hashed inputs, 106 APK native entries and 1410 decompiler markers. Marker counts may include two markers per failed method and are not the original 508-error run count. Input package/version/tool provenance, original JADX run errors, resource inventory and affected-method DEX verification remain open.
 - Documentation explains local-only output and distinguishes marker counts from JADX run errors. No frontend/Rust rebuild for this tooling change.
