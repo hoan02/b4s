@@ -6,6 +6,7 @@
   "nav.settings": "设置",
   "settings.identifier": "标识符",
   "pair.title": "连接",
+  "pair.reconnecting": "正在查找 {{name}}…",
   "pair.bluetoothOff": "开启蓝牙以扫描",
   "pair.demoSub": "演示 — 模拟设备",
   "pair.nearby": "附近的耳机 / 打开充电盒",

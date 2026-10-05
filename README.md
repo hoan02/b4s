@@ -30,6 +30,10 @@ See [the model catalog](docs/model-catalog.md) and [protocol notes](docs/protoco
 ## Features
 
 - Scan for and connect to Bluetooth LE earbuds.
+- Automatically reconnect to the last supported earbuds on startup. Select them
+  manually once; future launches search for the same device for up to 12 seconds
+  before falling back to manual selection. The earbuds must expose their BLE
+  control service; a Windows audio connection alone does not guarantee this.
 - Show left, right and case battery levels when the device reports them.
 - Control noise cancellation, transparency and supported listening modes.
 - Adjust EQ presets and custom EQ where the model profile allows it.

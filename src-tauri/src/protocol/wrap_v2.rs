@@ -108,8 +108,8 @@ pub fn wrap_ba_command(bare: &[u8]) -> Option<Vec<u8>> {
 
 /// The canonical BP1 Ultra battery polling frame.
 ///
-/// Ultra firmware returns earbud and case battery from the wrapped BA02
-/// exchange. Do not mix bare BA02 or BA27 frames into this exchange.
+/// Keep the wrapped BA02 exchange intact. Supplemental queries use the
+/// connection's model-specific framing through the normal write helper.
 pub fn battery_query_frame() -> Vec<u8> {
     let bare = vec![0xBA, 0x02];
     wrap_ba_command(&bare).expect("BA02 always produces a BP1 Ultra frame")
@@ -308,6 +308,16 @@ mod tests {
         assert_eq!(frame[..2], [0x78, 0x9C]);
         // Control marker, query type, payload length, battery opcode.
         assert_eq!(frame[4..8], [0x02, 0x01, 0x01, 0x02]);
+    }
+
+    #[test]
+    fn case_battery_query_uses_model_framing() {
+        let bare = crate::protocol::encode_command(crate::protocol::Command::QueryCaseBattery);
+        assert_eq!(bare, vec![0xBA, 0x27]);
+        let wrapped = wrap_ba_command(&bare).unwrap();
+        assert_eq!(wrapped[4..8], [0x02, 0x01, 0x01, 0x27]);
+        let crc_pos = wrapped.len() - 2;
+        assert_eq!(crc16(&wrapped[..crc_pos]), u16::from_be_bytes([wrapped[crc_pos], wrapped[crc_pos + 1]]));
     }
 
     #[test]

@@ -6,6 +6,7 @@
   "nav.settings": "Configurações",
   "settings.identifier": "Identificador",
   "pair.title": "Conectar",
+  "pair.reconnecting": "Procurando {{name}}…",
   "pair.bluetoothOff": "Ative o Bluetooth para procurar",
   "pair.demoSub": "Demonstração — dispositivo simulado",
   "pair.nearby": "Fones próximos / abra o estojo",

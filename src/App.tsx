@@ -66,6 +66,8 @@ const App: Component = () => {
   const [toasts, setToasts] = createSignal<ToastItem[]>([]);
   const [appVersion, setAppVersion] = createSignal("…");
   const [connected, setConnected] = createSignal(false);
+  const [connectionReady, setConnectionReady] = createSignal(false);
+  const [autoReconnectAvailable, setAutoReconnectAvailable] = createSignal(true);
   const [device, setDevice] = createSignal<BleDevice | null>(null);
   const [battery, setBattery] = createSignal<BatteryData>({
     left: 0,
@@ -154,6 +156,7 @@ const App: Component = () => {
       const state = await getConnection();
       if (state.link) applyLink(state.link);
       if (state.connected && state.device) {
+        setAutoReconnectAvailable(false);
         setDevice(state.device);
         setConnected(true);
         startLinkPoll();
@@ -221,6 +224,7 @@ const App: Component = () => {
     } catch (e) {
       console.warn("[App] events", e);
     }
+    setConnectionReady(true);
   });
 
   onCleanup(() => {
@@ -506,6 +510,7 @@ const App: Component = () => {
   };
 
   const handleDisconnect = async () => {
+    setAutoReconnectAvailable(false);
     try {
       await bleDisconnect();
     } catch (e) {
@@ -593,11 +598,15 @@ const App: Component = () => {
             when={connected()}
             fallback={
               <section class="section section-pair">
-                <BlePairing
-                  onConnected={handleConnected}
-                  onOpenSettings={() => setView("settings")}
-                  appVersion={appVersion()}
-                />
+                <Show when={connectionReady()}>
+                  <BlePairing
+                    onConnected={handleConnected}
+                    onOpenSettings={() => setView("settings")}
+                    appVersion={appVersion()}
+                    autoReconnect={autoReconnectAvailable()}
+                    onAutoReconnectAttempt={() => setAutoReconnectAvailable(false)}
+                  />
+                </Show>
               </section>
             }
           >

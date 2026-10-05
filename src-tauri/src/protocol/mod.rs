@@ -54,6 +54,7 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             // EarphoneFunctionShowFragmentNewUI: companion.c(model, "BA02", sn)
             Frame::write(0x02, &[]).encode_write()
         }
+        Command::QueryCaseBattery => Frame::write(0x27, &[]).encode_write(),
         Command::SetGameMode(on) => {
             Frame::write(0x24, &[if on { 0x01 } else { 0x00 }]).encode_write()
         }

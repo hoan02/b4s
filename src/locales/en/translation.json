@@ -4,6 +4,7 @@
   "nav.back": "Back",
   "nav.settings": "Settings",
   "pair.title": "Connect",
+  "pair.reconnecting": "Looking for {{name}}…",
   "pair.bluetoothOff": "Turn on Bluetooth to scan",
   "pair.demoSub": "Demo — simulated device",
   "pair.nearby": "Nearby earbuds / open the case",
