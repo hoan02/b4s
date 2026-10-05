@@ -209,3 +209,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Targeted JADX 1.5.6 raw-instruction fallback recovered DeviceManager.l without rerunning the whole APK. Exact model-name branches return minimum 1 and maximum 3/5/10; BP1 Pro/Ultra target 5.
 - Existing BP1 Pro maxCustomLevel=5 agrees with source, so no speculative runtime expansion was made. The default Android range 10 does not grant permission to unknown B4S models.
 - Raw output remains ignored; source triage dossier records tool/method/branch interpretation and distinguishes same-engine raw inspection from an independent decompiler result. Capture/firmware acceptance, range wire/readback and remaining failed-method/resource inventory stay open.
+
+
+## Increment 22 — advanced audio snapshot adoption
+
+- Snapshot contract adds nullable observed bass boost and timestamped hearing enabled/level. Session reset clears both; zero/disabled observations remain real values and unchanged hearing receipts advance freshness/revision.
+- Frontend real-device bass/hearing now uses ordered session snapshots; compatibility listeners only publish these values in demo mode. Spatial lacks a reviewed state decoder and is not fabricated into this snapshot.
+- Two focused snapshot tests and frontend typecheck passed, whitespace clean. Full unknown/pending UI semantics, bass/spatial/hearing range/correlation policy and hardware acceptance remain open under P4.3/P6.3.

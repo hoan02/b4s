@@ -139,6 +139,8 @@ const App: Component = () => {
     if (snapshot.anc !== null) setAncModeUi(snapshot.anc);
     if (snapshot.game !== null) setGameOn(snapshot.game);
     if (snapshot.ldac !== null) setLdac(snapshot.ldac);
+    if (snapshot.bassBoost != null) setBassBoostUi(snapshot.bassBoost);
+    if (snapshot.hearing != null) setHearingProtect(snapshot.hearing.enabled);
     const eqIds: Record<string, string> = {
       balanced: "classic", bassBoost: "bass", voice: "voice", clear: "clear",
       hifiLive: "hifi", pop: "pop", jazzRock: "jazz", classical: "classical", acoustic: "acoustic",
@@ -305,9 +307,9 @@ const App: Component = () => {
         })
       );
       track(await onGameMode((on) => { if (link().mock) setGameOn(on); }));
-      track(await onBassBoost((level) => setBassBoostUi(level)));
+      track(await onBassBoost((level) => { if (link().mock) setBassBoostUi(level); }));
       track(await onLdac((on) => { if (link().mock) setLdac(on); }));
-      track(await onHearingProtection((state) => setHearingProtect(state.enabled)));
+      track(await onHearingProtection((state) => { if (link().mock) setHearingProtect(state.enabled); }));
     } catch (e) {
       console.warn("[App] events", e);
     }

@@ -23,6 +23,8 @@ export interface DeviceSnapshot {
   eqIndex: number | null;
   game: boolean | null;
   ldac: boolean | null;
+  bassBoost: number | null;
+  hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
 }
 
 export function getDeviceSnapshot(): Promise<DeviceSnapshot> {
