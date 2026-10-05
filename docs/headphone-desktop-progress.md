@@ -18,9 +18,9 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P0.1 | Chụp baseline Git/build/test; ghi thay đổi đang có, không reset | In progress |
 | P0.2 | Ghi firmware BP1 Ultra, Android/Windows version và Bluetooth adapter | External evidence required |
 | P0.3 | Ghi phạm vi product và policy đã được người dùng chốt | Complete — architecture/desktop-scope.md |
-| P1.1 | Index entrypoints, model guards, SDK/native dependencies | Open |
+| P1.1 | Index entrypoints, model guards, SDK/native dependencies | In progress — transport dispatch indexed; feature/native inventory outstanding |
 | P1.2 | Triage JADX errors liên quan; extract resource/native inventory | Open |
-| P1.3 | Lần theo family/transport/framing/firmware rules | Open |
+| P1.3 | Lần theo family/transport/framing/firmware rules | In progress — exact transport/framing guards indexed; firmware/callback tracing outstanding |
 | P1.4 | Trace server dictionary/model-param consumers | In progress |
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
@@ -174,3 +174,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Removed outdated user-facing BA43/reset claims in all five locales. Preset copy describes model selection; custom copy distinguishes local drafts from confirmed device application. Band count text uses the selected schema.
 - Save/delete publish the updated draft list only after localStorage succeeds. Failed storage operations preserve the visible list and expose a localized alert; failures no longer escape the event handler or falsely appear saved.
 - Locale parity (237 keys), frontend typecheck and whitespace checks passed. Durable settings migration/export, storage corruption diagnostics and UI/hardware acceptance remain open.
+
+
+## Increment 17 — transport dispatch source inventory
+
+- Added Android transport source dossier with independent exact-name H0 (Classic dispatch) and Q0 (789C framing) inventories, connect/write entrypoints and local dump pointers.
+- Identified priority BLE write divergence: normal/alternate paths send the framing result, while the priority branch passes original sourceData. Constructor-provided RFCOMM UUID and caller/capture coverage require further tracing; no fixed SPP UUID or Windows support is inferred.
+- P1.1/P1.3 now explicitly in progress; native/error/hash/firmware/callback inventory remains outstanding. Documentation only; no redundant local build. Latest inspected CI run 37357844957 was pending.
