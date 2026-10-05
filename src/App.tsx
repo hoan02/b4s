@@ -90,7 +90,7 @@ const App: Component = () => {
   const [eqWireIndex, setEqWireIndex] = createSignal<number | null>(null);
   const modelEq = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.eq;
   const [eqActive, setEqActive] = createSignal<EqPresetId>("classic");
-  const [eqCustomBands, setEqCustomBands] = createSignal(defaultCustomBands());
+  const [eqCustomBands, setEqCustomBands] = createSignal<number[]>([]);
   const [eqCustomActive, setEqCustomActive] = createSignal(false);
   const [eqPending, setEqPending] = createSignal(false);
   const [gamePending, setGamePending] = createSignal(false);
@@ -129,7 +129,7 @@ const App: Component = () => {
       setHearingProtect(false);
       setSpatialOn(false);
       setEqCustomActive(false);
-      setEqCustomBands(defaultCustomBands());
+      setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
       setAncModeUi("off");
       setEqActive("classic");
       setGameOn(false);
@@ -151,6 +151,13 @@ const App: Component = () => {
       device()?.deviceProfile?.capabilities.customEq ?? false);
     setEqCustomActive(selection.kind === "custom");
     setEqActive(selection.kind === "preset" ? selection.id : "");
+  });
+  let eqDraftLayout = "";
+  createEffect(() => {
+    const layout = `${device()?.id ?? ""}:${modelEq()?.bands.join(",") ?? ""}`;
+    if (layout === eqDraftLayout) return;
+    eqDraftLayout = layout;
+    setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
   });
   const session = createDeviceSession(applySnapshot);
   const refreshSnapshot = async () => {
@@ -416,7 +423,7 @@ const App: Component = () => {
   const handleResetCustomEq = async () => {
     if (!requestEqAction({ kind: "resetCustom" })) return;
     await equalizer.run(() => setEqIndex(0), () => {
-      setEqCustomBands(defaultCustomBands());
+      setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
       if (link().mock) setEqCustomActive(false);
       notify(t("toast.resetEq"), "info");
     }, (message) => notify(message, "error"));
