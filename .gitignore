@@ -87,3 +87,6 @@ test-results/
 *.old
 
 tools
+
+# Private hardware manifests and original Bluetooth captures
+.local-captures/

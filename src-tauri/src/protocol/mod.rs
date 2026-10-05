@@ -13,6 +13,7 @@
 //!   Notify  : 654b749c-e37f-ae1f-ebab-40ca133e3690
 
 mod framing;
+pub mod receiver;
 pub mod advertisement;
 mod types;
 mod families;

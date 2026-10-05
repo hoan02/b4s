@@ -137,6 +137,9 @@ pub fn unwrap_notify(data: &[u8]) -> Vec<Vec<u8>> {
     if data.len() >= 6 && data[0] == 0x78 && data[1] == 0x9C {
         let mut i = 0usize;
         while i + 6 <= data.len() {
+            if data[i..i + 2] != [0x78, 0x9C] {
+                break;
+            }
             let total = u16::from_be_bytes([data[i + 2], data[i + 3]]) as usize;
             if total < 6 || i + total > data.len() {
                 break;

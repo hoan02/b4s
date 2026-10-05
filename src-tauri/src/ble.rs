@@ -1079,9 +1079,24 @@ async fn subscribe_notifications(app: AppHandle, peripheral: Peripheral) -> Resu
         .map_err(|e| format!("notifications stream: {e}"))?;
 
     tauri::async_runtime::spawn(async move {
+        let mut receivers = HashMap::<uuid::Uuid, protocol::receiver::NotificationReceiver>::new();
         while let Some(n) = stream.next().await {
             log::info!("Notify {} : {:02X?}", n.uuid, n.value);
-            handle_notification(&app, &n.value, Some(n.uuid.to_string())).await;
+            // Init-state text is a separate handshake message, not an AA frame.
+            let is_init_reply = std::str::from_utf8(&n.value)
+                .map(|text| {
+                    let text = text.to_ascii_lowercase();
+                    text.contains("init state") || text.contains("already configured")
+                })
+                .unwrap_or(false);
+            if is_init_reply {
+                handle_notification(&app, &n.value, Some(n.uuid.to_string())).await;
+                continue;
+            }
+            let receiver = receivers.entry(n.uuid).or_default();
+            for frame in receiver.push(&n.value, std::time::Instant::now()) {
+                handle_notification(&app, &frame, Some(n.uuid.to_string())).await;
+            }
         }
         log::info!("Notification stream ended");
     });

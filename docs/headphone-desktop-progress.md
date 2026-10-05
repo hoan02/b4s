@@ -8,7 +8,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 - Started from clean `main`, commit `09b4c67`.
 - Existing SolidJS/Tauri framework and legacy BLE facade preserved.
 - First safety slice: unknown startup query denied, CRC-invalid/truncated wrapped notifications rejected, raw battery salvage removed, invalid ANC/EQ/spatial values rejected.
-- Validation: frontend build (includes TypeScript), five-locale parity, 69 Rust library tests passed. Cargo check baseline passed; re-run after final changes before PR.
+- Validation: frontend build (includes TypeScript), five-locale parity, 69 Rust library tests and Cargo check passed on the safety slice.
 - No hardware verification, firmware manifest, Android captures, or signed installer evidence collected.
 
 ## Work packages
@@ -63,3 +63,10 @@ Every PR updates this tracker with implementation, checks, limitations and links
 ## Required external evidence
 
 BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapter and U01/U02 captures establish transport and framing. A second-family hardware report and signing/release configuration are separate gates. Continue offline source/replay work while these remain unavailable.
+
+## Increment 2 — framing and capture preparation
+
+- Characteristic-local `NotificationReceiver` separates 789C reassembly from feature decoding. Input is bounded to 4096 bytes; partial frames expire after two seconds and disappear with their stream. CRC/length errors never reach feature state.
+- Three focused tests passed: every split point and batching; timeout/reset/overflow; corruption followed by a good frame. Full matrix runs in PR CI.
+- Capture guide added; private hardware manifests and original captures ignored. P2.1 remains in progress pending actual identity and repeatable Android export. P2.3 remains in progress pending scripted command/transport timeout and late ACK replay.
+- PR: https://github.com/hoan02/b4s/pull/5.
