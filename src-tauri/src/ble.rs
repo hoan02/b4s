@@ -1207,6 +1207,9 @@ async fn apply_event(app: &AppHandle, event: DeviceEvent, token: crate::device::
             };
             let _ = app.emit("device://anc", s);
         }
+        DeviceEvent::EqIndex(index) => {
+            let _ = app.emit("device://eq-index", index);
+        }
         DeviceEvent::Eq(preset) => {
             let _ = app.emit("device://eq", preset);
         }
@@ -1416,6 +1419,17 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
     .await
 }
 
+pub async fn send_eq_id(id: &str) -> Result<(), String> {
+    let model_id = {
+        let state = BLE.lock().await;
+        state.connected_id.as_ref().and_then(|id| state.devices.get(id)).and_then(|device| device.model_id.clone())
+    }.ok_or("Connected model is missing")?;
+    let eq = crate::catalog::profile_for(&model_id).and_then(|profile| profile.eq).ok_or("No model EQ schema")?;
+    let preset = eq.presets.iter().find(|preset| preset.id == id).ok_or("Preset ID is absent from the model schema")?;
+    send_eq_index(preset.dict_sort).await
+}
+
+#[allow(dead_code)]
 pub async fn send_eq(preset: EqPreset) -> Result<(), String> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetEq(preset)).await?;
     let state = BLE.lock().await;
@@ -1429,7 +1443,7 @@ pub async fn send_eq(preset: EqPreset) -> Result<(), String> {
     drop(state);
     with_connected_peripheral(|p| {
         let d = data.clone();
-        Box::pin(async move { write_and_readback(&p, &d, &[0xBA, 0x42], crate::device::confirmation::ExpectedState::Eq(preset)).await })
+        Box::pin(async move { write_and_readback(&p, &d, &[0xBA, 0x30], crate::device::confirmation::ExpectedState::Eq(preset)).await })
     })
     .await
 }
@@ -1473,7 +1487,6 @@ pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {
 }
 
 pub async fn send_eq_index(index: u8) -> Result<(), String> {
-    let preset = EqPreset::from_byte(index).ok_or("EQ index has no confirmed-state decoder")?;
     let data = encode_connected_feature(protocol::FeatureCommand::SetEqIndex(index)).await?;
     let state = BLE.lock().await;
     if state.mock {
@@ -1484,7 +1497,7 @@ pub async fn send_eq_index(index: u8) -> Result<(), String> {
         return Ok(());
     }
     drop(state);
-    with_connected_peripheral(|p| Box::pin(async move { write_and_readback(&p, &data, &[0xBA, 0x42], crate::device::confirmation::ExpectedState::Eq(preset)).await })).await
+    with_connected_peripheral(|p| Box::pin(async move { write_and_readback(&p, &data, &[0xBA, 0x30], crate::device::confirmation::ExpectedState::EqIndex(index)).await })).await
 }
 
 pub async fn send_custom_eq(bands: Vec<protocol::EqBand>, dict_sort: u8, anc: bool) -> Result<(), String> {

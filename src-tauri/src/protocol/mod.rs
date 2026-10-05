@@ -49,7 +49,7 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             Bp1ProAnc::cmd_set_custom_eq(dict_sort, anc, &bands)
         }
         Command::QueryEq => {
-            Frame::write(0x42, &[]).encode_write()
+            Frame::write(0x30, &[]).encode_write()
         }
         Command::QueryBattery => {
             // EarphoneFunctionShowFragmentNewUI: companion.c(model, "BA02", sn)

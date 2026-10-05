@@ -1,4 +1,4 @@
-import { Component, createSignal, Show, onMount, onCleanup } from "solid-js";
+import { Component, createEffect, createSignal, Show, onMount, onCleanup } from "solid-js";
 import type { AncMode, NoiseEnvironment, EqPresetId, SpatialMode, TransparencyMode } from "./lib/device";
 import BlePairing from "./components/BlePairing";
 import HomePanel from "./components/HomePanel";
@@ -10,7 +10,7 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import { getDeviceSnapshot, onDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
-import type { BleDevice, LinkHealth } from "./lib/ble";
+import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
 import {
   disconnect as bleDisconnect,
   onDisconnected,
@@ -19,12 +19,14 @@ import {
   getConnection,
   getLinkHealth,
   emptyLink,
+  listModelProfiles,
 } from "./lib/ble";
 import {
   fetchBattery,
   queryBattery,
   setListeningState,
   setEqIndex,
+  setEqPreset,
   setCustomEq,
   setGameMode,
   setSpatialMode,
@@ -42,7 +44,7 @@ import {
   onHearingProtection,
   toBatteryData,
 } from "./lib/device";
-import { EQ_BANDS, EQ_LABEL, defaultCustomBands, presetSort } from "./lib/eq";
+import { EQ_BANDS, defaultCustomBands } from "./lib/eq";
 import { getAppInfo } from "./lib/app";
 import {
   applyTheme,
@@ -82,6 +84,9 @@ const App: Component = () => {
   const [adaptiveNoise, setAdaptiveNoise] = createSignal(true);
   const [noiseEnvironment, setNoiseEnvironment] = createSignal<NoiseEnvironment>(102);
   const [noiseLevel, setNoiseLevel] = createSignal(3);
+  const [modelProfiles, setModelProfiles] = createSignal<ModelProfile[]>([]);
+  const [eqWireIndex, setEqWireIndex] = createSignal<number | null>(null);
+  const modelEq = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.eq;
   const [eqActive, setEqActive] = createSignal<EqPresetId>("classic");
   const [eqCustomBands, setEqCustomBands] = createSignal(defaultCustomBands());
   const [eqCustomActive, setEqCustomActive] = createSignal(false);
@@ -113,6 +118,7 @@ const App: Component = () => {
       rightCharging: snapshot?.battery.right?.charging,
       caseCharging: snapshot?.battery.case?.charging,
     });
+    setEqWireIndex(snapshot?.eqIndex ?? null);
     if (!snapshot) {
       setEqPending(false);
       setGamePending(false);
@@ -138,6 +144,10 @@ const App: Component = () => {
     };
     if (snapshot.eq !== null && eqIds[snapshot.eq]) setEqActive(eqIds[snapshot.eq]);
   };
+  createEffect(() => {
+    const preset = modelEq()?.presets.find((preset) => preset.dictSort === eqWireIndex());
+    if (preset) setEqActive(preset.id);
+  });
   const session = createDeviceSession(applySnapshot);
   const refreshSnapshot = async () => {
     const generation = session.capture();
@@ -198,6 +208,7 @@ const App: Component = () => {
     applyTheme(storedTheme);
     setTheme(storedTheme);
 
+    try { setModelProfiles(await listModelProfiles()); } catch { /* unavailable outside Tauri */ }
     try {
       const info = await getAppInfo();
       setAppVersion(info.version);
@@ -359,7 +370,7 @@ const App: Component = () => {
     setEqPending(true);
     setEqError(null);
     try {
-      await setEqIndex(presetSort(preset));
+      await setEqPreset(preset);
       if (!session.isCurrent(generation)) return;
       setEqCustomActive(false);
       await refreshSnapshot();
@@ -396,7 +407,7 @@ const App: Component = () => {
     setEqCustomActive(true);
     const customLabel = label.trim() || t("eq.customize");
     // Official Self-Define uses multi-band frames; desktop best-effort:
-    // reset path BA43 00 then stay on custom UI (curve kept locally).
+    // Reset through the model preset route; keep the local custom draft.
     try {
       await setCustomEq(
         bands.map((gain, index) => ({
@@ -648,6 +659,7 @@ const App: Component = () => {
         <Show when={view() === "eq" && connected()}>
           <section class="section section-scroll">
             <EqPanel
+              presets={(modelEq()?.presets ?? []).map((preset) => ({ ...preset, sub: preset.description }))}
               eqActive={eqActive()}
               pending={eqPending()}
               error={eqError()}
@@ -730,7 +742,7 @@ const App: Component = () => {
                 eqLabel={
                   eqCustomActive()
                     ? t("eq.customize")
-                    : EQ_LABEL[eqActive()] ?? eqActive()
+                    : modelEq()?.presets.find((preset) => preset.id === eqActive())?.label ?? "—"
                 }
                 onAncMode={handleAncMode}
                 onAncStrength={handleAncStrength}

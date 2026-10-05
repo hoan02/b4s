@@ -20,6 +20,7 @@ export interface DeviceSnapshot {
   };
   anc: "off" | "anc" | "transparency" | null;
   eq: "balanced" | "bassBoost" | "voice" | "clear" | "hifiLive" | "pop" | "jazzRock" | "classical" | "acoustic" | "bassReduce" | "trebleReduce" | null;
+  eqIndex: number | null;
   game: boolean | null;
   ldac: boolean | null;
 }

@@ -29,6 +29,7 @@ pub struct DeviceSnapshot {
     pub battery: BatterySnapshot,
     pub anc: Option<AncMode>,
     pub eq: Option<EqPreset>,
+    pub eq_index: Option<u8>,
     pub game: Option<bool>,
     pub ldac: Option<bool>,
 }
@@ -45,6 +46,7 @@ impl DeviceSnapshot {
             battery: BatterySnapshot::default(),
             anc: None,
             eq: None,
+            eq_index: None,
             game: None,
             ldac: None,
         }
@@ -73,6 +75,7 @@ impl DeviceSnapshot {
             }
             DeviceEvent::Anc(value) => self.anc = Some(*value),
             DeviceEvent::Eq(value) => self.eq = Some(*value),
+            DeviceEvent::EqIndex(value) => self.eq_index = Some(*value),
             DeviceEvent::GameMode(value) => self.game = Some(*value),
             DeviceEvent::Ldac(value) => self.ldac = Some(*value),
             _ => return,

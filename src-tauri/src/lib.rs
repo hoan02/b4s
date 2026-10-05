@@ -6,7 +6,7 @@ mod catalog;
 mod device;
 mod protocol;
 
-use protocol::{AncMode, BatteryState, EqBand, EqPreset, ListeningCommand, SpatialMode};
+use protocol::{AncMode, BatteryState, EqBand, ListeningCommand, SpatialMode};
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_updater::UpdaterExt;
@@ -155,8 +155,7 @@ async fn set_anc_mode(
 
 #[tauri::command]
 async fn set_eq_preset(preset: String) -> Result<(), String> {
-    let eq = EqPreset::from_ui(&preset)?;
-    ble::send_eq(eq).await
+    ble::send_eq_id(&preset).await
 }
 
 #[tauri::command]

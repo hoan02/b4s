@@ -81,8 +81,13 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
             }
             let mut sorts = std::collections::HashSet::new();
             for preset in &eq.presets {
-                if preset.curve.len() != eq.bands.len() {
+                if !preset.curve.is_empty() && preset.curve.len() != eq.bands.len() {
                     return Err(format!("EQ curve length mismatch in {}", profile.id));
+                }
+                if preset.filters.len() > 16 || preset.filters.iter().any(|filter|
+                    filter.frequency == 0 || !filter.q_value.is_finite() || filter.q_value <= 0.0 ||
+                    !filter.gain.is_finite() || filter.gain < eq.min_gain || filter.gain > eq.max_gain || filter.filter > 2) {
+                    return Err(format!("invalid EQ filter payload in {}", profile.id));
                 }
                 if !sorts.insert(preset.dict_sort) {
                     return Err(format!("duplicate EQ dictSort in {}", profile.id));
@@ -129,7 +134,7 @@ mod tests {
         let profile = profile_for("bass-bp1-pro").unwrap();
         assert_eq!(profile.protocol_family, "bp1");
         assert_eq!(profile.noise.environments, vec![101, 102, 103, 108]);
-        assert_eq!(profile.eq.unwrap().presets.len(), 12);
+        assert_eq!(profile.eq.unwrap().presets.len(), 7);
         validate().unwrap();
     }
 
@@ -138,7 +143,7 @@ mod tests {
         let profile = profile_for("bass-bp1-pro").unwrap();
         assert!(validate_profiles(&[profile.clone(), profile.clone()]).is_err());
         let mut invalid = profile;
-        invalid.eq.as_mut().unwrap().presets[0].curve.pop();
+        invalid.eq.as_mut().unwrap().presets[0].curve = vec![1.0];
         assert!(validate_profiles(&[invalid]).is_err());
     }
 

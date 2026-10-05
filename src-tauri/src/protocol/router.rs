@@ -87,10 +87,10 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
 
     match (profile.protocol, command) {
         (ProtocolFamily::Bp1Pro, FeatureCommand::SetEq(preset)) => {
-            Ok(Bp1ProAnc::cmd_set_eq(preset))
+            encode_profile_eq(profile, preset.to_byte())
         }
         (ProtocolFamily::Bp1Pro, FeatureCommand::SetEqIndex(index)) => {
-            Ok(encode_command(Command::SetEqIndex(index)))
+            encode_profile_eq(profile, index)
         }
         (ProtocolFamily::Bp1Pro, FeatureCommand::SetGameMode(on)) => {
             Ok(Bp1ProAnc::cmd_set_game_mode(on))
@@ -125,6 +125,15 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
             Err("Custom EQ protocol is not verified for this model".into())
         }
     }
+}
+
+fn encode_profile_eq(profile: &DeviceProfile, index: u8) -> Result<Vec<u8>, String> {
+    let eq = profile.model_id.as_deref().and_then(crate::catalog::profile_for)
+        .and_then(|profile| profile.eq).ok_or("No model EQ schema")?;
+    let preset = eq.presets.iter().find(|preset| preset.dict_sort == index)
+        .ok_or("Preset index is absent from the model schema")?;
+    if preset.filters.is_empty() { return Err("Preset has no source-traced filter payload".into()); }
+    Ok(Bp1ProAnc::cmd_set_eq_filters(index, &preset.filters))
 }
 
 pub fn encode_listening(

@@ -1,15 +1,14 @@
 /**
  * Full EQ screen — presets (like official list) + custom multi-band
- * Presets → BA43 + index. Custom curve stored in UI (apply best-effort).
+ * Preset identities and preview data come from the selected model catalog.
  */
 import { Component, For, Show, createSignal, createEffect } from "solid-js";
 import type { EqPresetId } from "../lib/device";
 import {
   EQ_BANDS,
-  EQ_PRESETS,
+  type EqPresetMeta,
   type CustomEqPreset,
   clampBand,
-  curveForPreset,
   defaultCustomBands,
   loadCustomEqPresets,
   saveCustomEqPresets,
@@ -19,6 +18,7 @@ import { t } from "../lib/i18n";
 import OperationStatus from "./OperationStatus";
 
 interface Props {
+  presets: EqPresetMeta[];
   eqActive: EqPresetId;
   pending?: boolean;
   error?: string | null;
@@ -89,7 +89,7 @@ const EqPanel: Component<Props> = (props) => {
   const previewCurve = () =>
     tab() === "custom"
       ? localBands()
-      : curveForPreset(props.eqActive);
+      : props.presets.find((preset) => preset.id === props.eqActive)?.curve ?? [];
 
   const setBand = (i: number, v: number) => {
     const next = localBands().slice();
@@ -110,6 +110,7 @@ const EqPanel: Component<Props> = (props) => {
       </div>
 
       {/* Live curve preview */}
+      <Show when={previewCurve().length > 0}>
       <div class="eq-preview-card">
         <div class="eq-preview-bars" aria-hidden="true">
           <For each={previewCurve()}>
@@ -135,10 +136,12 @@ const EqPanel: Component<Props> = (props) => {
         <p class="eq-preview-hint">
           {tab() === "custom"
             ? t("eq.customBands")
-            : (t(`eqPreset.${props.eqActive}`) || EQ_PRESETS.find((p) => p.id === props.eqActive)?.label) ??
+            : props.presets.find((p) => p.id === props.eqActive)?.label ??
               t("eq.preset")}
         </p>
       </div>
+
+      </Show>
 
       {/* Tabs: preset | custom */}
       <div class="eq-tabs">
@@ -162,7 +165,7 @@ const EqPanel: Component<Props> = (props) => {
         <p class="more-label">{t("eq.choosePreset")}</p>
         <OperationStatus pending={props.pending} error={props.error} />
         <div class="eq-preset-grid" aria-busy={props.pending}>
-          <For each={EQ_PRESETS}>
+          <For each={props.presets}>
             {(p) => (
               <button
                 type="button"
@@ -186,8 +189,8 @@ const EqPanel: Component<Props> = (props) => {
                     )}
                   </For>
                 </div>
-                          <span class="eq-preset-name">{t(`eqPreset.${p.id}`) || p.label}</span>
-                          <span class="eq-preset-sub">{t(`eqPresetSub.${p.id}`) || p.sub}</span>
+                          <span class="eq-preset-name">{p.label}</span>
+                          <span class="eq-preset-sub">{p.sub}</span>
               </button>
             )}
           </For>

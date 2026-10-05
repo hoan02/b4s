@@ -15,6 +15,7 @@ pub struct StateObservation {
 pub enum ExpectedState {
     Battery,
     Eq(EqPreset),
+    EqIndex(u8),
     Game(bool),
     Ldac(bool),
     Hearing { enabled: bool, level: u8 },
@@ -27,7 +28,8 @@ impl ExpectedState {
         }
         match (self, observation.opcode, &observation.event) {
             (Self::Battery, 0x02, DeviceEvent::Battery(_)) => true,
-            (Self::Eq(expected), 0x42, DeviceEvent::Eq(actual)) => expected == actual,
+            (Self::Eq(expected), 0x30, DeviceEvent::EqIndex(actual)) => expected.to_byte() == *actual,
+            (Self::EqIndex(expected), 0x30, DeviceEvent::EqIndex(actual)) => expected == actual,
             (Self::Game(expected), 0x23, DeviceEvent::GameMode(actual)) => expected == actual,
             (Self::Ldac(expected), 0x74, DeviceEvent::Ldac(actual)) => expected == actual,
             (
@@ -55,8 +57,8 @@ mod tests {
         let session = epoch.token();
         let mut observation = StateObservation {
             session,
-            opcode: 0x42,
-            event: DeviceEvent::Eq(EqPreset::Balanced),
+            opcode: 0x30,
+            event: DeviceEvent::EqIndex(0),
         };
         assert!(ExpectedState::Eq(EqPreset::Balanced).matches(session, &observation));
         observation.opcode = 0x43;

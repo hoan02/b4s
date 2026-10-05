@@ -105,6 +105,7 @@ pub enum EqPreset {
 }
 
 impl EqPreset {
+    #[allow(dead_code)]
     pub fn from_byte(b: u8) -> Option<Self> {
         match b {
             0 => Some(Self::Balanced),
@@ -127,6 +128,7 @@ impl EqPreset {
     }
 
     /// Map UI id / label → preset (Baseus app-style names).
+    #[allow(dead_code)]
     pub fn from_ui(s: &str) -> Result<Self, String> {
         let k = s.to_lowercase().replace([' ', '-', '_'], "");
         Ok(match k.as_str() {
@@ -210,6 +212,7 @@ pub enum DeviceEvent {
     Battery(BatteryState),
     Anc(AncMode),
     Eq(EqPreset),
+    EqIndex(u8),
     GameMode(bool),
     BassBoost(u8),
     Ldac(bool),

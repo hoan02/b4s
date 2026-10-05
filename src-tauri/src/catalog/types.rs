@@ -53,6 +53,8 @@ pub struct EqPresetProfile {
     pub description: String,
     pub dict_sort: u8,
     pub curve: Vec<f32>,
+    #[serde(default)]
+    pub filters: Vec<crate::protocol::EqBand>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

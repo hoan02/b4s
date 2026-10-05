@@ -45,12 +45,11 @@ impl Bp1ProAnc {
                 None => Err(DecodeError::UnknownOpcode(0x34)),
             },
 
-            // Only query state is authoritative; AA43 is a set acknowledgement.
-            0x42 => {
-                let byte = *frame.payload.first().ok_or(DecodeError::PayloadTooShort { opcode: frame.cmd, need: 1, got: 0 })?;
-                let preset = EqPreset::from_byte(byte).ok_or(DecodeError::UnknownOpcode(frame.cmd))?;
-                Ok(DeviceEvent::Eq(preset))
-            }
+            // APK 2.17.0.1: AA30 is dictSort; AA42 is spatial-related state.
+            0x30 => match frame.payload.as_slice() {
+                [index] => Ok(DeviceEvent::EqIndex(*index)),
+                _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
+            },
 
             0x54 => Ok(DeviceEvent::BassBoost(Self::bass_level_from_payload(&frame.payload))),
             0x74 => match frame.payload.as_slice() {
@@ -78,7 +77,7 @@ impl Bp1ProAnc {
             }
 
             // Keepalive / identity / case event — ignore or unknown
-            0x12 | 0x24 | 0x30 | 0x80 => Err(DecodeError::UnknownOpcode(frame.cmd)),
+            0x12 | 0x24 | 0x42 | 0x43 | 0x80 => Err(DecodeError::UnknownOpcode(frame.cmd)),
 
             other => Err(DecodeError::UnknownOpcode(other)),
         }
@@ -162,6 +161,19 @@ impl Bp1ProAnc {
 // ---------------------------------------------------------------------------
 
 impl Bp1ProAnc {
+    /// Source-traced BA31 preset filters, eight bytes per filter, no invented
+    /// ANC byte. Quantization truncates exactly as the Android consumer does.
+    pub fn cmd_set_eq_filters(index: u8, filters: &[EqBand]) -> Vec<u8> {
+        let mut payload = vec![index];
+        for filter in filters {
+            payload.extend_from_slice(&filter.frequency.to_le_bytes());
+            payload.extend_from_slice(&((filter.gain * 10.0 + 120.0) as u16).to_le_bytes());
+            payload.extend_from_slice(&((filter.q_value * 10.0) as u16).to_le_bytes());
+            payload.extend_from_slice(&(filter.filter as u16).to_le_bytes());
+        }
+        Frame::write(0x31, &payload).encode_write()
+    }
+
     pub fn cmd_set_custom_eq(dict_sort: u8, anc: bool, bands: &[EqBand]) -> Vec<u8> {
         let mut payload = vec![dict_sort, if anc { 0x01 } else { 0x00 }];
         for band in bands.iter().take(8) {
@@ -197,6 +209,7 @@ impl Bp1ProAnc {
         crate::protocol::encode_command(Command::SetNoise { mode, parameter })
     }
 
+    #[allow(dead_code)]
     pub fn cmd_set_eq(preset: EqPreset) -> Vec<u8> {
         crate::protocol::encode_command(Command::SetEq(preset))
     }
@@ -281,7 +294,7 @@ mod tests {
     #[test]
     fn empty_invalid_and_ack_only_payloads_never_create_state() {
         for packet in [vec![0xAA, 0x23], vec![0xAA, 0x23, 2],
-            vec![0xAA, 0x42], vec![0xAA, 0x42, 255], vec![0xAA, 0x43, 1],
+            vec![0xAA, 0x30], vec![0xAA, 0x30, 0, 1], vec![0xAA, 0x42, 1], vec![0xAA, 0x43, 1],
             vec![0xAA, 0x74], vec![0xAA, 0x74, 2], vec![0xAA, 0x75, 1],
             vec![0xAA, 0x34, 1]] {
             assert!(dec(&packet).is_err(), "unexpected state from {packet:02X?}");
@@ -291,8 +304,8 @@ mod tests {
     #[test]
     fn eq_bass() {
         assert_eq!(
-            dec(&[0xAA, 0x42, 0x01]).unwrap(),
-            DeviceEvent::Eq(EqPreset::BassBoost)
+            dec(&[0xAA, 0x30, 0x01]).unwrap(),
+            DeviceEvent::EqIndex(1)
         );
     }
 
@@ -424,4 +437,22 @@ mod tests {
     fn init_state_is_plain_utf8_payload() {
         assert_eq!(init_state_payload(), b"#InitState:");
     }
+    #[test]
+    fn source_preset_filters_use_little_endian_u16_fields() {
+        let filters = [EqBand { frequency: 190, gain: -5.8, q_value: 0.64, filter: 1 }];
+        assert_eq!(Bp1ProAnc::cmd_set_eq_filters(0, &filters),
+            vec![0xBA, 0x31, 0, 190, 0, 62, 0, 6, 0, 1, 0]);
+        let filters = [EqBand { frequency: 1000, gain: 0.0, q_value: 32.0, filter: 2 }];
+        assert_eq!(Bp1ProAnc::cmd_set_eq_filters(10, &filters),
+            vec![0xBA, 0x31, 10, 0xE8, 3, 120, 0, 0x40, 1, 2, 0]);
+    }
+
+    #[test]
+    fn eq_readback_preserves_wire_index_and_ignores_spatial_and_ack() {
+        assert_eq!(dec(&[0xAA, 0x30, 101]).unwrap(), DeviceEvent::EqIndex(101));
+        assert!(dec(&[0xAA, 0x42, 1]).is_err());
+        assert!(dec(&[0xAA, 0x43, 1]).is_err());
+        assert!(dec(&[0xAA, 0x30, 1, 2]).is_err());
+    }
+
 }
