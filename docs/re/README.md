@@ -35,3 +35,12 @@ remain recognition-only until their control protocol is configured and tested.
 ## Local artifacts (gitignored)
 
 `docs/re/apk-*`, `tools/jadx`, `*.xapk` — large / copyrighted; regenerate as needed.
+
+
+## Reproducible input and error inventory
+
+```powershell
+python scripts/inventory-android-source.py docs/re/apk-2.17.0.1
+```
+
+The report remains in ignored `.tmp/android-source-inventory.json`. It records SHA256/size of APK, XAPK, DEX and native inputs, hashes native APK entries without extracting them, and locates JADX error/undecompiled-method markers without copying source. Output is restricted to `.tmp`; do not commit the report or original dumps. Unpack XAPK splits before scanning. Marker counts are not the original JADX run's error count; retain original logs/tool versions and package/version provenance separately. Use the locations to triage headphone call paths, then verify failed methods against DEX/smali or another engine.
