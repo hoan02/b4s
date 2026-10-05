@@ -21,6 +21,8 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
 /// Set once from lib.rs setup for event emit helpers.
+static COMMAND_EXECUTOR: Lazy<crate::device::executor::CommandExecutor> = Lazy::new(Default::default);
+
 static CONNECT_ATTEMPT: Mutex<()> = Mutex::const_new(());
 
 static APP: OnceCell<AppHandle> = OnceCell::new();
@@ -1515,7 +1517,7 @@ where
     let result = tokio::select! {
         biased;
         _ = lease.cancelled() => Err("Device session was cancelled".into()),
-        result = f(p) => result,
+        result = COMMAND_EXECUTOR.run(f(p)) => result.map_err(|error| error.to_string()),
     };
     ensure_session(token).await?;
     result
@@ -1540,8 +1542,8 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
     log::info!("TX ANC {:?} → {:02X?}", mode, data);
     {
         let mut state = BLE.lock().await;
-        // Remember user intent so AA34 "ok" acks map back correctly
-        state.last_anc = Some(mode);
+        // Real confirmed state is changed only by a device state report.
+        if state.mock { state.last_anc = Some(mode); }
         if state.mock {
             drop(state);
             if let Some(app) = app_handle() {
@@ -1650,7 +1652,6 @@ pub async fn send_custom_eq(bands: Vec<protocol::EqBand>, dict_sort: u8, anc: bo
 }
 
 pub async fn send_bass_boost(level: u8) -> Result<(), String> {
-    let level = level.min(3);
     let data = encode_connected_feature(protocol::FeatureCommand::SetBassBoost(level)).await?;
     with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
 }
@@ -1681,7 +1682,6 @@ pub async fn send_ldac(enabled: bool) -> Result<(), String> {
 }
 
 pub async fn send_hearing_protection(enabled: bool, level: u8) -> Result<(), String> {
-    let level = level.min(3);
     let data = encode_connected_feature(protocol::FeatureCommand::SetHearingProtection { enabled, level }).await?;
     let state = BLE.lock().await;
     if state.mock {

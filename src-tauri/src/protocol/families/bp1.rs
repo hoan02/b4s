@@ -16,7 +16,7 @@ impl Bp1ProAnc {
     /// Decode a notification frame into a high-level event.
     pub fn decode_frame(
         frame: &Frame,
-        last_anc: Option<AncMode>,
+        _last_anc: Option<AncMode>,
     ) -> Result<DeviceEvent, DecodeError> {
         match frame.cmd {
             // Battery L/R: AA 02 [L%] 00 [R%] 01
@@ -24,7 +24,11 @@ impl Bp1ProAnc {
 
             // Game mode state: AA 23 [00|01]
             0x23 => {
-                let on = frame.payload.first().copied().unwrap_or(0) != 0;
+                let on = match frame.payload.as_slice() {
+                    [0] => false,
+                    [1] => true,
+                    _ => return Err(DecodeError::UnknownOpcode(frame.cmd)),
+                };
                 Ok(DeviceEvent::GameMode(on))
             }
 
@@ -36,20 +40,24 @@ impl Bp1ProAnc {
 
             // ANC set/query reply: AA 34 [mode] [level?]
             // Wire modes match BA34: 00=Off, 01=ANC, 02=Transparency (docs + encode_command)
-            0x34 => match Self::resolve_anc_ack(&frame.payload, last_anc) {
+            0x34 => match Self::resolve_anc_ack(&frame.payload, None) {
                 Some(mode) => Ok(DeviceEvent::Anc(mode)),
                 None => Err(DecodeError::UnknownOpcode(0x34)),
             },
 
-            // EQ query response / set ack
-            0x42 | 0x43 => {
-                let byte = frame.payload.first().copied().unwrap_or(0);
-                let preset = EqPreset::from_byte(byte).unwrap_or(EqPreset::Balanced);
+            // Only query state is authoritative; AA43 is a set acknowledgement.
+            0x42 => {
+                let byte = *frame.payload.first().ok_or(DecodeError::PayloadTooShort { opcode: frame.cmd, need: 1, got: 0 })?;
+                let preset = EqPreset::from_byte(byte).ok_or(DecodeError::UnknownOpcode(frame.cmd))?;
                 Ok(DeviceEvent::Eq(preset))
             }
 
             0x54 => Ok(DeviceEvent::BassBoost(Self::bass_level_from_payload(&frame.payload))),
-            0x74 | 0x75 => Ok(DeviceEvent::Ldac(frame.payload.first().copied().unwrap_or(1) == 0)),
+            0x74 => match frame.payload.as_slice() {
+                [0] => Ok(DeviceEvent::Ldac(true)),
+                [1] => Ok(DeviceEvent::Ldac(false)),
+                _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
+            },
             // App 2.17.0.1 HearingProtectionPopWindow.z consumes AA93 +
             // enabled + level. AA94 01 is only a write-success acknowledgement.
             0x93 | 0x94 => {
@@ -80,26 +88,15 @@ impl Bp1ProAnc {
     ///
     /// Official write: `BA 34 <mode> <level>` with mode `00|01|02`.
     /// Many firmwares echo the same; some only send a 1-byte "ok" (`01`).
-    /// Never default to ANC when unsure — that made Normal/Ambient snap back to Giảm ồn.
-    pub fn resolve_anc_ack(payload: &[u8], last_commanded: Option<AncMode>) -> Option<AncMode> {
-        let b0 = payload.first().copied()?;
-        match b0 {
-            // Explicit mode byte (matches AncMode::to_byte)
-            0x00 => Some(AncMode::Off),
-            0x02 => Some(AncMode::Transparency),
-            0x01 => {
-                // AA34 01 <level>: real ANC report (level often 0x10..=0xFF)
-                // AA34 01 alone: generic success — keep last user command
-                if payload.len() >= 2 {
-                    let lvl = payload[1];
-                    if lvl >= 0x10 || lvl == 0x00 {
-                        return Some(AncMode::Anc);
-                    }
-                }
-                last_commanded
-            }
-            // Strength-only or unknown — trust last commanded mode only
-            _ => last_commanded,
+    /// Generic success is not state, even when the desired mode is known.
+    pub fn resolve_anc_ack(payload: &[u8], _last_commanded: Option<AncMode>) -> Option<AncMode> {
+        // A one-byte success ACK cannot prove the requested mode was applied.
+        if payload.len() < 2 { return None; }
+        match payload[0] {
+            0 => Some(AncMode::Off),
+            1 => Some(AncMode::Anc),
+            2 => Some(AncMode::Transparency),
+            _ => None,
         }
     }
 
@@ -353,9 +350,19 @@ mod tests {
     }
 
     #[test]
+    fn empty_invalid_and_ack_only_payloads_never_create_state() {
+        for packet in [vec![0xAA, 0x23], vec![0xAA, 0x23, 2],
+            vec![0xAA, 0x42], vec![0xAA, 0x42, 255], vec![0xAA, 0x43, 1],
+            vec![0xAA, 0x74], vec![0xAA, 0x74, 2], vec![0xAA, 0x75, 1],
+            vec![0xAA, 0x34, 1]] {
+            assert!(dec(&packet).is_err(), "unexpected state from {packet:02X?}");
+        }
+    }
+
+    #[test]
     fn eq_bass() {
         assert_eq!(
-            dec(&[0xAA, 0x43, 0x01]).unwrap(),
+            dec(&[0xAA, 0x42, 0x01]).unwrap(),
             DeviceEvent::Eq(EqPreset::BassBoost)
         );
     }
@@ -385,15 +392,15 @@ mod tests {
     }
 
     #[test]
-    fn anc_ack_generic_ok_keeps_last_not_default_anc() {
-        // AA34 01 alone = generic ok — must not force ANC when user chose Off
+    fn anc_ack_generic_ok_never_becomes_confirmed_state() {
+        // AA34 01 alone is generic success, not evidence of any mode.
         assert_eq!(
             Bp1ProAnc::resolve_anc_ack(&[0x01], Some(AncMode::Off)),
-            Some(AncMode::Off)
+            None
         );
         assert_eq!(
             Bp1ProAnc::resolve_anc_ack(&[0x01], Some(AncMode::Transparency)),
-            Some(AncMode::Transparency)
+            None
         );
         // No last command + vague ack → no event (was defaulting to Anc)
         assert_eq!(Bp1ProAnc::resolve_anc_ack(&[0x01], None), None);

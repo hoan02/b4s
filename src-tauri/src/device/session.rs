@@ -12,7 +12,10 @@ pub struct SessionEpoch {
 impl Default for SessionEpoch {
     fn default() -> Self {
         let (changes, _) = tokio::sync::watch::channel(0);
-        Self { generation: 0, changes }
+        Self {
+            generation: 0,
+            changes,
+        }
     }
 }
 
@@ -40,7 +43,10 @@ impl SessionEpoch {
     }
 
     pub fn invalidate(&mut self) {
-        self.generation = self.generation.checked_add(1).expect("session epoch exhausted");
+        self.generation = self
+            .generation
+            .checked_add(1)
+            .expect("session epoch exhausted");
         self.changes.send_replace(self.generation);
     }
 
@@ -49,7 +55,10 @@ impl SessionEpoch {
     }
 
     pub fn lease(&self, token: SessionToken) -> SessionLease {
-        SessionLease { token, changes: self.changes.subscribe() }
+        SessionLease {
+            token,
+            changes: self.changes.subscribe(),
+        }
     }
 }
 
@@ -63,9 +72,13 @@ mod tests {
         let token = epoch.token();
         let mut lease = epoch.lease(token);
         epoch.invalidate();
-        tokio::time::timeout(std::time::Duration::from_millis(100), lease.cancelled()).await.unwrap();
+        tokio::time::timeout(std::time::Duration::from_millis(100), lease.cancelled())
+            .await
+            .unwrap();
         let mut late = epoch.lease(token);
-        tokio::time::timeout(std::time::Duration::from_millis(100), late.cancelled()).await.unwrap();
+        tokio::time::timeout(std::time::Duration::from_millis(100), late.cancelled())
+            .await
+            .unwrap();
     }
 
     #[test]

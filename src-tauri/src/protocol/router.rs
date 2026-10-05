@@ -51,6 +51,18 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
     if profile.protocol == ProtocolFamily::Unknown {
         return Err("No protocol is verified for this model".into());
     }
+    // Preserve existing wire limits by rejecting invalid intent rather than
+    // silently clamping it into another command. Profile-scoped constraints
+    // will replace these legacy bounds during the profile-v2 migration.
+    match &command {
+        FeatureCommand::SetBassBoost(level) if *level > 3 => {
+            return Err("Bass level is outside the current protocol range".into());
+        }
+        FeatureCommand::SetHearingProtection { level, .. } if *level > 3 => {
+            return Err("Hearing protection level is outside the current protocol range".into());
+        }
+        _ => {}
+    }
 
     match (profile.protocol, command) {
         (ProtocolFamily::Bp1Pro, FeatureCommand::SetEq(preset)) => {
