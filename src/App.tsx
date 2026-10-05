@@ -45,7 +45,6 @@ import { getAppInfo } from "./lib/app";
 import {
   applyTheme,
   getStoredTheme,
-  toggleTheme,
   type ThemeMode,
 } from "./lib/theme";
 import { makeToast, type ToastItem } from "./lib/toast";
@@ -62,10 +61,13 @@ type PendingEqAction =
 
 const App: Component = () => {
   const [view, setView] = createSignal<View>("home");
+  const [settingsSubpage, setSettingsSubpage] = createSignal<"language" | "appearance" | null>(null);
   const [theme, setTheme] = createSignal<ThemeMode>("dark");
   const [toasts, setToasts] = createSignal<ToastItem[]>([]);
   const [appVersion, setAppVersion] = createSignal("…");
   const [connected, setConnected] = createSignal(false);
+  const [connectionReady, setConnectionReady] = createSignal(false);
+  const [autoReconnectAvailable, setAutoReconnectAvailable] = createSignal(true);
   const [device, setDevice] = createSignal<BleDevice | null>(null);
   const [battery, setBattery] = createSignal<BatteryData>({
     left: 0,
@@ -154,6 +156,7 @@ const App: Component = () => {
       const state = await getConnection();
       if (state.link) applyLink(state.link);
       if (state.connected && state.device) {
+        setAutoReconnectAvailable(false);
         setDevice(state.device);
         setConnected(true);
         startLinkPoll();
@@ -221,6 +224,7 @@ const App: Component = () => {
     } catch (e) {
       console.warn("[App] events", e);
     }
+    setConnectionReady(true);
   });
 
   onCleanup(() => {
@@ -506,6 +510,7 @@ const App: Component = () => {
   };
 
   const handleDisconnect = async () => {
+    setAutoReconnectAvailable(false);
     try {
       await bleDisconnect();
     } catch (e) {
@@ -520,10 +525,9 @@ const App: Component = () => {
     stopLinkPoll();
   };
 
-  const handleTheme = () => {
-    const next = toggleTheme(theme());
-    setTheme(next);
-    notify(next === "dark" ? t("theme.dark") : t("theme.light"), "info");
+  const handleTheme = (mode: ThemeMode) => {
+    applyTheme(mode);
+    setTheme(mode);
   };
 
   return (
@@ -539,17 +543,19 @@ const App: Component = () => {
                 type="button"
                 class="screen-back"
                 aria-label={t("nav.back")}
-                onClick={() => setView("home")}
+                onClick={() => settingsSubpage() ? setSettingsSubpage(null) : setView("home")}
               >
                 <IconBack size={20} />
               </button>
-              <span class="screen-title">{t("nav.settings")}</span>
+              <span class="screen-title">{settingsSubpage() === "language" ? t("settings.language") : settingsSubpage() === "appearance" ? t("settings.interface") : t("nav.settings")}</span>
               <div class="screen-nav-spacer" />
             </div>
             <Settings
               theme={theme()}
-              onToggleTheme={handleTheme}
+              onSelectTheme={handleTheme}
               onNotify={notify}
+              activeSubpage={settingsSubpage()}
+              onNavigate={setSettingsSubpage}
             />
           </section>
         </Show>
@@ -592,11 +598,15 @@ const App: Component = () => {
             when={connected()}
             fallback={
               <section class="section section-pair">
-                <BlePairing
-                  onConnected={handleConnected}
-                  onOpenSettings={() => setView("settings")}
-                  appVersion={appVersion()}
-                />
+                <Show when={connectionReady()}>
+                  <BlePairing
+                    onConnected={handleConnected}
+                    onOpenSettings={() => setView("settings")}
+                    appVersion={appVersion()}
+                    autoReconnect={autoReconnectAvailable()}
+                    onAutoReconnectAttempt={() => setAutoReconnectAvailable(false)}
+                  />
+                </Show>
               </section>
             }
           >

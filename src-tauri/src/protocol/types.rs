@@ -186,6 +186,8 @@ pub enum Command {
     QueryEq,
     /// Official app: BA02 → battery report AA02
     QueryBattery,
+    /// Official app: BA27 separately requests charging-case battery (AA27).
+    QueryCaseBattery,
     SetGameMode(bool),
     /// Spatial on → BA43 + mode; off → BA43 00 (common mode)
     SetSpatial(SpatialMode),

@@ -4,6 +4,7 @@
  */
 
 import { invoke, listen, type UnlistenFn } from "./tauri";
+import { rememberDevice } from "./reconnect";
 
 // ---------------------------------------------------------------------------
 // Types (mirror Rust serde)
@@ -166,7 +167,9 @@ export async function stopScan(): Promise<void> {
 }
 
 export async function connect(deviceId: string, mock = false): Promise<BleDevice> {
-  return invoke<BleDevice>("ble_connect", { deviceId, mock });
+  const device = await invoke<BleDevice>("ble_connect", { deviceId, mock });
+  if (!mock) rememberDevice(device);
+  return device;
 }
 
 export async function disconnect(): Promise<void> {
