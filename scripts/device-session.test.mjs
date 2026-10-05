@@ -68,3 +68,19 @@ test("backend session rollover invalidates pending work even without connection 
   session.accept(snapshot("A", 2, 1));
   assert.equal(session.isCurrent(operation), false);
 });
+
+
+const selectionSource = readFileSync(new URL("../src/features/equalizer/selection.ts", import.meta.url), "utf8");
+const selectionCompiled = ts.transpileModule(selectionSource, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+}).outputText;
+const { resolveEqSelection } = await import(`data:text/javascript;base64,${Buffer.from(selectionCompiled).toString("base64")}`);
+
+test("EQ readback resolves custom, model presets and unknown without inventing Classic", () => {
+  const presets = [{ id: "classic", dictSort: 0 }, { id: "acoustic", dictSort: 10 }];
+  assert.deepEqual(resolveEqSelection(null, presets, true), { kind: "unknown", wireIndex: null });
+  assert.deepEqual(resolveEqSelection(101, presets, true), { kind: "custom", wireIndex: 101 });
+  assert.deepEqual(resolveEqSelection(101, presets, false), { kind: "unknown", wireIndex: 101 });
+  assert.deepEqual(resolveEqSelection(10, presets, true), { kind: "preset", wireIndex: 10, id: "acoustic" });
+  assert.deepEqual(resolveEqSelection(11, presets, true), { kind: "unknown", wireIndex: 11 });
+});

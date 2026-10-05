@@ -256,6 +256,7 @@ const EqPanel: Component<Props> = (props) => {
             <button
               type="button"
               class="eq-btn ghost"
+              disabled={props.pending}
               onClick={() => {
                 props.onResetCustom();
               }}
@@ -265,6 +266,7 @@ const EqPanel: Component<Props> = (props) => {
             <button
               type="button"
               class="eq-btn primary"
+              disabled={props.pending}
               onClick={() => props.onApplyCustom(localBands(), customName().trim() || t("eq.customize"))}
             >
               {t("eq.apply")}

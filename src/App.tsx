@@ -8,6 +8,7 @@ import Settings from "./components/Settings";
 import ToastHost from "./components/ToastHost";
 import ConfirmDialog from "./components/ConfirmDialog";
 import { getDeviceSnapshot, onDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot";
+import { resolveEqSelection } from "./features/equalizer/selection";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
@@ -145,8 +146,11 @@ const App: Component = () => {
     if (snapshot.eq !== null && eqIds[snapshot.eq]) setEqActive(eqIds[snapshot.eq]);
   };
   createEffect(() => {
-    const preset = modelEq()?.presets.find((preset) => preset.dictSort === eqWireIndex());
-    if (preset) setEqActive(preset.id);
+    if (link().mock) return;
+    const selection = resolveEqSelection(eqWireIndex(), modelEq()?.presets ?? [],
+      device()?.deviceProfile?.capabilities.customEq ?? false);
+    setEqCustomActive(selection.kind === "custom");
+    setEqActive(selection.kind === "preset" ? selection.id : "");
   });
   const session = createDeviceSession(applySnapshot);
   const refreshSnapshot = async () => {
@@ -437,14 +441,23 @@ const App: Component = () => {
   };
 
   const handleResetCustomEq = async () => {
-    if (!requestEqAction({ kind: "resetCustom" })) return;
-    setEqCustomBands(defaultCustomBands());
-    setEqCustomActive(false);
+    if (eqPending() || !requestEqAction({ kind: "resetCustom" })) return;
+    const generation = session.capture();
+    setEqPending(true);
+    setEqError(null);
     try {
       await setEqIndex(0);
+      if (!session.isCurrent(generation)) return;
+      setEqCustomBands(defaultCustomBands());
+      setEqCustomActive(false);
+      await refreshSnapshot();
       notify(t("toast.resetEq"), "info");
     } catch (e) {
+      if (!session.isCurrent(generation)) return;
+      setEqError(formatError(e));
       notify(formatError(e), "error");
+    } finally {
+      if (session.isCurrent(generation)) setEqPending(false);
     }
   };
 
