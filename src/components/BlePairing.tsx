@@ -8,7 +8,9 @@ import {
   onConnecting,
   rssiToBars,
   checkAdapter,
+  getScanStatus,
 } from "../lib/ble";
+import { findRememberedDevice, readRememberedDevice } from "../lib/reconnect";
 import { resolveDeviceThumb } from "../lib/deviceImages";
 import { formatError, t } from "../lib/i18n";
 
@@ -16,6 +18,8 @@ interface Props {
   onConnected: (device: BleDevice) => void;
   onOpenSettings?: () => void;
   appVersion?: string;
+  autoReconnect: boolean;
+  onAutoReconnectAttempt: () => void;
 }
 
 const BlePairing: Component<Props> = (props) => {
@@ -25,6 +29,10 @@ const BlePairing: Component<Props> = (props) => {
   const [error, setError] = createSignal<string | null>(null);
   const [adapterOk, setAdapterOk] = createSignal<boolean | null>(null);
   const [useMock, setUseMock] = createSignal(false);
+  const savedDevice = props.autoReconnect ? readRememberedDevice() : null;
+  const [autoSearching, setAutoSearching] = createSignal(!!savedDevice);
+  const reconnectAbort = new AbortController();
+  let reconnectTask: Promise<void> | undefined;
 
   let unsubs: Array<() => void> = [];
   let checkingAdapter = false;
@@ -34,7 +42,7 @@ const BlePairing: Component<Props> = (props) => {
   let handleVisibility: (() => void) | undefined;
 
   const refreshAdapter = async () => {
-    if (useMock() || checkingAdapter) return;
+    if (useMock() || checkingAdapter || scanning() || autoSearching() || connectingId()) return;
     checkingAdapter = true;
     try {
       const ok = await checkAdapter();
@@ -53,6 +61,7 @@ const BlePairing: Component<Props> = (props) => {
   };
 
   onMount(() => {
+    props.onAutoReconnectAttempt();
     handleFocus = () => { void refreshAdapter(); };
     handleVisibility = () => {
       if (document.visibilityState === "visible") void refreshAdapter();
@@ -69,8 +78,16 @@ const BlePairing: Component<Props> = (props) => {
         if (status.error) setError(status.error);
       });
       if (disposed) scanUnsub();
-      else unsubs.push(scanUnsub);
-    })();
+      else {
+        unsubs.push(scanUnsub);
+        if (savedDevice) reconnectTask = runAutomaticReconnect();
+      }
+    })().catch((e) => {
+      if (!disposed) {
+        setAutoSearching(false);
+        setError(formatError(e));
+      }
+    });
 
     void (async () => {
       const connectingUnsub = await onConnecting((id) => setConnectingId(id));
@@ -81,6 +98,7 @@ const BlePairing: Component<Props> = (props) => {
 
   onCleanup(() => {
     disposed = true;
+    reconnectAbort.abort();
     if (handleFocus) window.removeEventListener("focus", handleFocus);
     if (handleVisibility) {
       document.removeEventListener("visibilitychange", handleVisibility);
@@ -90,7 +108,32 @@ const BlePairing: Component<Props> = (props) => {
     stopScan().catch(() => {});
   });
 
+  const runAutomaticReconnect = async () => {
+    if (!savedDevice) return;
+    try {
+      const candidate = await findRememberedDevice(savedDevice, {
+        checkAdapter, startScan, stopScan, getScanStatus, onScanStatus,
+      }, reconnectAbort.signal);
+      if (!disposed && !reconnectAbort.signal.aborted && candidate) {
+        setAutoSearching(false);
+        await handleConnect(candidate);
+      }
+    } catch (e) {
+      if (!disposed && !reconnectAbort.signal.aborted) setError(formatError(e));
+    } finally {
+      if (!disposed) setAutoSearching(false);
+    }
+  };
+
+  const cancelAutoReconnect = async () => {
+    reconnectAbort.abort();
+    await reconnectTask;
+    setAutoSearching(false);
+  };
+
   const handleScan = async () => {
+    if (connectingId()) return;
+    if (autoSearching()) await cancelAutoReconnect();
     setError(null);
     setDevices([]);
     if (!useMock()) {
@@ -109,6 +152,8 @@ const BlePairing: Component<Props> = (props) => {
   };
 
   const enableDemo = async () => {
+    if (connectingId()) return;
+    if (autoSearching()) await cancelAutoReconnect();
     setUseMock(true);
     setError(null);
     setDevices([]);
@@ -121,6 +166,8 @@ const BlePairing: Component<Props> = (props) => {
 
   const handleConnect = async (device: BleDevice) => {
     if (connectingId()) return;
+    if (autoSearching()) await cancelAutoReconnect();
+    if (disposed || connectingId()) return;
     setError(null);
     setConnectingId(device.id);
     try {
@@ -168,7 +215,9 @@ const BlePairing: Component<Props> = (props) => {
                 ? t("pair.bluetoothOff")
                 : useMock()
                   ? t("pair.demoSub")
-                  : t("pair.nearby")}
+                  : autoSearching()
+                    ? t("pair.reconnecting", { name: savedDevice?.name })
+                    : t("pair.nearby")}
             </p>
           </div>
 
@@ -179,14 +228,15 @@ const BlePairing: Component<Props> = (props) => {
                 <button
                   class="ble-btn secondary"
                   type="button"
-                  onClick={() => stopScan()}
+                  disabled={!!connectingId()}
+                  onClick={() => autoSearching() ? cancelAutoReconnect() : stopScan()}
                 >
                   <span class="spinner" />
                   {t("pair.stop")}
                 </button>
               }
             >
-              <button class="ble-btn primary" type="button" onClick={handleScan}>
+              <button class="ble-btn primary" type="button" disabled={!!connectingId() || autoSearching()} onClick={handleScan}>
                 {t("pair.scan")}
               </button>
             </Show>

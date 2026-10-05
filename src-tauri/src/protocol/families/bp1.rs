@@ -335,6 +335,19 @@ mod tests {
     }
 
     #[test]
+    fn case_report_can_contain_only_the_percentage() {
+        let ev = dec(&[0xAA, 0x27, 0x64]).unwrap();
+        match ev {
+            DeviceEvent::Battery(b) => {
+                assert_eq!(b.case, 100);
+                assert!(!b.case_charging);
+                assert_eq!((b.left, b.right), (0, 0));
+            }
+            _ => panic!("expected case battery"),
+        }
+    }
+
+    #[test]
     fn game_mode_on() {
         assert_eq!(dec(&[0xAA, 0x23, 0x01]).unwrap(), DeviceEvent::GameMode(true));
     }

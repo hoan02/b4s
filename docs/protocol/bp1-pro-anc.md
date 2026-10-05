@@ -41,6 +41,7 @@ Ultra / N0 models: logical BA command wrapped as `789C | len | … | CRC` (see `
 | Transparency | `BA 34 02 FF` |
 | EQ / spatial payload | `BA 43 <byte>` |
 | EQ query | `BA 42` |
+| Case battery query | `BA 27` |
 | Game ON/OFF | `BA 24 01` / `BA 24 00` |
 | Game query | `BA 23` |
 | Find both buds | `BA 10 02 01` |
@@ -58,6 +59,13 @@ Ultra / N0 models: logical BA command wrapped as `789C | len | … | CRC` (see `
 | Identity | `AA 12 …` |
 
 ## Implementation (B4S)
+
+Battery polling retains the canonical wrapped `BA02` query and adds a separate
+`BA27` query for the BP1 protocol family. The case query uses the connection's
+normal framing: bare for BP1 Pro, `789C` wrapped when required by the model.
+This query is present in the official app 2.14.1 (`EarFunctionShowPresenter.d`);
+the response is `AA27` with the percentage as its first payload byte. The added
+query has protocol tests but still needs confirmation on physical hardware.
 
 - Rust: `src-tauri/src/protocol/`  
 - BLE: `src-tauri/src/ble.rs`  

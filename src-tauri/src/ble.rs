@@ -138,6 +138,7 @@ struct BleInner {
     peripherals: HashMap<String, Peripheral>,
     connected_id: Option<String>,
     scanning: bool,
+    scan_generation: u64,
     devices: HashMap<String, BleDevice>,
     /// Live battery merged from 0x02 + 0x27 notifies
     battery: BatteryState,
@@ -167,6 +168,7 @@ impl BleInner {
             peripherals: HashMap::new(),
             connected_id: None,
             scanning: false,
+            scan_generation: 0,
             devices: HashMap::new(),
             battery: BatteryState::default(),
             last_anc: None,
@@ -325,8 +327,10 @@ pub async fn is_adapter_available() -> bool {
     drop(state);
     // Read the platform radio state. An adapter can exist while Bluetooth is
     // powered off, so probing scan alone is not a reliable power-state check.
-    if matches!(adapter.adapter_state().await, Ok(CentralState::PoweredOff)) {
-        return false;
+    match adapter.adapter_state().await {
+        Ok(CentralState::PoweredOn) => return true,
+        Ok(CentralState::PoweredOff) => return false,
+        _ => {}
     }
 
     // Probe: start + stop scan for unknown backend states.
@@ -372,6 +376,8 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     state.devices.retain(|id, _| Some(id.clone()) == connected);
     state.peripherals.retain(|id, _| Some(id.clone()) == connected);
     state.scanning = true;
+    state.scan_generation = state.scan_generation.wrapping_add(1);
+    let scan_generation = state.scan_generation;
     state.mock = false;
     drop(state);
 
@@ -391,7 +397,7 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     let app_t = app.clone();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(Duration::from_secs(15)).await;
-        let _ = stop_scan(app_t).await;
+        let _ = stop_scan_session(app_t, Some(scan_generation)).await;
     });
     Ok(())
 }
@@ -555,8 +561,13 @@ async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, id: &Periph
 }
 
 pub async fn stop_scan(app: AppHandle) -> Result<(), String> {
+    stop_scan_session(app, None).await
+}
+
+// A previous scan's deadline must not stop a later manual or automatic scan.
+async fn stop_scan_session(app: AppHandle, generation: Option<u64>) -> Result<(), String> {
     let mut state = BLE.lock().await;
-    if !state.scanning {
+    if !state.scanning || generation.is_some_and(|value| value != state.scan_generation) {
         return Ok(());
     }
     if let Some(a) = &state.adapter {
@@ -915,7 +926,7 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     }
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    // Post-connect queries — battery first (BA02 bare + wrapped)
+    // Post-connect battery queries keep the canonical BA02 frame.
     let startup_plan = device_preview
         .as_ref()
         .map(|device| {
@@ -1722,13 +1733,28 @@ pub async fn disconnect(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Poll BP1 Ultra battery with the canonical APK-style frame.
+/// Request earbud battery and, for the BP1 family, the independent case report.
 async fn send_battery_queries(peripheral: &Peripheral) -> Result<(), String> {
-    write_raw(peripheral, &protocol::battery_query_frame()).await
+    write_raw(peripheral, &protocol::battery_query_frame()).await?;
+    let id = id_to_string(&peripheral.id());
+    let query_case = {
+        let state = BLE.lock().await;
+        state.devices.get(&id).is_some_and(|device| {
+            device.device_profile.protocol == protocol::ProtocolFamily::Bp1Pro
+        })
+    };
+    if query_case {
+        tokio::time::sleep(Duration::from_millis(80)).await;
+        // EarFunctionShowPresenter.d uses BA27. Use this model's normal framing;
+        // failure to read the case must not discard a valid earbud report.
+        if let Err(error) = write_command(peripheral, protocol::Command::QueryCaseBattery).await {
+            log::debug!("Case battery query unavailable: {error}");
+        }
+    }
+    Ok(())
 }
 
-/// Explicit battery refresh. Sends the canonical wrapped BA02 and waits for
-/// AA02/AA27 notifications from the BP1 Ultra.
+/// Explicit refresh requests the earbud/case reports and waits for notifications.
 pub async fn query_battery() -> Result<BatteryState, String> {
     // Demo mode: return seeded mock values
     {
@@ -1940,6 +1966,7 @@ async fn emit_connection_state(app: &AppHandle) {
 pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
     let mut state = BLE.lock().await;
     state.scanning = true;
+    state.scan_generation = state.scan_generation.wrapping_add(1);
     state.mock = true;
     state.devices.clear();
     drop(state);

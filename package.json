@@ -4,6 +4,7 @@
   "description": "B4S — unofficial desktop companion for multi-model earbuds listening control (BLE)",
   "type": "module",
   "scripts": {
+    "test:reconnect": "node --test scripts/reconnect.test.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "check:i18n": "node scripts/check-locales.mjs",
