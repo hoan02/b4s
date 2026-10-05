@@ -19,6 +19,8 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
 /// Set once from lib.rs setup for event emit helpers.
+static CONNECT_ATTEMPT: Mutex<()> = Mutex::const_new(());
+
 static APP: OnceCell<AppHandle> = OnceCell::new();
 
 pub fn set_app_handle(app: AppHandle) {
@@ -139,6 +141,7 @@ struct BleInner {
     connected_id: Option<String>,
     scanning: bool,
     scan_generation: u64,
+    session: crate::device::session::SessionEpoch,
     devices: HashMap<String, BleDevice>,
     /// Live battery merged from 0x02 + 0x27 notifies
     battery: BatteryState,
@@ -169,6 +172,7 @@ impl BleInner {
             connected_id: None,
             scanning: false,
             scan_generation: 0,
+            session: Default::default(),
             devices: HashMap::new(),
             battery: BatteryState::default(),
             last_anc: None,
@@ -189,6 +193,7 @@ impl BleInner {
     }
 
     fn reset_link(&mut self) {
+        self.session.invalidate();
         self.has_write_uuid = false;
         self.has_notify_uuid = false;
         self.handshake_ok = false;
@@ -689,6 +694,7 @@ fn has_control_chars(peripheral: &Peripheral) -> (bool, bool) {
 }
 
 pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, String> {
+    let _attempt = CONNECT_ATTEMPT.try_lock().map_err(|_| "Another connection attempt is active")?;
     // Public product metadata supplies recognition, not a command transport.
     // Reject before disconnecting a working device or probing an unknown GATT.
     {
@@ -741,6 +747,7 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         let mut state = BLE.lock().await;
         state.mock = false;
         state.reset_link();
+        let attempt_token = state.session.token();
         drop(state);
 
         log::info!(
@@ -768,6 +775,9 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
                 }
                 {
                     let mut state = BLE.lock().await;
+                    if !state.session.accepts(attempt_token) {
+                        return Err("Connection attempt was cancelled".into());
+                    }
                     state.connected_id = None;
                     state.reset_link();
                     state.peripherals.remove(id);
@@ -787,7 +797,16 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     }
 }
 
+async fn ensure_session(token: crate::device::session::SessionToken) -> Result<(), String> {
+    if BLE.lock().await.session.accepts(token) {
+        Ok(())
+    } else {
+        Err("Connection attempt was cancelled".into())
+    }
+}
+
 async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, String> {
+    let token = BLE.lock().await.session.token();
     let peripheral = resolve_peripheral(&device_id).await?;
     let mut first_connect = handshake::Handshake::new(30_000);
 
@@ -811,6 +830,7 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         .await
         .map_err(|e| format!("Service discovery: {e}"))?;
     first_connect.on_services_discovered();
+    ensure_session(token).await?;
 
     // Keep fresh handle in map
     {
@@ -874,8 +894,9 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     log::info!("Protocol wrap_v2 (789C+CRC) = {use_v2}");
 
     // Subscribe to notify characteristic(s)
-    subscribe_notifications(app.clone(), peripheral.clone()).await?;
+    subscribe_notifications(app.clone(), peripheral.clone(), device_id.clone(), token).await?;
     first_connect.on_notifications_enabled();
+    ensure_session(token).await?;
 
     // The APK's first-bind handshake is a plain UTF-8 query, not a BA frame.
     write_raw(&peripheral, first_connect.init_payload())
@@ -904,6 +925,7 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         v
     };
     for pkt in handshakes {
+        ensure_session(token).await?;
         match write_raw(&peripheral, &pkt).await {
             Ok(()) => {
                 log::info!("Handshake OK: {:02X?}", pkt);
@@ -936,8 +958,9 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
                 .and_then(|id| protocol::catalog_json().into_iter().find(|m| &m.id == id));
             crate::device::initialization::plan_for(model.as_ref(), &device.device_profile)
         })
-        .unwrap_or_else(|| vec![crate::device::initialization::StartupQuery::Battery]);
+        .unwrap_or_default();
     for query in startup_plan {
+        ensure_session(token).await?;
         if matches!(query, crate::device::initialization::StartupQuery::Battery) {
             let _ = send_battery_queries(&peripheral).await;
         } else if let Some(command) = crate::device::initialization::command_for(query) {
@@ -945,8 +968,11 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         }
         tokio::time::sleep(Duration::from_millis(80)).await;
     }
-    // Another battery nudge after EQ (some firmwares only answer once “awake”)
+    // Publish only if this attempt has not been cancelled or superseded.
     let mut state = BLE.lock().await;
+    if !state.session.accepts(token) {
+        return Err("Connection attempt was cancelled".into());
+    }
     state.connected_id = Some(device_id.clone());
     let mut device = if let Some(d) = state.devices.get_mut(&device_id) {
         d.connected = true;
@@ -990,7 +1016,7 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
             tokio::time::sleep(Duration::from_secs(if i < 5 { 2 } else { 10 })).await;
             let still = {
                 let s = BLE.lock().await;
-                s.connected_id.as_ref() == Some(&poll_id)
+                s.session.accepts(token) && s.connected_id.as_ref() == Some(&poll_id)
             };
             if !still {
                 break;
@@ -1004,7 +1030,12 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     Ok(device)
 }
 
-async fn subscribe_notifications(app: AppHandle, peripheral: Peripheral) -> Result<(), String> {
+async fn subscribe_notifications(
+    app: AppHandle,
+    peripheral: Peripheral,
+    device_id: String,
+    token: crate::device::session::SessionToken,
+) -> Result<(), String> {
     let notify_candidates = [
         protocol::uuids::notify(),
         protocol::uuids::ccsdk_notify(),
@@ -1081,6 +1112,9 @@ async fn subscribe_notifications(app: AppHandle, peripheral: Peripheral) -> Resu
     tauri::async_runtime::spawn(async move {
         let mut receivers = HashMap::<uuid::Uuid, protocol::receiver::NotificationReceiver>::new();
         while let Some(n) = stream.next().await {
+            if !BLE.lock().await.session.accepts(token) {
+                break;
+            }
             log::info!("Notify {} : {:02X?}", n.uuid, n.value);
             // Init-state text is a separate handshake message, not an AA frame.
             let is_init_reply = std::str::from_utf8(&n.value)
@@ -1090,12 +1124,12 @@ async fn subscribe_notifications(app: AppHandle, peripheral: Peripheral) -> Resu
                 })
                 .unwrap_or(false);
             if is_init_reply {
-                handle_notification(&app, &n.value, Some(n.uuid.to_string())).await;
+                handle_notification(&app, &n.value, &device_id, token).await;
                 continue;
             }
             let receiver = receivers.entry(n.uuid).or_default();
             for frame in receiver.push(&n.value, std::time::Instant::now()) {
-                handle_notification(&app, &frame, Some(n.uuid.to_string())).await;
+                handle_notification(&app, &frame, &device_id, token).await;
             }
         }
         log::info!("Notification stream ended");
@@ -1104,10 +1138,16 @@ async fn subscribe_notifications(app: AppHandle, peripheral: Peripheral) -> Resu
     Ok(())
 }
 
-async fn handle_notification(app: &AppHandle, data: &[u8], _char_uuid: Option<String>) {
+async fn handle_notification(
+    app: &AppHandle,
+    data: &[u8],
+    device_id: &str,
+    token: crate::device::session::SessionToken,
+) {
     // Track RX for link health — strongest proof of a real device link
     {
         let mut state = BLE.lock().await;
+        if !state.session.accepts(token) { return; }
         state.notify_count = state.notify_count.saturating_add(1);
         state.last_notify_ms = Some(now_ms());
         state.last_rx_hex = Some(hex_encode(data));
@@ -1136,10 +1176,9 @@ async fn handle_notification(app: &AppHandle, data: &[u8], _char_uuid: Option<St
 
     let (last_anc, family) = {
         let state = BLE.lock().await;
+        if !state.session.accepts(token) { return; }
         let family = state
-            .connected_id
-            .as_ref()
-            .and_then(|id| state.devices.get(id))
+            .devices.get(device_id)
             .map(|device| device.device_profile.protocol)
             .unwrap_or(protocol::ProtocolFamily::Unknown);
         (state.last_anc, family)
@@ -1154,7 +1193,7 @@ async fn handle_notification(app: &AppHandle, data: &[u8], _char_uuid: Option<St
             Ok(fr) => match protocol::decode_frame(family, &fr, last_anc) {
                 Ok(event) => {
                     log::info!("DeviceEvent: {:?}", event);
-                    apply_event(app, event).await;
+                    apply_event(app, event, token).await;
                     any_decoded = true;
                 }
                 Err(e) => log::debug!("Decode skip: {e}  raw={:02X?}", frame),
@@ -1232,10 +1271,11 @@ fn should_accept_case(prev: &BatteryState, next: &BatteryState) -> bool {
     true
 }
 
-async fn apply_event(app: &AppHandle, event: DeviceEvent) {
+async fn apply_event(app: &AppHandle, event: DeviceEvent, token: crate::device::session::SessionToken) {
+    let mut state = BLE.lock().await;
+    if !state.session.accepts(token) { return; }
     match &event {
         DeviceEvent::Battery(partial) => {
-            let mut state = BLE.lock().await;
             let prev = state.battery.clone();
             let looks_like_case = partial.left == 0
                 && partial.right == 0
@@ -1304,15 +1344,12 @@ async fn apply_event(app: &AppHandle, event: DeviceEvent) {
                 bat.right_charging,
                 bat.case_charging
             );
-            drop(state);
             let _ = app.emit("device://battery", &bat);
         }
         DeviceEvent::Anc(mode) => {
-            let mut state = BLE.lock().await;
             // Only update last_anc + UI when mode actually changes (avoid flicker)
             let prev = state.last_anc;
             state.last_anc = Some(*mode);
-            drop(state);
             if prev != Some(*mode) {
                 log::info!("ANC mode → {:?}", mode);
             }
@@ -1676,16 +1713,21 @@ pub async fn get_battery_state() -> BatteryState {
 // ---------------------------------------------------------------------------
 
 pub async fn disconnect(app: AppHandle) -> Result<(), String> {
-    let state = BLE.lock().await;
-    let id = match &state.connected_id {
-        Some(id) => id.clone(),
-        None => return Ok(()),
+    // Invalidate first, including a connection that has not published its ID.
+    // No old notification can mutate state during the asynchronous OS cleanup.
+    let (id, peripheral, token) = {
+        let mut state = BLE.lock().await;
+        let id = state.connected_id.take();
+        let peripheral = id.as_ref().and_then(|id| state.peripherals.remove(id));
+        if let Some(device) = id.as_ref().and_then(|id| state.devices.get_mut(id)) {
+            device.connected = false;
+        }
+        state.battery = BatteryState::default();
+        state.last_anc = None;
+        state.reset_link();
+        (id, peripheral, state.session.token())
     };
-    let p = state.peripherals.get(&id).cloned();
-    drop(state);
-
-    if let Some(p) = p {
-        // Best-effort unsubscribe then disconnect (prevents Windows RO_E_CLOSED on next connect)
+    if let Some(p) = peripheral {
         for c in p.characteristics().iter().filter(|c| {
             c.uuid == protocol::uuids::notify()
                 || c.uuid == protocol::uuids::ccsdk_notify()
@@ -1694,22 +1736,14 @@ pub async fn disconnect(app: AppHandle) -> Result<(), String> {
             let _ = p.unsubscribe(c).await;
         }
         let _ = p.disconnect().await;
-        tokio::time::sleep(Duration::from_millis(200)).await;
     }
-
-    let mut state = BLE.lock().await;
-    state.connected_id = None;
-    state.battery = BatteryState::default();
-    state.last_anc = None;
-    state.reset_link();
-    // Drop cached peripheral so next connect re-resolves a fresh WinRT object
-    state.peripherals.remove(&id);
-    if let Some(d) = state.devices.get_mut(&id) {
-        d.connected = false;
+    // A new connection may have started while the OS was cleaning up.
+    if BLE.lock().await.session.accepts(token) {
+        emit_connection_state(&app).await;
+        if let Some(id) = id {
+            let _ = app.emit("ble://disconnected", &id);
+        }
     }
-    drop(state);
-    emit_connection_state(&app).await;
-    let _ = app.emit("ble://disconnected", &id);
     Ok(())
 }
 
@@ -2016,6 +2050,7 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
 }
 
 pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice, String> {
+    let _attempt = CONNECT_ATTEMPT.try_lock().map_err(|_| "Another connection attempt is active")?;
     let _ = stop_scan(app.clone()).await;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
@@ -2048,6 +2083,7 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
         case_charging: true,
     };
     let bat = state.battery.clone();
+    let token = state.session.token();
     drop(state);
 
     emit_connection_state(&app).await;
@@ -2058,8 +2094,10 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
     let app2 = app.clone();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(Duration::from_millis(300)).await;
+        if !BLE.lock().await.session.accepts(token) { return; }
         let _ = app2.emit("device://anc", "anc");
         tokio::time::sleep(Duration::from_millis(200)).await;
+        if !BLE.lock().await.session.accepts(token) { return; }
         let _ = app2.emit("device://eq", &EqPreset::Balanced);
     });
 
