@@ -21,7 +21,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P1.1 | Index entrypoints, model guards, SDK/native dependencies | Open |
 | P1.2 | Triage JADX errors liên quan; extract resource/native inventory | Open |
 | P1.3 | Lần theo family/transport/framing/firmware rules | Open |
-| P1.4 | Trace server dictionary/model-param consumers | Open |
+| P1.4 | Trace server dictionary/model-param consumers | In progress |
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | Open |
@@ -38,7 +38,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P5.2 | Devices/overview + accurate battery/connect feedback | Open |
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
 | P6.1 | ANC/transparency/game, constraints/readback | Open |
-| P6.2 | EQ preset/custom/slot with model schema | Open |
+| P6.2 | EQ preset/custom/slot with model schema | In progress |
 | P6.3 | Bass/spatial/codec/hearing constraints | Open |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
 | P6.5 | Multipoint/find/device settings | Open |
@@ -130,3 +130,12 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - P1.4 and P6.2 remain in progress. Custom EQ, firmware applicability, persistence and hardware verification are outstanding; source evidence does not close acceptance gates.
 
 - Validation for increment 10: all 88 Rust library tests passed; frontend typecheck/Vite build and `git diff --check` passed. Source-filter byte vectors cover truncation, little-endian encoding and Q above an 8-bit field; ACK/spatial replies cannot become EQ observations. UUID presentation assertion now compares canonical case.
+
+
+## Increment 11 — source-correct BP1 Pro custom EQ
+
+- Traced EarEqSelfDefinePresenter A/B/C/F/G/m/n/r/w and the activity's model branch: BP1 Pro sends BA31 + index 101 + eight LE16 filter records, without the Storm 1 ANC selector. Default frequencies use the model's existing 100–10000 Hz layout, Q=1 and peak type=1. Unsupported slot/ANC/Q/filter intents reject before encoding.
+- Custom serialization shares the preset filter encoder, removing truncation of the filter count and the old rounded/clamped 8-bit field assumptions. Custom apply now requires current-session AA30 index 101 before returning success; frontend retains confirmed state during pending/failure and rejects stale completion.
+- Index 101 identifies current custom selection; it does not prove filter content or hardware slots. Android custom lists are locally cached; desktop saved profiles are local drafts, not a verified device slot inventory. Full model editor/persistence/reset reconciliation and hardware acceptance remain open.
+
+- Validation: eight router tests passed, Cargo check and frontend typecheck/Vite build passed, whitespace check clean. Added a dedicated invalid custom slot/selector/filter test for CI without another local full-suite run.

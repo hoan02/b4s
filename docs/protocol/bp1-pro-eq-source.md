@@ -14,3 +14,8 @@ Filter layout: frequency LE16, truncated `(gain * 10 + 120)` LE16, truncated `(Q
 Catalog contains the seven metadata selections: 0 Classic, 1 Deep Bass, 3 Hi-Fi Live, 7 Jazz, 8 Classical, 9 Treble Boost, 10 Acoustic. UI sends a catalog ID; backend resolves and authorizes its wire index and filters. Raw AA30 indexes remain observable even when not recognized by the catalog. Confirmation requires the matching AA30 index in the current session.
 
 Custom EQ slot/ANC payload semantics and readback require their own source/capture verification. Existing custom implementation is not promoted by this preset correction. Firmware scope and device-side persistence after reconnect remain open hardware gates.
+
+
+## Custom consumer trace
+
+EarEqSelfDefinePresenter `A/B` uses the same LE16 truncation layout. `C/F` chooses default frequencies and Q; BP1 Pro is absent from DeviceManager.Y, so frequencies are 100/200/400/800/1000/3000/6000/10000, Q=1 and filter=1. `m/G` sends BA31 plus index and filters, adding a selector only for Storm 1. Activity `i1/p1` calls the two-selector `n` path only for Storm 1. `r` initializes index 101; `w` persists local entries of that index. A matching AA30 101 confirms selection only, not equality of transmitted filters. Local list capacity must not be described as device-side slots.

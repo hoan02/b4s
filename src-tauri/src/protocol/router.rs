@@ -63,7 +63,13 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::FindBuds(_) => Feature::Find,
     };
     authorize(profile, feature)?;
-    if let FeatureCommand::SetCustomEq { bands, .. } = &command {
+    if let FeatureCommand::SetCustomEq { bands, dict_sort, anc } = &command {
+        if profile.protocol != ProtocolFamily::Bp1Pro || *dict_sort != 101 || *anc {
+            return Err("Custom EQ slot/ANC selector is not reviewed for this model".into());
+        }
+        if bands.iter().any(|band| band.q_value != 1.0 || band.filter != 1) {
+            return Err("BP1 Pro custom EQ requires Q=1 and peak filters".into());
+        }
         let eq = profile.model_id.as_deref().and_then(crate::catalog::profile_for)
             .and_then(|profile| profile.eq).ok_or("No reviewed custom EQ schema")?;
         if bands.len() != eq.bands.len() || bands.iter().zip(&eq.bands).any(|(band, frequency)|
@@ -281,7 +287,24 @@ mod tests {
             },
         )
         .unwrap();
-        assert_eq!(&packet[..4], &[0xBA, 0x31, 0x65, 0x00]);
-        assert_eq!(packet.len(), 4 + (8 * 8));
+        assert_eq!(&packet[..5], &[0xBA, 0x31, 0x65, 100, 0]);
+        assert_eq!(packet.len(), 3 + (8 * 8));
     }
+    #[test]
+    fn bp1_custom_rejects_unreviewed_slot_selector_and_filter() {
+        let profile = profile_for(Some("bass-bp1-pro"), None, None);
+        let bands: Vec<_> = crate::catalog::profile_for("bass-bp1-pro").unwrap().eq.unwrap().bands
+            .into_iter().map(|frequency| EqBand { frequency, q_value: 1.0, gain: 0.0, filter: 1 }).collect();
+        for (dict_sort, anc) in [(100, false), (102, false), (101, true)] {
+            assert!(encode_feature(&profile, FeatureCommand::SetCustomEq {
+                dict_sort, anc, bands: bands.clone(),
+            }).is_err());
+        }
+        let mut invalid = bands;
+        invalid[0].filter = 2;
+        assert!(encode_feature(&profile, FeatureCommand::SetCustomEq {
+            dict_sort: 101, anc: false, bands: invalid,
+        }).is_err());
+    }
+
 }

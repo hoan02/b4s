@@ -174,20 +174,10 @@ impl Bp1ProAnc {
         Frame::write(0x31, &payload).encode_write()
     }
 
-    pub fn cmd_set_custom_eq(dict_sort: u8, anc: bool, bands: &[EqBand]) -> Vec<u8> {
-        let mut payload = vec![dict_sort, if anc { 0x01 } else { 0x00 }];
-        for band in bands.iter().take(8) {
-            payload.extend_from_slice(&band.frequency.to_le_bytes());
-            let gain = (band.gain * 10.0 + 120.0).round().clamp(0.0, 255.0) as u8;
-            payload.push(gain);
-            payload.push(0x00);
-            let q = (band.q_value * 10.0).round().clamp(0.0, 255.0) as u8;
-            payload.push(q);
-            payload.push(0x00);
-            payload.push(band.filter);
-            payload.push(0x00);
-        }
-        Frame::write(0x31, &payload).encode_write()
+    /// BP1 Pro custom uses the same filter layout as presets. The ANC selector
+    /// belongs to Storm 1 and is rejected by the model router for BP1 Pro.
+    pub fn cmd_set_custom_eq(dict_sort: u8, _anc: bool, bands: &[EqBand]) -> Vec<u8> {
+        Self::cmd_set_eq_filters(dict_sort, bands)
     }
     fn bass_level_from_payload(payload: &[u8]) -> u8 {
         // Firmware variants answer either AA54 [level] or AA54 [enabled, level].

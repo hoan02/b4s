@@ -1501,9 +1501,6 @@ pub async fn send_eq_index(index: u8) -> Result<(), String> {
 }
 
 pub async fn send_custom_eq(bands: Vec<protocol::EqBand>, dict_sort: u8, anc: bool) -> Result<(), String> {
-    if bands.len() != 8 {
-        return Err("Custom EQ requires exactly 8 bands".into());
-    }
     let data = encode_connected_feature(protocol::FeatureCommand::SetCustomEq { dict_sort, anc, bands }).await?;
     let state = BLE.lock().await;
     if state.mock {
@@ -1514,7 +1511,7 @@ pub async fn send_custom_eq(bands: Vec<protocol::EqBand>, dict_sort: u8, anc: bo
         return Ok(());
     }
     drop(state);
-    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+    with_connected_peripheral(|p| Box::pin(async move { write_and_readback(&p, &data, &[0xBA, 0x30], crate::device::confirmation::ExpectedState::EqIndex(dict_sort)).await })).await
 }
 
 pub async fn send_bass_boost(level: u8) -> Result<(), String> {

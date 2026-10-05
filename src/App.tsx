@@ -404,10 +404,12 @@ const App: Component = () => {
 
   const handleApplyCustomEq = async (bands = eqCustomBands(), label = t("eq.customize")) => {
     if (!requestEqAction({ kind: "applyCustom" })) return;
-    setEqCustomActive(true);
+    if (eqPending()) return;
+    const generation = session.capture();
+    setEqPending(true);
+    setEqError(null);
     const customLabel = label.trim() || t("eq.customize");
-    // Official Self-Define uses multi-band frames; desktop best-effort:
-    // Reset through the model preset route; keep the local custom draft.
+    // Only publish active custom state after current-session readback.
     try {
       await setCustomEq(
         bands.map((gain, index) => ({
@@ -417,13 +419,20 @@ const App: Component = () => {
           filter: 1,
         }))
       );
+      if (!session.isCurrent(generation)) return;
+      setEqCustomActive(true);
+      await refreshSnapshot();
       notify(
         t("toast.customEqSaved"),
         "success",
         `EQ custom · ${customLabel}`
       );
     } catch (e) {
+      if (!session.isCurrent(generation)) return;
+      setEqError(formatError(e));
       notify(formatError(e), "error", customLabel);
+    } finally {
+      if (session.isCurrent(generation)) setEqPending(false);
     }
   };
 
