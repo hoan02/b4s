@@ -1,6 +1,6 @@
 [package]
 name = "b4s"
-version = "0.1.0"
+version = "0.1.1"
 description = "B4S — unofficial desktop companion for multi-model earbuds (BLE listening control)"
 authors = ["hoan02"]
 edition = "2021"
