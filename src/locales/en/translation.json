@@ -188,7 +188,7 @@
   "eq.saveName": "Name this EQ preset",
   "eq.duplicateName": "An EQ preset with this name already exists",
   "eq.maxCustom": "You can save up to 2 custom EQ presets",
-  "eq.customBands": "Custom · 8 bands",
+  "eq.customBands": "Custom · {{count}} bands",
   "eq.preset": "Preset",
   "eq.delete": "Delete {{name}}",
   "eq.namePlaceholder": "Preset name, for example: My music",
@@ -224,8 +224,8 @@
   "theme.dark": "Dark theme",
   "theme.light": "Light theme",
   "eq.save": "Save",
-  "eq.presetFootnote": "Presets are sent to the earbuds using BA43 and the preset index (0–10). Names follow common EQ labels.",
-  "eq.customFootnote": "The official app uses Self-Define and a BA4300 reset for custom EQ. B4S stores the curve locally; full custom BLE support is best effort and some firmware accepts presets only.",
+  "eq.presetFootnote": "Presets follow the selected headphone model.",
+  "eq.customFootnote": "Saved drafts stay on this computer. Applying a draft requires confirmation from the headphones.",
   "listen.ldacNote": "LDAC is usually managed by the Windows or Android Bluetooth stack. This toggle saves the setting in B4S; a PC may not change the codec like a phone app.",
   "linkMessage.offline": "Not connected",
   "linkMessage.demo": "Demo mode — UI only, not talking to real earbuds",
@@ -234,5 +234,6 @@
   "linkMessage.live": "Live link · {{notifications}} notifications · {{writes}} writes",
   "linkMessage.waiting": "GATT write ready, waiting for notifications or battery data. Open the case or wear the earbuds.",
   "linkMessage.handshakeFailed": "BLE connected, but the control handshake failed. Try the other scan entry with the same name, or forget and re-pair the earbuds.",
-  "device.applying": "Applying…"
+  "device.applying": "Applying…",
+  "eq.storageError": "Could not save changes on this computer."
 }

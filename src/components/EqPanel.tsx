@@ -80,15 +80,24 @@ const EqPanel: Component<Props> = (props) => {
       return;
     }
     const next = [...customPresets(), { id: `custom-${Date.now()}`, label, bands: localBands().slice() }];
-    setCustomPresets(next);
-    saveCustomEqPresets(props.storageKey, next);
-    setCustomError("");
+    try {
+      saveCustomEqPresets(props.storageKey, next);
+      setCustomPresets(next);
+      setCustomError("");
+    } catch {
+      setCustomError(t("eq.storageError"));
+    }
   };
 
   const deleteCustom = (id: string) => {
     const next = customPresets().filter((p) => p.id !== id);
-    setCustomPresets(next);
-    saveCustomEqPresets(props.storageKey, next);
+    try {
+      saveCustomEqPresets(props.storageKey, next);
+      setCustomPresets(next);
+      setCustomError("");
+    } catch {
+      setCustomError(t("eq.storageError"));
+    }
   };
 
   const previewCurve = () =>
@@ -140,7 +149,7 @@ const EqPanel: Component<Props> = (props) => {
         </div>
         <p class="eq-preview-hint">
           {tab() === "custom"
-            ? t("eq.customBands")
+            ? t("eq.customBands", { count: props.frequencies.length })
             : props.presets.find((p) => p.id === props.eqActive)?.label ??
               t("eq.preset")}
         </p>
@@ -227,7 +236,7 @@ const EqPanel: Component<Props> = (props) => {
           />
           <button type="button" class="eq-btn ghost" onClick={saveCustom}>{t("eq.save")}</button>
         </div>
-        <Show when={customError()}><p class="eq-inline-error">{customError()}</p></Show>
+        <Show when={customError()}><p class="eq-inline-error" role="alert">{customError()}</p></Show>
         <div class="eq-custom-card">
           <div class="eq-sliders">
             <For each={props.frequencies}>

@@ -147,7 +147,7 @@
   "eq.saveName": "Hãy đặt tên cho cấu hình EQ",
   "eq.duplicateName": "Tên EQ này đã tồn tại",
   "eq.maxCustom": "Bạn có thể lưu tối đa 2 cấu hình EQ tùy chỉnh",
-  "eq.customBands": "Tùy chỉnh · 8 băng tần",
+  "eq.customBands": "Tùy chỉnh · {{count}} dải",
   "eq.delete": "Xóa {{name}}",
   "eq.namePlaceholder": "Tên cấu hình, ví dụ: Nhạc của tôi",
   "eq.nameLabel": "Tên cấu hình EQ",
@@ -187,8 +187,8 @@
   "theme.dark": "Giao diện tối",
   "theme.light": "Giao diện sáng",
   "eq.save": "Lưu",
-  "eq.presetFootnote": "Preset được gửi tới tai nghe qua BA43 và chỉ số preset (0–10). Tên hiển thị dùng nhãn EQ phổ biến.",
-  "eq.customFootnote": "Ứng dụng chính thức dùng Self-Define và lệnh reset BA4300 cho EQ tùy chỉnh. B4S lưu đường cong trên máy; gửi BLE đầy đủ là thử nghiệm và một số firmware chỉ nhận preset.",
+  "eq.presetFootnote": "Preset theo model tai nghe đang chọn.",
+  "eq.customFootnote": "Bản nháp được lưu trên máy tính này. Áp dụng bản nháp cần xác nhận từ tai nghe.",
   "listen.ldacNote": "LDAC thường do Bluetooth trên Windows hoặc Android quản lý. Tùy chọn này lưu trong B4S; máy tính có thể không đổi codec như ứng dụng điện thoại.",
   "linkMessage.offline": "Chưa kết nối",
   "linkMessage.demo": "Chế độ mô phỏng — chỉ hiển thị giao diện, không kết nối tai nghe thật",
@@ -197,5 +197,6 @@
   "linkMessage.live": "Đang nhận dữ liệu · {{notifications}} thông báo · {{writes}} lệnh gửi",
   "linkMessage.waiting": "GATT đã sẵn sàng gửi lệnh, đang chờ thông báo hoặc dữ liệu pin. Hãy mở hộp sạc hoặc đeo tai nghe.",
   "linkMessage.handshakeFailed": "Đã kết nối BLE nhưng bắt tay điều khiển thất bại. Hãy thử mục quét khác cùng tên hoặc xóa ghép đôi rồi kết nối lại.",
-  "device.applying": "Đang áp dụng…"
+  "device.applying": "Đang áp dụng…",
+  "eq.storageError": "Không thể lưu thay đổi trên máy tính này."
 }
