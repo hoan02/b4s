@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Bump app version across package.json, Cargo.toml, tauri.conf.json
+ * Bump app version across Node, Cargo and Tauri version metadata.
  *
  * Usage:
  *   npm run version:bump           # patch 0.1.0 → 0.1.1
@@ -44,14 +44,21 @@ function bump(ver, kind) {
 }
 
 const pkgPath = path.join(root, "package.json");
+const lockPath = path.join(root, "package-lock.json");
 const tauriPath = path.join(root, "src-tauri", "tauri.conf.json");
 const cargoPath = path.join(root, "src-tauri", "Cargo.toml");
+const cargoLockPath = path.join(root, "src-tauri", "Cargo.lock");
 
 const pkg = readJson(pkgPath);
 const next = bump(pkg.version, arg);
 
 pkg.version = next;
 writeJson(pkgPath, pkg);
+
+const lock = readJson(lockPath);
+lock.version = next;
+if (lock.packages?.[""]) lock.packages[""].version = next;
+writeJson(lockPath, lock);
 
 const tauri = readJson(tauriPath);
 tauri.version = next;
@@ -64,10 +71,18 @@ cargo = cargo.replace(
 );
 fs.writeFileSync(cargoPath, cargo);
 
+let cargoLock = fs.readFileSync(cargoLockPath, "utf8");
+const packageEntry = /(\[\[package\]\]\r?\nname = "b4s"\r?\nversion = ")[^"]+("\r?\n)/;
+if (!packageEntry.test(cargoLock)) {
+  throw new Error("Could not find the b4s package entry in Cargo.lock");
+}
+cargoLock = cargoLock.replace(packageEntry, `$1${next}$2`);
+fs.writeFileSync(cargoLockPath, cargoLock);
+
 console.log(`Version → ${next}`);
 console.log(`
 Next steps:
-  git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
+  git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
   git commit -m "chore: release v${next}"
   git tag v${next}
   git push origin main --tags

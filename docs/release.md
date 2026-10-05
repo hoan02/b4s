@@ -18,8 +18,10 @@ Pushing code to `main` alone does **not** create installers or a Release.
 | File | Field |
 |------|--------|
 | `package.json` | `version` |
+| `package-lock.json` | root package `version` fields |
 | `src-tauri/tauri.conf.json` | `version` |
 | `src-tauri/Cargo.toml` | `version` |
+| `src-tauri/Cargo.lock` | `b4s` package version |
 
 ```bash
 npm run version:bump          # patch

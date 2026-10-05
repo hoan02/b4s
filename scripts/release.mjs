@@ -30,8 +30,10 @@ const bumpScript = path.join(root, "scripts", "bump-version.mjs");
 
 const VERSION_FILES = [
   "package.json",
+  "package-lock.json",
   "src-tauri/tauri.conf.json",
   "src-tauri/Cargo.toml",
+  "src-tauri/Cargo.lock",
 ];
 
 // ── args ───────────────────────────────────────────────────────────────────
