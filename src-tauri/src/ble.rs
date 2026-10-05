@@ -687,6 +687,9 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
             .devices
             .get(&device_id)
             .ok_or("Device is no longer in the scan list")?;
+        if device.device_profile.connection.as_ref().map(|connection| connection.transport) != Some(crate::catalog::ControlTransport::BleGatt) {
+            return Err("This model has no reviewed BLE control transport; capture/transport verification is required".into());
+        }
         if device.device_profile.protocol == protocol::ProtocolFamily::Unknown {
             return Err("This model is recognized only; its Bluetooth control protocol is not configured".into());
         }
@@ -861,76 +864,39 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         log::warn!("No known Baseus write/notify UUID — may be wrong dual entry");
     }
 
-    // Decide framing from catalog match
-    let device_preview = {
-        let state = BLE.lock().await;
-        state.devices.get(&device_id).cloned()
-    };
-    let use_v2 = protocol::needs_v2_wrap(
-        device_preview.as_ref().and_then(|d| d.model_id.as_deref()),
-        device_preview.as_ref().and_then(|d| d.model_name.as_deref()),
-        device_preview.as_ref().map(|d| d.name.as_str()),
-    );
+    let device_preview = BLE.lock().await.devices.get(&device_id).cloned();
+    let connection = device_preview.as_ref().and_then(|device| device.device_profile.connection.clone())
+        .ok_or("No reviewed connection profile")?;
+    let service_uuid = uuid::Uuid::parse_str(connection.service_uuid.as_deref().ok_or("Missing reviewed service UUID")?).map_err(|error| error.to_string())?;
+    if !peripheral.services().iter().any(|service| service.uuid == service_uuid) {
+        return Err("Reviewed control service is missing on this entry".into());
+    }
+    let use_v2 = connection.framing == crate::catalog::WireFraming::Headphone789c;
     {
         let mut state = BLE.lock().await;
+        if !state.session.accepts(token) { return Err("Connection attempt was cancelled".into()); }
         state.use_v2_wrap = use_v2;
     }
-    log::info!("Protocol wrap_v2 (789C+CRC) = {use_v2}");
 
     // Subscribe to notify characteristic(s)
     subscribe_notifications(app.clone(), peripheral.clone(), device_id.clone(), token).await?;
     first_connect.on_notifications_enabled();
     ensure_session(token).await?;
 
-    // The APK's first-bind handshake is a plain UTF-8 query, not a BA frame.
-    write_raw(&peripheral, first_connect.init_payload())
-        .await
-        .map_err(|e| format!("Init-state query: {e}"))?;
-    let _ = app.emit(
-        "ble://handshake",
-        &serde_json::json!({ "phase": "awaitingInitState", "timeoutMs": 30_000 }),
-    );
-
-    tokio::time::sleep(Duration::from_millis(200)).await;
-
-    // Handshake BA0500 — try both bare and wrapped always (Pro vs Ultra)
-    let mut handshake_ok = false;
-    let handshakes: Vec<Vec<u8>> = {
-        let bare = vec![0xBA, 0x05, 0x00];
-        let mut v = Vec::new();
-        if let Some(w) = protocol::wrap_ba_command(&bare) {
-            v.push(w);
-        }
-        v.push(bare);
-        v.push(vec![0xBA, 0x05, 0x01]);
-        if let Some(w) = protocol::wrap_ba_command(&[0xBA, 0x05, 0x01]) {
-            v.push(w);
-        }
-        v
-    };
-    for pkt in handshakes {
-        ensure_session(token).await?;
-        match write_raw(&peripheral, &pkt).await {
-            Ok(()) => {
-                log::info!("Handshake OK: {:02X?}", pkt);
-                handshake_ok = true;
-                // If wrapped handshake worked, stick to v2 for later writes
-                if pkt.len() >= 2 && pkt[0] == 0x78 && pkt[1] == 0x9C {
-                    let mut state = BLE.lock().await;
-                    state.use_v2_wrap = true;
-                    log::info!("Enabled wrap_v2 from successful 789C handshake");
-                }
-                break;
-            }
-            Err(e) => log::warn!("Handshake fail {:02X?}: {e}", pkt),
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
+    if connection.init_state_query {
+        write_raw(&peripheral, first_connect.init_payload()).await?;
+    }
+    ensure_session(token).await?;
+    // Select the reviewed framing once; OS write completion never chooses it.
+    if !connection.handshake.is_empty() {
+        write_bytes(&peripheral, &connection.handshake).await?;
     }
     {
         let mut state = BLE.lock().await;
-        state.handshake_ok = handshake_ok;
+        if !state.session.accepts(token) { return Err("Connection attempt was cancelled".into()); }
+        // Diagnostic means write accepted, not device ready.
+        state.handshake_ok = !connection.handshake.is_empty();
     }
-    tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Post-connect battery queries keep the canonical BA02 frame.
     let startup_plan = device_preview
@@ -1031,25 +997,16 @@ async fn subscribe_notifications(
     device_id: String,
     token: crate::device::session::SessionToken,
 ) -> Result<(), String> {
-    let notify_candidates = [
-        protocol::uuids::notify(),
-        protocol::uuids::ccsdk_notify(),
-    ];
-    let write_candidates = [
-        protocol::uuids::write(),
-        protocol::uuids::ccsdk_write(),
-    ];
+    let connection = BLE.lock().await.devices.get(&device_id)
+        .and_then(|device| device.device_profile.connection.clone()).ok_or("Missing connection profile")?;
+    let notify_candidates = [uuid::Uuid::parse_str(connection.notify_uuid.as_deref().ok_or("Missing notify UUID")?).map_err(|error| error.to_string())?];
+    let write_candidates = [uuid::Uuid::parse_str(connection.write_uuid.as_deref().ok_or("Missing write UUID")?).map_err(|error| error.to_string())?];
     let chars = peripheral.characteristics();
 
     // Pick ONE notify char (multi-subscribe on Windows often hits "object closed")
     let ch = notify_candidates
         .iter()
         .find_map(|u| chars.iter().find(|c| c.uuid == *u))
-        .or_else(|| {
-            chars
-                .iter()
-                .find(|c| c.properties.contains(CharPropFlags::NOTIFY))
-        })
         .cloned()
         .ok_or_else(|| {
             "No NOTIFY characteristic. Forget buds in Windows Bluetooth, pair from this app while buds are in case-open/pairing mode.".to_string()
@@ -1082,8 +1039,7 @@ async fn subscribe_notifications(
 
     let has_write = chars.iter().any(|c| {
         write_candidates.contains(&c.uuid)
-            || c.properties.contains(CharPropFlags::WRITE)
-            || c.properties.contains(CharPropFlags::WRITE_WITHOUT_RESPONSE)
+
     });
     if !has_write {
         return Err(
@@ -1152,11 +1108,6 @@ async fn handle_notification(
         state.notify_count = state.notify_count.saturating_add(1);
         state.last_notify_ms = Some(now_ms());
         state.last_rx_hex = Some(hex_encode(data));
-        // Auto-learn 789C framing if device speaks it
-        if data.len() >= 2 && data[0] == 0x78 && data[1] == 0x9C && !state.use_v2_wrap {
-            state.use_v2_wrap = true;
-            log::info!("Enabled wrap_v2 from 789C notify");
-        }
     }
     let _ = app.emit("ble://link", &get_connection_state().await.link);
 
@@ -1293,19 +1244,21 @@ fn hex_encode(data: &[u8]) -> String {
 // ---------------------------------------------------------------------------
 
 /// Apply v2 wrap if current connection needs it (Ultra etc.).
-async fn maybe_wrap(data: &[u8]) -> Vec<u8> {
-    let use_v2 = BLE.lock().await.use_v2_wrap;
-    if use_v2 && data.first() == Some(&0xBA) {
-        if let Some(w) = protocol::wrap_ba_command(data) {
-            log::info!("wrap_v2 bare {:02X?} → {:02X?}", data, w);
-            return w;
-        }
+async fn maybe_wrap(peripheral: &Peripheral, data: &[u8]) -> Result<Vec<u8>, String> {
+    let id = id_to_string(&peripheral.id());
+    let framing = BLE.lock().await.devices.get(&id)
+        .and_then(|device| device.device_profile.connection.as_ref().map(|connection| connection.framing))
+        .ok_or("Missing reviewed wire framing")?;
+    match framing {
+        crate::catalog::WireFraming::BareAaBa => Ok(data.to_vec()),
+        crate::catalog::WireFraming::Headphone789c if data.first() == Some(&0xBA) =>
+            protocol::wrap_ba_command(data).ok_or("Cannot frame command".into()),
+        _ => Err("Command framing is unresolved".into()),
     }
-    data.to_vec()
 }
 
 async fn write_bytes(peripheral: &Peripheral, data: &[u8]) -> Result<(), String> {
-    let wire = maybe_wrap(data).await;
+    let wire = maybe_wrap(peripheral, data).await?;
     write_raw(peripheral, &wire).await
 }
 
@@ -1324,23 +1277,18 @@ async fn write_raw(peripheral: &Peripheral, data: &[u8]) -> Result<(), String> {
         return Err("Peripheral disconnected".into());
     }
 
-    let write_order = [
-        protocol::uuids::write(),
-        protocol::uuids::ccsdk_write(),
-    ];
+    let id = id_to_string(&peripheral.id());
+    let write_uuid = BLE.lock().await.devices.get(&id)
+        .and_then(|device| device.device_profile.connection.as_ref().and_then(|connection| connection.write_uuid.clone()))
+        .ok_or("Missing reviewed write UUID")?;
+    let write_uuid = uuid::Uuid::parse_str(&write_uuid).map_err(|error| error.to_string())?;
     let chars = peripheral.characteristics();
+    let ch = chars.iter().find(|characteristic| characteristic.uuid == write_uuid)
+        .ok_or("Reviewed WRITE characteristic is missing")?;
 
-    let ch = write_order
-        .iter()
-        .find_map(|u| chars.iter().find(|c| c.uuid == *u))
-        .or_else(|| {
-            chars.iter().find(|c| {
-                c.properties.contains(CharPropFlags::WRITE)
-                    || c.properties.contains(CharPropFlags::WRITE_WITHOUT_RESPONSE)
-            })
-        })
-        .ok_or("No WRITE characteristic")?;
-
+    if !ch.properties.intersects(CharPropFlags::WRITE | CharPropFlags::WRITE_WITHOUT_RESPONSE) {
+        return Err("Reviewed characteristic does not support writes".into());
+    }
     // Prefer WithResponse when available (official / elaxptr)
     let write_type = if ch.properties.contains(CharPropFlags::WRITE) {
         WriteType::WithResponse
@@ -1361,20 +1309,6 @@ async fn write_raw(peripheral: &Peripheral, data: &[u8]) -> Result<(), String> {
 
     ensure_session(token).await?;
     let result = peripheral.write(ch, data, write_type).await;
-    let result = match result {
-        Err(e)
-            if matches!(write_type, WriteType::WithResponse)
-                && ch.properties.contains(CharPropFlags::WRITE_WITHOUT_RESPONSE) =>
-        {
-            ensure_session(token).await?;
-            log::warn!("Write WithResponse failed ({e}), retry WithoutResponse");
-            peripheral
-                .write(ch, data, WriteType::WithoutResponse)
-                .await
-        }
-        other => other,
-    };
-
     result.map_err(|e| format!("Write failed: {e}"))?;
 
     {
@@ -1677,7 +1611,7 @@ pub async fn disconnect(app: AppHandle) -> Result<(), String> {
 
 /// Request earbud battery and, for the BP1 family, the independent case report.
 async fn send_battery_queries(peripheral: &Peripheral) -> Result<(), String> {
-    write_raw(peripheral, &protocol::battery_query_frame()).await?;
+    write_command(peripheral, protocol::Command::QueryBattery).await?;
     let id = id_to_string(&peripheral.id());
     let query_case = {
         let state = BLE.lock().await;

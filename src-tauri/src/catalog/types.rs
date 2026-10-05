@@ -1,5 +1,27 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ControlTransport { BleGatt, Unresolved }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WireFraming { BareAaBa, Headphone789c, Unresolved }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ConnectionProfile {
+    pub transport: ControlTransport,
+    pub framing: WireFraming,
+    pub service_uuid: Option<String>,
+    pub write_uuid: Option<String>,
+    pub notify_uuid: Option<String>,
+    pub handshake: Vec<u8>,
+    pub init_state_query: bool,
+    pub firmware_versions: Vec<String>,
+    pub provenance: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Capabilities {
@@ -53,6 +75,10 @@ pub struct NoiseProfile {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelProfile {
+    #[serde(default = "legacy_schema")]
+    pub schema_version: u8,
+    #[serde(default)]
+    pub connection: Option<ConnectionProfile>,
     pub id: String,
     pub display_name: String,
     pub aliases: Vec<String>,
@@ -65,3 +91,5 @@ pub struct ModelProfile {
     pub eq: Option<EqProfile>,
     pub image: Option<String>,
 }
+
+fn legacy_schema() -> u8 { 1 }

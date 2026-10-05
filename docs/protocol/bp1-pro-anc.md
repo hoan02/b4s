@@ -1,6 +1,7 @@
 # Reference packet table — Bass BP1 Pro / Ultra family
 
-> Reference packet table for the verified BP1 Pro and BP1 Ultra hardware targets.
+> Legacy reference packet table. BP1 Pro retains its reviewed compatibility profile;
+> BP1 Ultra remains scan-only until model/firmware/transport evidence is captured.
 > Commands and framing remain model-specific; other Baseus models require their
 > own hardware evidence before these packets can be assumed to work.
 
@@ -60,9 +61,10 @@ Ultra / N0 models: logical BA command wrapped as `789C | len | … | CRC` (see `
 
 ## Implementation (B4S)
 
-Battery polling retains the canonical wrapped `BA02` query and adds a separate
-`BA27` query for the BP1 protocol family. The case query uses the connection's
-normal framing: bare for BP1 Pro, `789C` wrapped when required by the model.
+Battery polling uses the reviewed connection framing: bare BA02 for BP1 Pro.
+BA27 uses the same profile-selected framing. No wrapped packet is sent simply
+because a BLE write succeeded. BP1 Ultra has a 789C source candidate but no
+resolved runtime transport, so it does not send control/init packets.
 This query is present in the official app 2.14.1 (`EarFunctionShowPresenter.d`);
 the response is `AA27` with the percentage as its first payload byte. The added
 query has protocol tests but still needs confirmation on physical hardware.

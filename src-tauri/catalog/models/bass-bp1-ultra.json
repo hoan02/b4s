@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "id": "bass-bp1-ultra",
+  "displayName": "Baseus Bass BP1 Ultra",
+  "aliases": [
+    "bass bp1 ultra",
+    "bp1 ultra"
+  ],
+  "support": "scanOnly",
+  "protocolFamily": "unknown",
+  "category": "tws",
+  "group": "Bass BP1 / EP10",
+  "capabilities": {},
+  "noise": {
+    "supportsAdaptive": false,
+    "environments": [],
+    "maxCustomLevel": 0,
+    "supportsTransparencyVoice": false
+  },
+  "eq": null,
+  "image": null,
+  "connection": {
+    "transport": "unresolved",
+    "framing": "headphone789c",
+    "serviceUuid": null,
+    "writeUuid": null,
+    "notifyUuid": null,
+    "handshake": [],
+    "initStateQuery": false,
+    "firmwareVersions": [],
+    "provenance": "docs/re/findings-2.17.0.1.md; 789C source candidate; U01 transport capture required"
+  }
+}

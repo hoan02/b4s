@@ -29,7 +29,7 @@ pub use models::{
     catalog_json, identify as identify_model, looks_like_baseus, profile_for, DeviceProfile,
     ModelInfo, ProtocolFamily, SupportLevel,
 };
-pub use wrap_v2::{battery_query_frame, needs_v2_wrap, unwrap_notify, wrap_ba_command};
+pub use wrap_v2::{unwrap_notify, wrap_ba_command};
 pub use router::{decode_frame, encode_feature, encode_listening, FeatureCommand, ListeningCommand};
 
 /// Encode a bare BA command (no 789C wrap).

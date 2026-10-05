@@ -42,5 +42,21 @@
       {"id":"rock","label":"Rock Classic","description":"Rock","dictSort":11,"curve":[3,1,2,3,1,2,1,-1]}
     ]
   },
-  "image": "default_ear_pic"
+  "image": "default_ear_pic",
+  "schemaVersion": 2,
+  "connection": {
+  "transport": "bleGatt",
+  "framing": "bareAaBa",
+  "serviceUuid": "53527aa4-29f7-ae11-4e74-997334782568",
+  "writeUuid": "ee684b1a-1e9b-ed3e-ee55-f894667e92ac",
+  "notifyUuid": "654b749c-e37f-ae1f-ebab-40ca133e3690",
+  "handshake": [
+    186,
+    5,
+    0
+  ],
+  "initStateQuery": false,
+  "firmwareVersions": [],
+  "provenance": "docs/protocol/bp1-pro-anc.md; firmware scope not yet captured"
+}
 }

@@ -2,6 +2,7 @@ mod types;
 pub mod public;
 
 pub use types::ModelProfile;
+pub use types::{ConnectionProfile, ControlTransport, WireFraming};
 
 include!(concat!(env!("OUT_DIR"), "/model_profiles.rs"));
 
@@ -32,6 +33,29 @@ pub fn validate() -> Result<(), String> {
 fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
     let mut ids = std::collections::HashSet::new();
     for profile in profiles {
+        if !(1..=2).contains(&profile.schema_version) {
+            return Err(format!("unsupported profile schema in {}", profile.id));
+        }
+        if profile.schema_version == 2 && profile.connection.is_none() {
+            return Err(format!("missing connection profile in {}", profile.id));
+        }
+        if let Some(connection) = &profile.connection {
+            if connection.provenance.trim().is_empty() {
+                return Err(format!("missing transport provenance in {}", profile.id));
+            }
+            for uuid in [&connection.service_uuid, &connection.write_uuid, &connection.notify_uuid].into_iter().flatten() {
+                uuid::Uuid::parse_str(uuid).map_err(|_| format!("invalid transport UUID in {}", profile.id))?;
+            }
+            if connection.transport == ControlTransport::BleGatt &&
+                (connection.service_uuid.is_none() || connection.write_uuid.is_none() || connection.notify_uuid.is_none()
+                || connection.framing == WireFraming::Unresolved) {
+                return Err(format!("incomplete BLE connection profile in {}", profile.id));
+            }
+            if connection.transport == ControlTransport::Unresolved &&
+                (profile.support != "scanOnly" || !connection.handshake.is_empty() || connection.init_state_query) {
+                return Err(format!("unresolved transport must remain passive in {}", profile.id));
+            }
+        }
         if !ids.insert(profile.id.clone()) {
             return Err(format!("duplicate model profile: {}", profile.id));
         }
@@ -71,6 +95,33 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn v2_rejects_missing_invalid_or_active_unresolved_transport() {
+        let mut profile = profile_for("bass-bp1-pro").unwrap();
+        assert_eq!(profile.schema_version, 2);
+        profile.connection = None;
+        assert!(validate_profiles(&[profile]).is_err());
+        let mut profile = profile_for("bass-bp1-pro").unwrap();
+        profile.connection.as_mut().unwrap().notify_uuid = Some("not-a-uuid".into());
+        assert!(validate_profiles(&[profile]).is_err());
+        let mut profile = profile_for("bass-bp1-ultra").unwrap();
+        assert_eq!(profile.support, "scanOnly");
+        profile.connection.as_mut().unwrap().handshake = vec![0xBA, 5, 0];
+        assert!(validate_profiles(&[profile]).is_err());
+    }
+
+    #[test]
+    fn reviewed_pro_uuid_and_ultra_transport_are_not_inferred() {
+        let pro = profile_for("bass-bp1-pro").unwrap().connection.unwrap();
+        assert_eq!(pro.transport, ControlTransport::BleGatt);
+        assert_eq!(pro.framing, WireFraming::BareAaBa);
+        assert_eq!(pro.notify_uuid.as_deref(), Some("654b749c-e37f-ae1f-ebab-40ca133e3690"));
+        let ultra = profile_for("bass-bp1-ultra").unwrap().connection.unwrap();
+        assert_eq!(ultra.transport, ControlTransport::Unresolved);
+        assert!(ultra.handshake.is_empty());
+        assert!(!ultra.init_state_query);
+    }
 
     #[test]
     fn bp1_profile_is_model_data_not_protocol_code() {

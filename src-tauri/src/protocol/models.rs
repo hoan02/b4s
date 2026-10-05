@@ -136,6 +136,7 @@ pub struct NoiseCapability {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceProfile {
+    pub connection: Option<crate::catalog::ConnectionProfile>,
     pub model_id: Option<String>,
     pub model_name: Option<String>,
     pub firmware: Option<String>,
@@ -146,6 +147,7 @@ pub struct DeviceProfile {
 
 pub fn unknown_profile(model_id: Option<&str>, model_name: Option<&str>) -> DeviceProfile {
     DeviceProfile {
+        connection: None,
         model_id: model_id.map(str::to_owned),
         model_name: model_name.map(str::to_owned),
         firmware: None,
@@ -180,6 +182,7 @@ pub fn profile_for(
         5
     };
     DeviceProfile {
+        connection: catalog_profile.as_ref().and_then(|profile| profile.connection.clone()),
         model_id: Some(model.id),
         model_name: Some(model.display_name),
         firmware: firmware.map(str::to_owned),
@@ -234,6 +237,11 @@ pub fn all_models() -> Vec<ModelInfo> {
         model.capabilities.spatial = profile.capabilities.spatial;
         model.capabilities.ldac = profile.capabilities.ldac;
         model.capabilities.hearing_protection = profile.capabilities.hearing_protection;
+        if let Some(connection) = &profile.connection {
+            model.transport.service_uuid = connection.service_uuid.clone();
+            model.transport.write_uuid = connection.write_uuid.clone();
+            model.transport.notify_uuid = connection.notify_uuid.clone();
+        }
         models.retain(|existing| existing.id != model.id);
         models.push(model);
     }
@@ -287,7 +295,7 @@ fn merge_public_models(models: &mut Vec<ModelInfo>) {
 fn legacy_models() -> Vec<ModelInfo> {
     vec![
         m("bass-bp1-pro", "Baseus Bass BP1 Pro", &["bass bp1 pro", "bp1 pro"], SupportLevel::Verified, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
-        m("bass-bp1-ultra", "Baseus Bass BP1 Ultra", &["bass bp1 ultra", "bp1 ultra"], SupportLevel::Verified, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
+        m("bass-bp1-ultra", "Baseus Bass BP1 Ultra", &["bass bp1 ultra", "bp1 ultra"], SupportLevel::ScanOnly, ProtocolFamily::Unknown, false, false, false, "tws", "Bass BP1 / EP10"),
         m("bass-bp1-nc", "Baseus Bass BP1 NC", &["bass bp1 nc", "bp1 nc"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
         m("bass-ep10-nc", "Baseus Bass EP10 NC", &["bass ep10 nc", "ep10 nc"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
         m("bass-ep10-pro", "Baseus Bass EP10 Pro", &["bass ep10 pro", "ep10 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),

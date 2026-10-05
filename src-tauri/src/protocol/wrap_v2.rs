@@ -7,38 +7,6 @@
 
 use super::crc_table::CRC_TABLE;
 
-/// Models that need 789C+CRC wrap (DeviceManager.N0 == true in app 2.14.1).
-pub fn needs_v2_wrap(model_id: Option<&str>, model_name: Option<&str>, ble_name: Option<&str>) -> bool {
-    let blob = format!(
-        "{} {} {}",
-        model_id.unwrap_or(""),
-        model_name.unwrap_or(""),
-        ble_name.unwrap_or("")
-    )
-    .to_lowercase();
-    // Explicit Ultra / NC / M4s / Inspire family that use N0 framing
-    [
-        "bp1 ultra",
-        "ep10 ultra",
-        "bp1 nc",
-        "ep10 nc",
-        "m4s",
-        "inspire",
-        "bc1 lite",
-        "bc2",
-        "bf1 lite",
-        "wm01s",
-        "wm02s",
-        "as01 air",
-        "mc2 nc",
-        "mc2",
-        "mp1",
-        "ms1",
-    ]
-    .iter()
-    .any(|k| blob.contains(k))
-}
-
 /// Custom CRC16 from HeadPhoneCrcUtil (app 2.14.1).
 pub fn crc16(data: &[u8]) -> u16 {
     let mut i2: u32 = 65535;
@@ -110,6 +78,7 @@ pub fn wrap_ba_command(bare: &[u8]) -> Option<Vec<u8>> {
 ///
 /// Keep the wrapped BA02 exchange intact. Supplemental queries use the
 /// connection's model-specific framing through the normal write helper.
+#[cfg(test)]
 pub fn battery_query_frame() -> Vec<u8> {
     let bare = vec![0xBA, 0x02];
     wrap_ba_command(&bare).expect("BA02 always produces a BP1 Ultra frame")

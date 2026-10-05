@@ -13,6 +13,10 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
     let Some(model) = model else {
         return plan;
     };
+    if profile.protocol == crate::protocol::ProtocolFamily::Unknown ||
+        profile.connection.as_ref().map(|connection| connection.transport) != Some(crate::catalog::ControlTransport::BleGatt) {
+        return plan;
+    }
     plan.push(StartupQuery::Battery);
     if model.capabilities.eq {
         plan.push(StartupQuery::Eq);

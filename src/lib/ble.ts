@@ -32,6 +32,18 @@ export interface BleDevice {
 }
 
 export interface DeviceProfile {
+  connection: {
+    transport: "bleGatt" | "unresolved";
+    framing: "bareAaBa" | "headphone789c" | "unresolved";
+    serviceUuid: string | null;
+    writeUuid: string | null;
+    notifyUuid: string | null;
+    handshake: number[];
+    initStateQuery: boolean;
+    firmwareVersions: string[];
+    provenance: string;
+  } | null;
+
   modelId?: string | null;
   modelName?: string | null;
   firmware?: string | null;
