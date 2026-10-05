@@ -51,7 +51,8 @@ impl Bp1ProAnc {
                 _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
             },
 
-            0x54 => Ok(DeviceEvent::BassBoost(Self::bass_level_from_payload(&frame.payload))),
+            0x54 => Self::bass_level_from_payload(&frame.payload)
+                .map(DeviceEvent::BassBoost).ok_or(DecodeError::UnknownOpcode(frame.cmd)),
             0x74 => match frame.payload.as_slice() {
                 [0] => Ok(DeviceEvent::Ldac(true)),
                 [1] => Ok(DeviceEvent::Ldac(false)),
@@ -179,14 +180,14 @@ impl Bp1ProAnc {
     pub fn cmd_set_custom_eq(dict_sort: u8, _anc: bool, bands: &[EqBand]) -> Vec<u8> {
         Self::cmd_set_eq_filters(dict_sort, bands)
     }
-    fn bass_level_from_payload(payload: &[u8]) -> u8 {
-        // Firmware variants answer either AA54 [level] or AA54 [enabled, level].
-        let level = if payload.len() >= 2 && payload[0] <= 1 {
-            payload[1]
-        } else {
-            payload.first().copied().unwrap_or(0)
-        };
-        level.min(3)
+    fn bass_level_from_payload(payload: &[u8]) -> Option<u8> {
+        // Preserve the legacy layouts, but never clamp ACK/error codes into state.
+        match payload {
+            [level @ 0..=3] => Some(*level),
+            [0, 0] => Some(0),
+            [1, level @ 0..=3] => Some(*level),
+            _ => None,
+        }
     }
 
     #[allow(dead_code)]
@@ -443,6 +444,16 @@ mod tests {
         assert!(dec(&[0xAA, 0x42, 1]).is_err());
         assert!(dec(&[0xAA, 0x43, 1]).is_err());
         assert!(dec(&[0xAA, 0x30, 1, 2]).is_err());
+    }
+
+    #[test]
+    fn bass_errors_and_invalid_layouts_never_become_level_three() {
+        for payload in [vec![], vec![0x0B], vec![0x0C], vec![0x0D], vec![4],
+            vec![2, 1], vec![0, 2], vec![1, 4], vec![1, 2, 0]] {
+            let mut frame = vec![0xAA, 0x54];
+            frame.extend(payload);
+            assert!(dec(&frame).is_err());
+        }
     }
 
 }

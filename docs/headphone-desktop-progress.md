@@ -230,3 +230,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Frontend LDAC/hearing values are nullable, reset to unknown on session loss and follow nullable snapshots. Missing readback no longer initializes a confirmed off state.
 - Supported controls show localized unknown-state text and accessible mixed checkbox state until observations arrive. Users can submit an explicit toggle, while pending retains the observed/unknown value and rejects repetition.
 - Frontend typecheck, 238-key five-locale parity and whitespace checks passed. Screen-reader/scaling acceptance and remaining advanced/listening unknown states remain open.
+
+
+## Increment 25 — reject bass error payloads
+
+- Source receive handling distinguishes AA53 query from AA54 set replies and AA54 error codes such as 0C/0D. Existing decoder clamped arbitrary payloads to level 3; removed that behavior and rejected empty, out-of-range, inconsistent and extra-byte layouts.
+- Three focused bass tests passed, including all error/invalid layouts. Legacy compact/enabled-level decoding remains compatibility behavior, not completed source verification; one-byte success ambiguity, actual AA53 decode and query confirmation remain open.
+- Source pointers: EarphoneFunctionShowFragmentNewUI receive routing around 3022/3028 and error handling around 950–978; EarHeadSetViewModel BA53 query around 463. No new bass hardware claim or UI success-policy completion.
