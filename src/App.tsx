@@ -427,7 +427,7 @@ const App: Component = () => {
           >
             <section class="section section-scroll">
               <Show when={controlError()}>
-                <div class="control-error" style={{ "margin-bottom": "12px" }}>
+                <div class="control-error" role="alert" aria-live="assertive" style={{ "margin-bottom": "12px" }}>
                   {controlError()}
                 </div>
               </Show>

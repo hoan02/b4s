@@ -512,3 +512,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Refreshed the work-package summary after moving ANC/transparency, EQ, game, spatial and advanced-sound workflows into dedicated feature controllers. P5.1 remains open for navigation/accessibility acceptance.
 - P4.3 now records full frontend shape validation and the remaining session/sequence/error semantics. No local tests/build were run for this tracker-only update.
+
+## Increment 68 — improve shared dialog keyboard accessibility
+
+- The shared confirmation dialog now moves keyboard focus into the dialog, keeps Tab navigation inside it, handles Escape through the existing cancel path, and restores focus when closed. Dialog title/description relationships are explicit, and its decorative glyph is hidden from assistive technology.
+- The top-level control error is announced with an alert live region. `npx tsc --noEmit` and `git diff --check` passed; platform/visual accessibility acceptance remains open.
