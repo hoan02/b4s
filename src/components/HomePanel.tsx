@@ -46,7 +46,7 @@ interface Props {
   findSupported: boolean;
   spatialSupported: boolean;
   moreSupported: boolean;
-  gameMode: boolean;
+  gameMode: boolean | null;
   gamePending?: boolean;
   gameError?: string | null;
   findActive: boolean;
@@ -300,13 +300,14 @@ const HomePanel: Component<Props> = (props) => {
             </span>
             <div class="list-text">
               <span class="list-title">{t("home.gameMode")}</span>
-              <span class="list-sub">{t("home.lowLatency")}</span>
+              <span class="list-sub">{props.gameMode === null ? t("control.unknown") : t("home.lowLatency")}</span>
               <OperationStatus pending={props.gamePending} error={props.gameError} />
             </div>
             <label class="toggle sm">
               <input
                 type="checkbox"
-                checked={props.gameMode}
+                aria-checked={props.gameMode === null ? "mixed" : props.gameMode}
+                checked={props.gameMode === true}
                 disabled={props.gamePending}
                 aria-busy={props.gamePending}
                 aria-label={t("home.gameMode")}

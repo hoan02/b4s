@@ -96,7 +96,7 @@ const App: Component = () => {
   const [gamePending, setGamePending] = createSignal(false);
   const [eqError, setEqError] = createSignal<string | null>(null);
   const [gameError, setGameError] = createSignal<string | null>(null);
-  const [gameOn, setGameOn] = createSignal(false);
+  const [gameOn, setGameOn] = createSignal<boolean | null>(null);
   const [findActive, setFindActive] = createSignal(false);
   const [findConfirmOpen, setFindConfirmOpen] = createSignal(false);
   const [findDialogMode, setFindDialogMode] = createSignal<"confirm" | "active">("confirm");
@@ -130,8 +130,7 @@ const App: Component = () => {
       equalizer.reset();
       advancedSound.reset();
       spatialOperation.reset();
-      setGamePending(false);
-      setGameError(null);
+      gameOperation.reset();
       setBassBoostUi(null);
       setHearingProtect(null);
       setHearingThreshold(null);
@@ -140,12 +139,12 @@ const App: Component = () => {
       setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
       setAncModeUi("off");
       setEqActive("classic");
-      setGameOn(false);
+      setGameOn(null);
       setLdac(null);
       return;
     }
     if (snapshot.anc !== null) setAncModeUi(snapshot.anc);
-    if (snapshot.game !== null) setGameOn(snapshot.game);
+    setGameOn(snapshot.game ?? null);
     setSpatialOn(snapshot.spatialEnabled ?? null);
     setLdac(snapshot.ldac ?? null);
     setBassBoostUi(snapshot.bassBoost ?? null);
@@ -185,6 +184,9 @@ const App: Component = () => {
   });
   const spatialOperation = createConfirmedOperation({
     session, refresh: refreshSnapshot, pending: setSpatialPending, error: setSpatialError, formatError,
+  });
+  const gameOperation = createConfirmedOperation({
+    session, refresh: refreshSnapshot, pending: setGamePending, error: setGameError, formatError,
   });
   let disposed = false;
   const track = (unsubscribe: () => void) => {
@@ -448,22 +450,10 @@ const App: Component = () => {
   };
 
   const handleGameMode = async (enabled: boolean) => {
-    if (gamePending()) return;
-    const generation = session.capture();
-    setGamePending(true);
-    setGameError(null);
-    try {
-      await setGameMode(enabled);
-      if (!session.isCurrent(generation)) return;
-      await refreshSnapshot();
+    await gameOperation.run(() => setGameMode(enabled), () => {
+      if (link().mock) setGameOn(enabled);
       notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info");
-    } catch (e) {
-      if (!session.isCurrent(generation)) return;
-      setGameError(formatError(e));
-      notify(formatError(e), "error");
-    } finally {
-      if (session.isCurrent(generation)) setGamePending(false);
-    }
+    }, (message) => notify(message, "error"));
   };
 
   const handleSpatialOn = async (on: boolean) => {
