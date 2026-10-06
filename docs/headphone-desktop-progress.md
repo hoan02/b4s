@@ -822,3 +822,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Decoded the base-APK resources locally (`jadx.cli.JadxCLI --no-src`) to resolve `str_left_and_right_adapter` = "Adaptive L/R Earbuds", confirming the meaning of the previously unlabeled `BA3F`/`BA4A` pair.
 - Implemented it: `adaptiveLr` capability + provenance, `BA3F`/`AA3F` query-state and `BA4A01`/`BA4A00` set with `BA3F` readback, shared authorization, timestamped snapshot, startup query, Experimental-only BP1 Pro toggle and five-locale label.
 - `cargo check` and 142 Rust library tests pass; `npx tsc --noEmit`, five-locale parity (292/292) and `npm run build` pass. Runtime audio effect and hardware acceptance remain unverified.
+
+## Increment 128 — connection diagnostics for duplicate entries
+
+- `connect_one` now logs the selected entry (id, name, address, advertised services) and, after service discovery, the exact services and characteristics that entry exposes, so a terminal `npm run tauri:dev` session shows why a connection failed. The missing-service error now reports the discovered service count and hints that the entry may be the audio endpoint.
+- The pairing list marks the entry advertising the reviewed control service with a **Control** tag (five locales) and sorts it first, so duplicate same-name entries can be told apart. The troubleshooting guide documents the duplicate-entry flow and the scan-only transport gate.
+- `cargo check` and 142 Rust library tests pass; `npx tsc --noEmit`, five-locale parity (293/293) and `npm run build` pass. This is diagnostics only and does not change the control transport.

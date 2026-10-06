@@ -21,6 +21,30 @@ Restart Bluetooth or the app after changing the adapter state. If the earbuds
 are connected to another phone, disconnect them there and place them back into
 their discoverable state before scanning again.
 
+### Two entries for one earbud and a failed connection
+
+Windows commonly lists the same earbuds as more than one BLE entry (an audio
+endpoint and an LE control entry), and some earbuds also advertise each bud
+separately. B4S can only control the entry that exposes the reviewed control
+service, so connecting to the wrong entry fails.
+
+- The scan list marks the entry that advertises the reviewed control service with
+  a **Control** tag and sorts it first. Try that entry first.
+- If both entries look identical, try the other one. The app shows a tip when two
+  entries share a name.
+- Run `npm run tauri:dev` to see the Rust log in the terminal. On each connect
+  attempt it prints the selected entry name/address/advertised services and, after
+  service discovery, the exact services and characteristics that entry exposes.
+  A connection to the audio entry typically reports "Reviewed control service is
+  missing on this entry".
+- A model shown **without** a verified/beta tag is scan-only. BP1 Ultra is
+  scan-only in the current build because its control transport (Classic SPP/789C
+  versus BLE) is not yet verified; connecting is intentionally refused until a
+  capture confirms it. See the capture guide.
+
+Collect the terminal log around the failed attempt, the exact on-screen error, and
+both entry names before reporting.
+
 ## Startup and the system tray
 
 **Start B4S at sign-in** and **Reconnect automatically** are separate settings;

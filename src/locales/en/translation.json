@@ -26,6 +26,7 @@
   "pair.connect": "Connect",
   "pair.verified": "Verified",
   "pair.experimental": "Beta",
+  "pair.control": "Control",
   "pair.entryHint": "2 entries",
   "pair.deviceCount_one": "{{count}} entry",
   "pair.deviceCount_other": "{{count}} entries",

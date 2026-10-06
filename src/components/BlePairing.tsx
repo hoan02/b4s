@@ -203,13 +203,21 @@ const BlePairing: Component<Props> = (props) => {
     }
   };
 
+  const advertisesControl = (device: BleDevice): boolean => {
+    const serviceUuid = device.deviceProfile.connection?.serviceUuid;
+    return !!serviceUuid &&
+      device.advertisedServices.some((uuid) => uuid.toLowerCase() === serviceUuid.toLowerCase());
+  };
+
   const matched = () => {
     const list = devices().filter((d) => d.isBaseus && d.headphoneCandidate !== false);
     return [...list].sort((a, b) => {
       const rank = (s?: string | null) =>
         s === "verified" ? 0 : s === "experimental" ? 1 : 2;
       const r = rank(a.support) - rank(b.support);
-      return r !== 0 ? r : b.rssi - a.rssi;
+      if (r !== 0) return r;
+      const control = Number(advertisesControl(b)) - Number(advertisesControl(a));
+      return control !== 0 ? control : b.rssi - a.rssi;
     });
   };
   const others = () => devices().filter((d) => !d.isBaseus);
@@ -286,6 +294,7 @@ const BlePairing: Component<Props> = (props) => {
                 {(device) => (
                   <DeviceRow
                     device={device}
+                    control={advertisesControl(device)}
                     connecting={connectingId() === device.id}
                     onConnect={() => handleConnect(device)}
                   />
@@ -352,6 +361,7 @@ const BlePairing: Component<Props> = (props) => {
 
 const DeviceRow: Component<{
   device: BleDevice;
+  control?: boolean;
   connecting: boolean;
   onConnect: () => void;
 }> = (props) => {
@@ -382,6 +392,9 @@ const DeviceRow: Component<{
           </Show>
           <Show when={props.device.support === "experimental"}>
             <span class="tag">{t("pair.experimental")}</span>
+          </Show>
+          <Show when={props.control}>
+            <span class="tag ok">{t("pair.control")}</span>
           </Show>
         </div>
         <div class="device-meta">

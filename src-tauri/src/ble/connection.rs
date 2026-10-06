@@ -41,6 +41,14 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Ble
             .devices
             .get(&device_id)
             .ok_or(BleError::DeviceUnavailable)?;
+        log::info!(
+            "Connect request: id={device_id} name={:?} address={} model={:?} support={:?} advertisedServices={:?}",
+            device.name,
+            device.address,
+            device.model_name,
+            device.support,
+            device.advertised_services
+        );
         if device
             .device_profile
             .connection
@@ -161,6 +169,25 @@ async fn connect_one(
     first_connect.on_services_discovered();
     ensure_session(token).await?;
 
+    // Diagnostics: what this exact OS entry actually exposes. A Windows install
+    // often lists the same earbuds twice (audio endpoint vs LE control entry);
+    // the control entry is the one carrying the reviewed service/characteristics.
+    let discovered_services: Vec<String> = peripheral
+        .services()
+        .iter()
+        .map(|service| service.uuid.to_string())
+        .collect();
+    let discovered_characteristics: Vec<String> = peripheral
+        .characteristics()
+        .iter()
+        .map(|characteristic| format!("{} {:?}", characteristic.uuid, characteristic.properties))
+        .collect();
+    log::info!(
+        "Entry {device_id} services ({}) {discovered_services:?}",
+        discovered_services.len()
+    );
+    log::info!("Entry {device_id} characteristics {discovered_characteristics:?}");
+
     // Keep fresh handle in map
     {
         let mut state = BLE.lock().await;
@@ -186,7 +213,10 @@ async fn connect_one(
         .iter()
         .any(|service| service.uuid == service_uuid)
     {
-        return Err("Reviewed control service is missing on this entry".into());
+        return Err(format!(
+            "Reviewed control service is missing on this entry ({} services discovered; this may be the audio entry, try the other scan entry)",
+            discovered_services.len()
+        ));
     }
     let write_uuid = uuid::Uuid::parse_str(
         connection

@@ -35,6 +35,7 @@
   "pair.connect": "Kết nối",
   "pair.verified": "Đã xác minh",
   "pair.experimental": "Thử nghiệm",
+  "pair.control": "Điều khiển",
   "pair.entryHint": "2 thiết bị",
   "pair.deviceCount_other": "{{count}} thiết bị",
   "home.bassLdac": "Bass · LDAC · …", "home.indicatorLeft": "Trái", "home.indicatorCase": "Hộp", "home.indicatorRight": "Phải",

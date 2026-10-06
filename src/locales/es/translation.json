@@ -34,6 +34,7 @@
   "pair.connect": "Conectar",
   "pair.verified": "Verificado",
   "pair.experimental": "Beta",
+  "pair.control": "Control",
   "home.connected": "Conectado",
   "home.waiting": "Esperando datos",
   "home.demo": "Demo",
