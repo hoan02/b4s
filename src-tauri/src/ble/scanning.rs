@@ -1,4 +1,5 @@
 use super::*;
+use crate::device::{DeviceIdentity, DeviceRegistry};
 
 fn insert_scan_device(devices: &mut HashMap<String, BleDevice>, device: BleDevice) -> bool {
     if devices
