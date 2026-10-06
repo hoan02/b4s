@@ -55,7 +55,9 @@ impl DeviceRegistry {
     ) -> ResolvedDevice {
         let profile = model
             .as_ref()
-            .map(|item| crate::protocol::profile_for(Some(&item.id), Some(&item.display_name), None))
+            .map(|item| {
+                crate::protocol::profile_for(Some(&item.id), Some(&item.display_name), None)
+            })
             .unwrap_or_else(|| crate::protocol::profile_for(None, Some(&identity.name), None));
         let source = if model.is_none() {
             ResolutionSource::Unknown
@@ -93,16 +95,24 @@ mod tests {
         assert_eq!(resolved.source, ResolutionSource::CatalogName);
         assert_eq!(resolved.profile.protocol, ProtocolFamily::Bp1Pro);
         assert!(resolved.profile.verified);
-        assert_eq!(resolved.model.as_ref().unwrap().support, SupportLevel::Verified);
+        assert_eq!(
+            resolved.model.as_ref().unwrap().support,
+            SupportLevel::Verified
+        );
     }
 
     #[test]
-    fn resolves_other_catalog_model_without_claiming_bp1_support() {
+    fn public_metadata_model_is_scan_only_without_a_protocol_profile() {
         let resolved = DeviceRegistry::resolve(identity("Baseus Bowie MA10"));
 
         assert_eq!(resolved.source, ResolutionSource::CatalogName);
         assert!(!resolved.profile.verified);
-        assert_eq!(resolved.model.as_ref().unwrap().support, SupportLevel::Experimental);
+        assert_eq!(
+            resolved.model.as_ref().unwrap().support,
+            SupportLevel::ScanOnly
+        );
+        assert_eq!(resolved.profile.protocol, ProtocolFamily::Unknown);
+        assert!(resolved.profile.connection.is_none());
     }
 
     #[test]
@@ -117,7 +127,8 @@ mod tests {
 
     #[test]
     fn explicit_catalog_model_overrides_ambiguous_bluetooth_name() {
-        let resolved = DeviceRegistry::resolve_with_model(identity("Wireless Audio"), "bass-bp1-pro");
+        let resolved =
+            DeviceRegistry::resolve_with_model(identity("Wireless Audio"), "bass-bp1-pro");
 
         assert_eq!(resolved.source, ResolutionSource::ExplicitModel);
         assert_eq!(resolved.model.as_ref().unwrap().id, "bass-bp1-pro");

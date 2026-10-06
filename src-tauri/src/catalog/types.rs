@@ -2,11 +2,18 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ControlTransport { BleGatt, Unresolved }
+pub enum ControlTransport {
+    BleGatt,
+    Unresolved,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum WireFraming { BareAaBa, Headphone789c, Unresolved }
+pub enum WireFraming {
+    BareAaBa,
+    Headphone789c,
+    Unresolved,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -87,7 +94,6 @@ pub struct HearingProfile {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelProfile {
-    #[serde(default = "legacy_schema")]
     pub schema_version: u8,
     #[serde(default)]
     pub connection: Option<ConnectionProfile>,
@@ -105,5 +111,3 @@ pub struct ModelProfile {
     pub hearing: Option<HearingProfile>,
     pub image: Option<String>,
 }
-
-fn legacy_schema() -> u8 { 1 }

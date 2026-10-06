@@ -39,14 +39,6 @@ export async function queryBattery(): Promise<DeviceBattery> {
   return invoke<DeviceBattery>("query_battery");
 }
 
-export async function setAncMode(
-  mode: AncMode,
-  strength = 70,
-  parameter?: number
-): Promise<void> {
-  await invoke("set_anc_mode", { mode, strength, parameter });
-}
-
 export interface ListeningStateRequest {
   mode: AncMode;
   transparencyMode: TransparencyMode;
@@ -72,16 +64,6 @@ export function profileNoise(profile?: {
   return {
     adaptive: profile.supportsAdaptive,
     maxLevel: profile.maxCustomLevel === 3 ? 3 : profile.maxCustomLevel > 0 ? 5 : 0,
-  };
-}
-
-const THREE_LEVEL_MODELS = new Set(["eh10-nc-lite", "bh1-nc-lite"]);
-
-export function noiseProfile(modelId?: string | null, hasAnc = true): NoiseProfile {
-  if (!hasAnc) return { adaptive: false, maxLevel: 3 };
-  return {
-    adaptive: true,
-    maxLevel: THREE_LEVEL_MODELS.has(modelId ?? "") ? 3 : 5,
   };
 }
 

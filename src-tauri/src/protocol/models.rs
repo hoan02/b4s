@@ -10,8 +10,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::advertisement::BASEUS_SERVICE_UUID;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SupportLevel {
@@ -25,12 +23,10 @@ pub enum SupportLevel {
 pub enum ProtocolFamily {
     /// Packet table verified on Bass BP1 Pro / Ultra hardware.
     Bp1Pro,
-    /// Best-effort shared Baseus AA/BA implementation; not hardware-verified for this model.
-    BaseusAaBaExperimental,
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelCapabilities {
     pub anc: bool,
@@ -73,57 +69,6 @@ pub struct ModelInfo {
     pub image_provenance: String,
 }
 
-fn m(
-    id: &str,
-    display: &str,
-    patterns: &[&str],
-    support: SupportLevel,
-    protocol: ProtocolFamily,
-    anc: bool,
-    eq: bool,
-    game: bool,
-    category: &str,
-    group: &str,
-) -> ModelInfo {
-    let protocol = match (support, protocol) {
-        (SupportLevel::Verified, protocol) => protocol,
-        (_, ProtocolFamily::Bp1Pro) => ProtocolFamily::BaseusAaBaExperimental,
-        (_, protocol) => protocol,
-    };
-
-    ModelInfo {
-        id: id.into(),
-        display_name: display.into(),
-        name_patterns: patterns.iter().map(|s| s.to_lowercase()).collect(),
-        support,
-        protocol,
-        has_anc: anc,
-        has_eq: eq,
-        has_game_mode: game,
-        category: category.into(),
-        group: group.into(),
-        capabilities: ModelCapabilities {
-            anc,
-            eq,
-            game_mode: game,
-            bass_boost: eq,
-            ldac: false,
-            hearing_protection: false,
-            spatial: eq,
-        },
-        transport: BleTransportConfig {
-            service_uuid: Some(BASEUS_SERVICE_UUID.into()),
-            write_uuid: Some("EE684B1A-1E9B-ED3E-EE55-F894667E92AC".into()),
-            notify_uuid: Some("654B749C-E37A-AE1F-EBAB-40CA133E3690".into()),
-            use_self_uuid: false,
-            required_advertised_service: false,
-        },
-        color_variants: Vec::new(),
-        image_url: None,
-        image_provenance: "fallback".into(),
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct NoiseCapability {
@@ -164,90 +109,169 @@ pub fn unknown_profile(model_id: Option<&str>, model_name: Option<&str>) -> Devi
     }
 }
 
+fn support_level(value: &str) -> SupportLevel {
+    match value {
+        "verified" => SupportLevel::Verified,
+        "experimental" => SupportLevel::Experimental,
+        _ => SupportLevel::ScanOnly,
+    }
+}
+
+fn protocol_family(value: &str) -> ProtocolFamily {
+    match value {
+        "bp1" => ProtocolFamily::Bp1Pro,
+        _ => ProtocolFamily::Unknown,
+    }
+}
+
+fn model_info_from_profile(profile: &crate::catalog::ModelProfile) -> ModelInfo {
+    let capabilities = ModelCapabilities {
+        anc: profile.capabilities.anc,
+        eq: profile.capabilities.eq,
+        game_mode: profile.capabilities.game_mode,
+        bass_boost: profile.capabilities.bass_boost,
+        ldac: profile.capabilities.ldac,
+        hearing_protection: profile.capabilities.hearing_protection,
+        spatial: profile.capabilities.spatial,
+    };
+    let connection = profile.connection.as_ref();
+    let (service_uuid, write_uuid, notify_uuid, use_self_uuid, required_advertised_service) =
+        match connection {
+            Some(connection)
+                if connection.transport == crate::catalog::ControlTransport::BleGatt =>
+            {
+                (
+                    connection.service_uuid.clone(),
+                    connection.write_uuid.clone(),
+                    connection.notify_uuid.clone(),
+                    false,
+                    true,
+                )
+            }
+            _ => (None, None, None, false, false),
+        };
+    ModelInfo {
+        id: profile.id.clone(),
+        display_name: profile.display_name.clone(),
+        name_patterns: profile
+            .aliases
+            .iter()
+            .map(|alias| alias.to_lowercase())
+            .collect(),
+        support: support_level(&profile.support),
+        protocol: protocol_family(&profile.protocol_family),
+        has_anc: capabilities.anc,
+        has_eq: capabilities.eq,
+        has_game_mode: capabilities.game_mode,
+        category: profile.category.clone(),
+        group: profile.group.clone(),
+        capabilities,
+        transport: BleTransportConfig {
+            service_uuid,
+            write_uuid,
+            notify_uuid,
+            use_self_uuid,
+            required_advertised_service,
+        },
+        color_variants: Vec::new(),
+        image_url: profile.image.clone(),
+        image_provenance: "reviewed-profile".into(),
+    }
+}
+
+fn scan_only_model(public: &crate::catalog::public::PublicModel) -> ModelInfo {
+    ModelInfo {
+        id: public.id.clone(),
+        display_name: public.model.clone(),
+        name_patterns: public.name_patterns(),
+        support: SupportLevel::ScanOnly,
+        protocol: ProtocolFamily::Unknown,
+        has_anc: false,
+        has_eq: false,
+        has_game_mode: false,
+        category: "audio".into(),
+        group: public.group(),
+        capabilities: ModelCapabilities {
+            anc: false,
+            eq: false,
+            game_mode: false,
+            bass_boost: false,
+            ldac: false,
+            hearing_protection: false,
+            spatial: false,
+        },
+        transport: BleTransportConfig {
+            service_uuid: None,
+            write_uuid: None,
+            notify_uuid: None,
+            use_self_uuid: false,
+            required_advertised_service: false,
+        },
+        color_variants: public.color_codes(),
+        image_url: None,
+        image_provenance: "offline-public-metadata".into(),
+    }
+}
+
 pub fn profile_for(
     model_id: Option<&str>,
     model_name: Option<&str>,
     firmware: Option<&str>,
 ) -> DeviceProfile {
     let Some(id) = model_id else {
-        return unknown_profile(model_id, model_name);
+        return unknown_profile(None, model_name);
     };
-    let Some(model) = all_models().into_iter().find(|item| item.id == id) else {
-        return unknown_profile(model_id, model_name);
+    if let Some(profile) = crate::catalog::profile_for(id) {
+        if profile.support == "scanOnly" {
+            let mut passive = unknown_profile(Some(&profile.id), Some(&profile.display_name));
+            passive.firmware = firmware.map(str::to_owned);
+            return passive;
+        }
+        return DeviceProfile {
+            connection: profile.connection,
+            capabilities: profile.capabilities,
+            model_id: Some(profile.id),
+            model_name: Some(profile.display_name),
+            firmware: firmware.map(str::to_owned),
+            protocol: protocol_family(&profile.protocol_family),
+            verified: profile.support == "verified",
+            noise: NoiseCapability {
+                supports_adaptive: profile.noise.supports_adaptive,
+                environments: profile.noise.environments,
+                max_custom_level: profile.noise.max_custom_level,
+                supports_transparency_voice: profile.noise.supports_transparency_voice,
+            },
+        };
+    }
+    let Some(model) = all_models().into_iter().find(|model| model.id == id) else {
+        return unknown_profile(Some(id), model_name);
     };
-    let catalog_profile = crate::catalog::profile_for(id);
-    let max_custom_level = if !model.has_anc {
-        0
-    } else if id == "eh10-nc-lite" || id == "bh1-nc-lite" {
-        3
-    } else {
-        5
-    };
+    if model.support != SupportLevel::ScanOnly {
+        return unknown_profile(Some(id), Some(&model.display_name));
+    }
     DeviceProfile {
-        connection: catalog_profile.as_ref().and_then(|profile| profile.connection.clone()),
-        capabilities: catalog_profile.as_ref().map(|profile| profile.capabilities.clone()).unwrap_or_default(),
+        connection: None,
+        capabilities: crate::catalog::Capabilities::default(),
         model_id: Some(model.id),
         model_name: Some(model.display_name),
         firmware: firmware.map(str::to_owned),
-        protocol: model.protocol,
-        verified: matches!(model.support, SupportLevel::Verified),
-        noise: catalog_profile.map(|profile| NoiseCapability {
-            supports_adaptive: profile.noise.supports_adaptive,
-            environments: profile.noise.environments,
-            max_custom_level: profile.noise.max_custom_level,
-            supports_transparency_voice: profile.noise.supports_transparency_voice,
-        }).unwrap_or(NoiseCapability {
-            supports_adaptive: model.has_anc,
-            environments: if model.has_anc {
-                vec![101, 102, 103, 108]
-            } else {
-                Vec::new()
-            },
-            max_custom_level,
-            supports_transparency_voice: model.has_anc,
-        }),
+        protocol: ProtocolFamily::Unknown,
+        verified: false,
+        noise: NoiseCapability {
+            supports_adaptive: false,
+            environments: Vec::new(),
+            max_custom_level: 0,
+            supports_transparency_voice: false,
+        },
     }
 }
 
-/// Reviewed profiles and legacy registry enriched by the public server snapshot.
+/// Runtime identity data comes only from reviewed profiles and the public scan catalog.
 pub fn all_models() -> Vec<ModelInfo> {
-    let mut models = legacy_models();
-    for profile in crate::catalog::all_profiles() {
-        let support = match profile.support.as_str() {
-            "verified" => SupportLevel::Verified,
-            "experimental" => SupportLevel::Experimental,
-            _ => SupportLevel::ScanOnly,
-        };
-        let protocol = match profile.protocol_family.as_str() {
-            "bp1" => ProtocolFamily::Bp1Pro,
-            "baseusAaBaExperimental" => ProtocolFamily::BaseusAaBaExperimental,
-            _ => ProtocolFamily::Unknown,
-        };
-        let aliases: Vec<_> = profile.aliases.iter().map(String::as_str).collect();
-        let mut model = m(
-            &profile.id,
-            &profile.display_name,
-            &aliases,
-            support,
-            protocol,
-            profile.capabilities.anc,
-            profile.capabilities.eq,
-            profile.capabilities.game_mode,
-            &profile.category,
-            &profile.group,
-        );
-        model.capabilities.bass_boost = profile.capabilities.bass_boost;
-        model.capabilities.spatial = profile.capabilities.spatial;
-        model.capabilities.ldac = profile.capabilities.ldac;
-        model.capabilities.hearing_protection = profile.capabilities.hearing_protection;
-        if let Some(connection) = &profile.connection {
-            model.transport.service_uuid = connection.service_uuid.clone();
-            model.transport.write_uuid = connection.write_uuid.clone();
-            model.transport.notify_uuid = connection.notify_uuid.clone();
-        }
-        models.retain(|existing| existing.id != model.id);
-        models.push(model);
-    }
+    let mut models: Vec<_> = crate::catalog::all_profiles()
+        .iter()
+        .map(model_info_from_profile)
+        .collect();
     merge_public_models(&mut models);
     models
 }
@@ -256,233 +280,36 @@ fn merge_public_models(models: &mut Vec<ModelInfo>) {
     use crate::catalog::public::{headphone_models, identity_key};
 
     for public in headphone_models() {
-        // Match full identities, never the legacy substring aliases. For example,
-        // metadata for "BP1 Pro+" must not enable BP1 Pro's command adapter.
         if let Some(existing) = models
             .iter_mut()
             .find(|model| identity_key(&model.display_name) == identity_key(&public.model))
         {
             for pattern in public.name_patterns() {
-                if !existing.name_patterns.contains(&pattern) {
+                if !existing
+                    .name_patterns
+                    .iter()
+                    .any(|alias| identity_key(alias) == identity_key(&pattern))
+                {
                     existing.name_patterns.push(pattern);
                 }
             }
             existing.color_variants = public.color_codes();
-            continue;
+        } else {
+            models.push(scan_only_model(public));
         }
-
-        let patterns = public.name_patterns();
-        let aliases: Vec<_> = patterns.iter().map(String::as_str).collect();
-        let mut model = scan_only_model(
-            &public.id,
-            &public.model,
-            &aliases,
-            "audio",
-            &public.group(),
-        );
-        model.color_variants = public.color_codes();
-        models.push(model);
     }
 }
 
-fn scan_only_model(
-    id: &str,
-    display: &str,
-    patterns: &[&str],
-    category: &str,
-    group: &str,
-) -> ModelInfo {
-    let mut model = m(
-        id,
-        display,
-        patterns,
-        SupportLevel::ScanOnly,
-        ProtocolFamily::Unknown,
-        false,
-        false,
-        false,
-        category,
-        group,
-    );
-    // Public metadata is not GATT/transport evidence.
-    model.transport.service_uuid = None;
-    model.transport.write_uuid = None;
-    model.transport.notify_uuid = None;
-    model
-}
-
-// Compatibility catalog: migrate entries only when model-specific data is available.
-fn legacy_models() -> Vec<ModelInfo> {
-    vec![
-        m("bass-bp1-pro", "Baseus Bass BP1 Pro", &["bass bp1 pro", "bp1 pro"], SupportLevel::Verified, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
-        m("bass-bp1-ultra", "Baseus Bass BP1 Ultra", &["bass bp1 ultra", "bp1 ultra"], SupportLevel::ScanOnly, ProtocolFamily::Unknown, false, false, false, "tws", "Bass BP1 / EP10"),
-        m("bass-bp1-nc", "Baseus Bass BP1 NC", &["bass bp1 nc", "bp1 nc"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
-        m("bass-ep10-nc", "Baseus Bass EP10 NC", &["bass ep10 nc", "ep10 nc"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
-        m("bass-ep10-pro", "Baseus Bass EP10 Pro", &["bass ep10 pro", "ep10 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
-        m("bass-ep10-ultra", "Baseus Bass EP10 Ultra", &["bass ep10 ultra", "ep10 ultra"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bass BP1 / EP10"),
-        m("bowie-ma10", "Baseus Bowie MA10", &["bowie ma10", "ma10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie MA series"),
-        m("bowie-ma10-pro", "Baseus Bowie MA10 Pro", &["bowie ma10 pro", "ma10 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie MA series"),
-        m("bowie-ma10s", "Baseus Bowie MA10s", &["bowie ma10s", "ma10s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie MA series"),
-        m("bowie-ma20", "Baseus Bowie MA20", &["bowie ma20", "ma20"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie MA series"),
-        m("bowie-ma20-pro", "Baseus Bowie MA20 Pro", &["bowie ma20 pro", "ma20 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie MA series"),
-        m("bowie-m1", "Baseus Bowie M1", &["bowie m1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie M series"),
-        m("bowie-m2", "Baseus Bowie M2", &["bowie m2"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie M series"),
-        m("bowie-m2-plus", "Baseus Bowie M2+", &["bowie m2+", "m2+"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie M series"),
-        m("bowie-m2s", "Baseus Bowie M2s", &["bowie m2s", "m2s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie M series"),
-        m("bowie-m2s-pro", "Baseus Bowie M2s Pro", &["bowie m2s pro", "m2s pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie M series"),
-        m("bowie-m3", "Baseus Bowie M3", &["bowie m3"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie M series"),
-        m("bowie-m3s", "Baseus Bowie M3s", &["bowie m3s", "m3s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie M series"),
-        m("bowie-m4s", "Baseus Bowie M4s", &["bowie m4s", "m4s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie M series"),
-        m("m2s-ultra", "Baseus M2s Ultra", &["m2s ultra"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie M series"),
-        m("bass-e12x", "Baseus Bass E12x", &["bass e12x", "e12x"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, true, "tws", "Bowie E series"),
-        m("bass-e19s", "Baseus Bass E19s", &["bass e19s", "e19s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie E series"),
-        m("bowie-e10", "Baseus Bowie E10", &["bowie e10", "e10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie E series"),
-        m("bowie-e12", "Baseus Bowie E12", &["bowie e12", "e12"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, true, "tws", "Bowie E series"),
-        m("bowie-e13", "Baseus Bowie E13", &["bowie e13", "e13"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, true, "tws", "Bowie E series"),
-        m("bowie-e2", "Baseus Bowie E2", &["bowie e2"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie E series"),
-        m("bowie-e3", "Baseus Bowie E3", &["bowie e3"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, true, "tws", "Bowie E series"),
-        m("bowie-e3-2025", "Baseus Bowie E3 2025", &["bowie e3 2025", "e3 2025"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, true, "tws", "Bowie E series"),
-        m("bowie-e5", "Baseus Bowie E5", &["bowie e5"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie E series"),
-        m("bowie-e5x", "Baseus Bowie E5x", &["bowie e5x", "e5x"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie E series"),
-        m("bowie-e8", "Baseus Bowie E8", &["bowie e8"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie E series"),
-        m("e9", "Baseus E9", &["e9"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie E series"),
-        m("inspire-xc1", "Baseus Inspire XC1", &["inspire xc1", "xc1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Inspire"),
-        m("inspire-xh1", "Baseus Inspire XH1", &["inspire xh1", "xh1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "headset", "Inspire"),
-        m("inspire-xp1", "Baseus Inspire XP1", &["inspire xp1", "xp1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Inspire"),
-        m("as01", "Baseus AS01", &["as01"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("as01-air", "Baseus AS01 Air", &["as01 air"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("airgo-1-ring", "Baseus AirGo 1 Ring", &["airgo 1 ring", "1 ring"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("airgo-ag20", "Baseus AirGo AG20", &["airgo ag20", "ag20"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("airgo-as01", "Baseus AirGo AS01", &["airgo as01", "as01"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("bowie-mc1", "Baseus Bowie MC1", &["bowie mc1", "mc1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("bowie-mc1-pro", "Baseus Bowie MC1 Pro", &["bowie mc1 pro", "mc1 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "open", "Open-ear"),
-        m("bowie-mc2", "Baseus Bowie MC2", &["bowie mc2", "mc2"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("bowie-mc2-air", "Baseus Bowie MC2 Air", &["bowie mc2 air", "mc2 air"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("bowie-mc2-nc", "Baseus Bowie MC2 NC", &["bowie mc2 nc", "mc2 nc"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "open", "Open-ear"),
-        m("bowie-mc2-s", "Baseus Bowie MC2 S", &["bowie mc2 s", "mc2 s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("bowie-mf1", "Baseus Bowie MF1", &["bowie mf1", "mf1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Open-ear"),
-        m("bass-bc1-lite", "Baseus Bass BC1 Lite", &["bass bc1 lite", "bc1 lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("bass-bc1", "Baseus Bass BC1 星光版", &["bass bc1", "bc1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("bass-bc2", "Baseus Bass BC2", &["bass bc2", "bc2"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("bass-bd1", "Baseus Bass BD1", &["bass bd1", "bd1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "Bass line"),
-        m("bass-bf1", "Baseus Bass BF1", &["bass bf1", "bf1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("bass-bf1-lite", "Baseus Bass BF1 Lite", &["bass bf1 lite", "bf1 lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("bass-bs1", "Baseus Bass BS1", &["bass bs1", "bs1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("bass-bs1-lite", "Baseus Bass BS1 Lite", &["bass bs1 lite", "bs1 lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("bass-bs1-nc", "Baseus Bass BS1 NC", &["bass bs1 nc", "bs1 nc"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "Bass line"),
-        m("bass-bs2-lite", "Baseus Bass BS2 Lite", &["bass bs2 lite", "bs2 lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("storm-1", "Baseus Storm 1", &["storm 1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("storm-3", "Baseus Storm 3", &["storm 3"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("storm-5", "Baseus Storm 5", &["storm 5"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bass line"),
-        m("bass-w04", "Baseus Bass W04", &["bass w04", "w04"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bass-wm01s", "Baseus Bass WM01s", &["bass wm01s", "wm01s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bass-wm02s", "Baseus Bass WM02s", &["bass wm02s", "wm02s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-ez10", "Baseus Bowie EZ10", &["bowie ez10", "ez10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-mz10", "Baseus Bowie MZ10", &["bowie mz10", "mz10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-w04", "Baseus Bowie W04", &["bowie w04", "w04"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-w04-plus", "Baseus Bowie W04 Plus", &["bowie w04 plus", "w04 plus"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-w04-pro", "Baseus Bowie W04 Pro", &["bowie w04 pro", "w04 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie W / WM"),
-        m("bowie-wm01", "Baseus Bowie WM01", &["bowie wm01", "wm01"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-wm01-plus", "Baseus Bowie WM01 Plus", &["bowie wm01 plus", "wm01 plus"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-wm03", "Baseus Bowie WM03", &["bowie wm03", "wm03"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-wm05", "Baseus Bowie WM05", &["bowie wm05", "wm05"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("bowie-wx5-pro", "Baseus Bowie WX5 Pro", &["bowie wx5 pro", "wx5 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie W / WM"),
-        m("encok-wm01", "Baseus Encok WM01", &["encok wm01", "wm01"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("w04-pro", "Baseus W04 Pro", &["w04 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Bowie W / WM"),
-        m("wm02", "Baseus WM02", &["wm02"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("wm02-plus", "Baseus WM02+", &["wm02+"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Bowie W / WM"),
-        m("airnora", "Baseus AirNora", &["airnora"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "AirNora"),
-        m("airnora-2", "Baseus AirNora 2", &["airnora 2"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "AirNora"),
-        m("airnora-3", "Baseus AirNora 3", &["airnora 3"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "AirNora"),
-        m("eli-10i-fit", "Baseus Eli 10i Fit", &["eli 10i fit", "10i fit"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Eli sport"),
-        m("eli-15i-fit", "Baseus Eli 15i Fit", &["eli 15i fit", "15i fit"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Eli sport"),
-        m("eli-1i-fit", "Baseus Eli 1i Fit", &["eli 1i fit", "1i fit"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Eli sport"),
-        m("eli-fit", "Baseus Eli Fit", &["eli fit", "fit"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Eli sport"),
-        m("eli-sport-1", "Baseus Eli Sport 1", &["eli sport 1", "sport 1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "open", "Eli sport"),
-        m("aequr-gh02", "Baseus AeQur GH02", &["aequr gh02", "gh02"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "headset", "Headset"),
-        m("bh1-nc-lite", "Baseus BH1 NC Lite", &["bh1 nc lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bass-bh1", "Baseus Bass BH1", &["bass bh1", "bh1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bass-bh1-air", "Baseus Bass BH1 Air", &["bass bh1 air", "bh1 air"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "headset", "Headset"),
-        m("bass-bh1-lite", "Baseus Bass BH1 Lite", &["bass bh1 lite", "bh1 lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bass-bh1-nc", "Baseus Bass BH1 NC", &["bass bh1 nc", "bh1 nc"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bass-eh10-nc", "Baseus Bass EH10 NC", &["bass eh10 nc", "eh10 nc"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bowie-10-max", "Baseus Bowie 10 Max", &["bowie 10 max", "10 max"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "headset", "Headset"),
-        m("bowie-30-max", "Baseus Bowie 30 Max", &["bowie 30 max", "30 max"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bowie-35-max", "Baseus Bowie 35 Max", &["bowie 35 max", "35 max"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bowie-d05", "Baseus Bowie D05", &["bowie d05", "d05"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "headset", "Headset"),
-        m("bowie-h1", "Baseus Bowie H1", &["bowie h1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bowie-h1-pro", "Baseus Bowie H1 Pro", &["bowie h1 pro", "h1 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "headset", "Headset"),
-        m("bowie-h1s", "Baseus Bowie H1S", &["bowie h1s", "h1s"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bowie-h1i", "Baseus Bowie H1i", &["bowie h1i", "h1i"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bowie-h1s-pro", "Baseus Bowie H1s Pro", &["bowie h1s pro", "h1s pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "headset", "Headset"),
-        m("bowie-h2", "Baseus Bowie H2", &["bowie h2"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bowie-mh1", "Baseus Bowie MH1", &["bowie mh1", "mh1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("eh10-nc-lite", "Baseus EH10 NC Lite", &["eh10 nc lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "headset", "Headset"),
-        m("bowie-p1", "Baseus Bowie P1", &["bowie p1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "neck", "Neckband"),
-        m("bowie-u2", "Baseus Bowie U2", &["bowie u2"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "neck", "Neckband"),
-        m("bowie-u2-pro", "Baseus Bowie U2 Pro", &["bowie u2 pro", "u2 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "neck", "Neckband"),
-        m("p1", "Baseus P1", &["p1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "neck", "Neckband"),
-        m("p1-lite", "Baseus P1 Lite", &["p1 lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "neck", "Neckband"),
-        m("p1x", "Baseus P1x", &["p1x"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "neck", "Neckband"),
-        m("aequr-30-air", "Baseus AeQur 30 Air", &["aequr 30 air", "30 air"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "AeQur"),
-        m("aequr-ds10", "Baseus AeQur DS10", &["aequr ds10", "ds10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "AeQur"),
-        m("aequr-g10", "Baseus AeQur G10", &["aequr g10", "g10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "AeQur"),
-        m("aequr-n10", "Baseus AeQur N10", &["aequr n10", "n10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "AeQur"),
-        m("aequr-vo20", "Baseus AeQur VO20", &["aequr vo20", "vo20"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "AeQur"),
-        // Keep the historical identity resolvable while excluding its speaker-only
-        // public-catalog entry from new headphone discovery.
-        scan_only_model(
-            "server-sleep-sk1",
-            "Baseus Sleep SK1",
-            &["sleep sk1"],
-            "audio",
-            "Speaker series",
-        ),
-        m("bass-1-plus", "Baseus Bass 1+", &["bass 1+"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "Other"),
-        m("bowie-30", "Baseus Bowie 30", &["bowie 30"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "Other"),
-        m("bowie-35", "Baseus Bowie 35", &["bowie 35"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "Other"),
-        m("bowie-mp1", "Baseus Bowie MP1", &["bowie mp1", "mp1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Other"),
-        m("bowie-ms1", "Baseus Bowie MS1", &["bowie ms1", "ms1"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Other"),
-        m("ef8", "Baseus EF8", &["ef8"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Other"),
-        m("ex", "Baseus EX", &["ex"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Other"),
-        m("t2-pro", "Baseus T2 Pro", &["t2 pro"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, true, "tws", "Other"),
-        m("w05-lite", "Baseus W05 Lite", &["w05 lite"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "Other"),
-    ]
-}
-
-/// Match BLE advertising name → best model (longest pattern wins).
+/// Resolve a complete advertised product name or an explicit reviewed alias.
 pub fn identify(ble_name: &str) -> Option<ModelInfo> {
-    let lower = ble_name.to_lowercase();
-    // Exact server model identity wins over broad legacy aliases like "ma10".
-    let models = all_models();
-    if let Some(model) = models.iter().find(|model| {
-        crate::catalog::public::identity_key(&model.display_name)
-            == crate::catalog::public::identity_key(ble_name)
-    }) {
-        return Some(model.clone());
-    }
-    let mut best: Option<(usize, ModelInfo)> = None;
-    for model in models {
-        for pat in &model.name_patterns {
-            if lower.contains(pat.as_str()) {
-                let score = pat.len();
-                if best.as_ref().map(|(s, _)| score > *s).unwrap_or(true) {
-                    best = Some((score, model.clone()));
-                }
-            }
-        }
-    }
-    best.map(|(_, m)| m)
-}
-
-pub fn looks_like_baseus(ble_name: &str) -> bool {
-    if identify(ble_name).is_some() {
-        return true;
-    }
-    let lower = ble_name.to_lowercase();
-    ["baseus", "bowie", "bass", "encok", "airgo", "airnora", "aequr", "eli ", "inspire", "storm"]
-        .iter()
-        .any(|k| lower.contains(k))
+    let identity = crate::catalog::public::identity_key(ble_name);
+    all_models().into_iter().find(|model| {
+        crate::catalog::public::identity_key(&model.display_name) == identity
+            || model
+                .name_patterns
+                .iter()
+                .any(|alias| crate::catalog::public::identity_key(alias) == identity)
+    })
 }
 
 pub fn catalog_json() -> Vec<ModelInfo> {
@@ -494,19 +321,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn public_metadata_keeps_reviewed_support_and_adds_safe_discovery() {
-        let bp1 = identify("Baseus Bass BP1 Pro").unwrap();
-        assert_eq!(bp1.id, "bass-bp1-pro");
-        assert_eq!(bp1.support, SupportLevel::Verified);
-        assert_eq!(bp1.protocol, ProtocolFamily::Bp1Pro);
-        let new = identify("Baseus Sleep SK1").unwrap();
-        assert_eq!(new.support, SupportLevel::ScanOnly);
-        assert_eq!(new.protocol, ProtocolFamily::Unknown);
-        assert!(!new.capabilities.eq);
-        assert!(!new.capabilities.spatial);
-        assert!(new.transport.write_uuid.is_none());
-        assert!(new.image_url.is_none()); // Offline discovery does not contact a CDN.
-        let profile = profile_for(Some(&new.id), None, None);
+    fn reviewed_profile_is_the_only_control_source() {
+        let model = identify("Baseus Bass BP1 Pro").unwrap();
+        assert_eq!(model.id, "bass-bp1-pro");
+        assert_eq!(model.support, SupportLevel::Verified);
+        assert_eq!(model.protocol, ProtocolFamily::Bp1Pro);
+
+        let profile = profile_for(Some(&model.id), None, Some("1.0.0"));
+        assert!(profile.verified);
+        assert_eq!(profile.noise.max_custom_level, 5);
+        assert_eq!(profile.noise.environments, vec![101, 102, 103, 108]);
+        assert!(profile.connection.is_some());
+    }
+
+    #[test]
+    fn public_metadata_is_scan_only_and_never_supplies_capabilities_or_transport() {
+        let model = identify("Baseus Bowie MA10").unwrap();
+        assert_eq!(model.support, SupportLevel::ScanOnly);
+        assert_eq!(model.protocol, ProtocolFamily::Unknown);
+        assert!(!model.capabilities.eq);
+        assert!(model.transport.write_uuid.is_none());
+
+        let profile = profile_for(Some(&model.id), None, None);
+        assert!(!profile.verified);
+        assert_eq!(profile.protocol, ProtocolFamily::Unknown);
+        assert_eq!(profile.connection, None);
+        assert!(!profile.capabilities.eq);
+        assert!(profile.noise.environments.is_empty());
         assert!(crate::protocol::encode_feature(
             &profile,
             crate::protocol::FeatureCommand::FindBuds(true)
@@ -515,77 +356,44 @@ mod tests {
     }
 
     #[test]
-    fn legacy_speaker_identities_remain_resolvable_after_discovery_filtering() {
-        for (id, name) in [
-            ("aequr-30-air", "Baseus AeQur 30 Air"),
-            ("aequr-ds10", "Baseus AeQur DS10"),
-            ("aequr-n10", "Baseus AeQur N10"),
-            ("aequr-vo20", "Baseus AeQur VO20"),
-            ("server-sleep-sk1", "Baseus Sleep SK1"),
-        ] {
-            let resolved = identify(name).expect("legacy identity remains resolvable");
-            assert_eq!(resolved.id, id);
-        }
+    fn model_matching_requires_a_complete_exact_identity_or_alias() {
+        assert!(identify("random Baseus Bass BP1 Pro clone").is_none());
+        let model = identify("BP1 Pro").unwrap();
+        assert_eq!(model.id, "bass-bp1-pro");
     }
 
     #[test]
-    fn server_variant_does_not_inherit_a_shorter_legacy_alias() {
-        let variant = identify("Baseus Bowie MC2 S 先锋版").unwrap();
-        assert_eq!(variant.support, SupportLevel::ScanOnly);
-        assert_eq!(variant.protocol, ProtocolFamily::Unknown);
-        assert_ne!(variant.id, "bowie-mc2-s");
-    }
-
-    #[test]
-    fn every_public_audio_identity_is_discoverable_without_enabling_non_audio() {
-        for public in crate::catalog::public::audio_models() {
+    fn headphone_catalog_is_discoverable_but_speakers_are_not_headphones() {
+        for public in crate::catalog::public::headphone_models() {
             let resolved = identify(&public.model).unwrap();
             assert_eq!(
                 crate::catalog::public::identity_key(&resolved.display_name),
                 crate::catalog::public::identity_key(&public.model)
             );
         }
+        assert!(identify("Baseus Sleep SK1").is_none());
     }
 
     #[test]
-    fn json_profile_drives_registry_capabilities_and_aliases() {
-        let profile = crate::catalog::profile_for("bass-bp1-pro").unwrap();
-        let model = identify(&profile.aliases[0]).unwrap();
-        assert_eq!(model.id, profile.id);
-        assert_eq!(model.capabilities.ldac, profile.capabilities.ldac);
-        assert_eq!(model.capabilities.spatial, profile.capabilities.spatial);
-        assert_eq!(all_models().iter().filter(|item| item.id == profile.id).count(), 1);
+    fn bp1_ultra_remains_explicitly_unresolved() {
+        let model = identify("Baseus Bass BP1 Ultra").unwrap();
+        assert_eq!(model.id, "bass-bp1-ultra");
+        assert_eq!(model.support, SupportLevel::ScanOnly);
+        assert_eq!(model.protocol, ProtocolFamily::Unknown);
+        assert!(model.transport.write_uuid.is_none());
+        let profile = profile_for(Some(&model.id), None, None);
+        assert!(profile.connection.is_none());
+        assert!(!profile.capabilities.anc);
+        assert!(!profile.capabilities.eq);
+        assert!(!profile.verified);
     }
 
     #[test]
-    fn bp1_profile_is_verified_and_has_apk_noise_capabilities() {
-        let profile = profile_for(Some("bass-bp1-pro"), None, Some("1.0.0"));
-        assert!(profile.verified);
-        assert_eq!(profile.protocol, ProtocolFamily::Bp1Pro);
-        assert_eq!(profile.noise.max_custom_level, 5);
-        assert_eq!(profile.noise.environments, vec![101, 102, 103, 108]);
-    }
-
-    #[test]
-    fn lite_profile_caps_custom_anc_at_three() {
-        let profile = profile_for(Some("eh10-nc-lite"), None, None);
-        assert_eq!(profile.noise.max_custom_level, 3);
-    }
-
-    #[test]
-    fn non_anc_profile_does_not_expose_noise_controls() {
-        let profile = profile_for(Some("bowie-m1"), None, None);
-        assert!(!profile.noise.supports_adaptive);
-        assert_eq!(profile.noise.max_custom_level, 0);
-        assert!(profile.noise.environments.is_empty());
-    }
-
-    #[test]
-    fn unknown_profile_is_safe_and_unverified() {
-        let profile = profile_for(Some("unknown"), Some("Baseus Unknown"), None);
+    fn unknown_profile_has_no_control_contract() {
+        let profile = profile_for(Some("unknown"), Some("Unknown Earbuds"), None);
         assert!(!profile.verified);
         assert_eq!(profile.protocol, ProtocolFamily::Unknown);
-        assert_eq!(profile.noise.max_custom_level, 0);
+        assert!(profile.connection.is_none());
+        assert!(profile.noise.environments.is_empty());
     }
 }
-

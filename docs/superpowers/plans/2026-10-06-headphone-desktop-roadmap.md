@@ -29,20 +29,20 @@ dịch vụ cloud hoặc tính năng điện thoại sẽ hoạt động trên W
 
 | Thành phần | Hiện trạng | Việc cần xử lý |
 |---|---|---|
-| `src-tauri/src/ble.rs` | Khoảng 2.060 dòng, gom scan/connect/write/notify/poll/state/mock | Chia theo transport, discovery, session, command, state; giữ bridge tương thích trong quá trình chuyển |
+| `src-tauri/src/ble.rs` | BLE runtime vẫn gom scan/connect/write/notify/poll/state/mock; discovery và handshake mới chỉ tách một phần | Tiếp tục chuyển quyền sở hữu runtime sang transport/session/command/state modules; xóa entrypoint và state legacy theo lát cắt |
 | `src/App.tsx` | Khoảng 701 dòng, chứa nhiều signal và handler nghiệp vụ | App shell gọn; state/feature controller riêng, có ràng buộc theo session |
 | Catalog công khai | 174 model, 129 audio, đã lấy CN/US/EU không cần token | Danh mục audio chứa 5 model chỉ thuộc nhóm loa; scope tai nghe hiện có 124 ứng viên trước kiểm tra phân loại sâu |
-| Profile đã review | Một JSON BP1 Pro; BP1 Ultra còn ở registry legacy | Migration profile phải bao gồm transport, framing, handshake, capability theo firmware |
-| `protocol/models.rs` | 124 entry legacy cùng metadata mới | Bỏ suy luận capability theo tên/model tương tự sau khi chuyển từng profile có bằng chứng |
-| `protocol/router.rs` | BP1 và experimental AA/BA còn chia sẻ nhiều codec | Dispatch bằng family/variant đã xác định, kiểm tra feature trước encoding |
+| Profile đã review | BP1 Pro có BLE profile; BP1 Ultra là profile scan-only do transport chưa được capture | Hoàn thiện transport/framing/feature constraints bằng evidence theo firmware |
+| `protocol/models.rs` | Registry tĩnh và substring identity resolver đã bị xóa; profile review cấp quyền điều khiển, metadata công khai chỉ scan-only | Hoàn thiện explicit ID migration và ma trận profile; không thêm model bằng heuristic |
+| `protocol/router.rs` | Chỉ còn family BP1 và Unknown; generic Baseus AA/BA route đã bị xóa | Mỗi family tiếp theo cần codec/decoder riêng và evidence trước khi thêm |
 | `protocol/wrap_v2.rs` | Lựa chọn framing còn dựa chuỗi tên | Framing nằm trong transport/protocol profile, kiểm chứng theo từng model |
-| Kết nối | Handshake thử nhiều packet; một lần write thành công có thể quyết định framing | Readiness/framing phải dựa reply và identity đã xác nhận, không dựa write success |
+| Kết nối | Chỉ dùng service/characteristic/framing khai báo trong profile; không dò characteristic generic hoặc thử sibling tự động | Hoàn thiện readiness/readback lifecycle theo reply; không dựa write success |
 | `device/initialization.rs` | Startup query chưa bao phủ toàn bộ state; unknown vẫn có kế hoạch query pin | Kế hoạch init phải theo negotiated capability; unknown không gửi packet đoán |
 | Pin | Có heuristic loại dữ liệu rất thấp và salvage ở nhiều lớp | Xác minh 0–4%, một bên vắng mặt, hộp sạc, sạc; không biến unknown thành 0% |
 | EQ | FE còn constants chung; profile có curve cố định | Tách preset ID, wire index, filter data, preview curve và firmware constraints |
 | Tauri command | Một số giá trị lạ mặc định thành preset/chế độ hợp lệ | Enum/validation có lỗi rõ ràng; không mặc định Off/Balanced khi dữ liệu sai |
 | State UI | Một số handler cập nhật trước khi được device xác nhận | Phân biệt requested/pending/confirmed/failed; snapshot có revision và session ID |
-| GATT | UUID/config có ở nhiều vị trí | Audit từng giá trị, bao gồm khác biệt `E37A`/`E37F` giữa registry và helper; không chọn theo phỏng đoán |
+| GATT | UUID/config do profile cấp; connect/subscribe/disconnect dùng UUID tường minh, scan entries cùng tên được giữ riêng | Audit UUID theo hardware trace; không dò alternate characteristic hoặc tự đổi sang entry khác |
 | Kiểm thử | Baseline lượt trước: 65 Rust + 9 Python, typecheck/build/check qua | Giữ baseline và thêm replay, transport giả lập, integration/UI, hardware matrix |
 
 Nguồn baseline: `docs/architecture.md`, `docs/model-catalog.md`, các file trên,
@@ -430,7 +430,7 @@ song để che thiếu profile; giữ user data bằng migration có chủ đíc
 
 1. P0 + P1: chốt baseline, inventory toàn phần tai nghe, chuẩn bị hồ sơ BP1 Ultra và firmware.
 2. P2: chuẩn hóa capture/replay; dùng Android thu U01/U02 trước để chốt transport/framing, rồi thu core feature traces.
-3. P3 + P4: transport/session/queue/profile/DTO; giữ UI đang dùng được qua bridge.
+3. P3 + P4: thay transport/session/queue/profile/DTO theo contract mới; cập nhật UI consumer trực tiếp và xóa bridge cũ trong lát cắt hoàn chỉnh.
 4. P5: một luồng hoàn chỉnh devices→overview trên BP1; không bật mọi control sớm.
 5. P6: âm thanh cơ bản → EQ → advanced sound → gestures/connectivity/settings; mỗi nhóm có trace/tests/UI.
 6. P7: mỗi family mới có adapter/profile riêng và hardware validation khi có điều kiện.

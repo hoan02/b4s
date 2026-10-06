@@ -12,25 +12,27 @@
 //!   Write   : ee684b1a-1e9b-ed3e-ee55-f894667e92ac
 //!   Notify  : 654b749c-e37f-ae1f-ebab-40ca133e3690
 
-mod framing;
-pub mod receiver;
 pub mod advertisement;
-mod types;
-mod families;
 mod crc_table;
-pub mod wrap_v2;
+mod families;
+mod framing;
 pub mod models;
+pub mod receiver;
 pub mod router;
+mod types;
+pub mod wrap_v2;
 
-pub use framing::Frame;
-pub use types::*;
 pub use families::bp1::Bp1ProAnc;
+pub use framing::Frame;
 pub use models::{
-    catalog_json, identify as identify_model, looks_like_baseus, profile_for, DeviceProfile,
-    ModelInfo, ProtocolFamily, SupportLevel,
+    catalog_json, identify as identify_model, profile_for, DeviceProfile, ModelInfo,
+    ProtocolFamily, SupportLevel,
 };
+pub use router::{
+    decode_frame, encode_feature, encode_listening, FeatureCommand, ListeningCommand,
+};
+pub use types::*;
 pub use wrap_v2::{unwrap_notify, wrap_ba_command};
-pub use router::{decode_frame, encode_feature, encode_listening, FeatureCommand, ListeningCommand};
 
 /// Encode a bare BA command (no 789C wrap).
 pub fn encode_command(cmd: Command) -> Vec<u8> {
@@ -41,16 +43,14 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
         Command::SetNoise { mode, parameter } => {
             Frame::write(0x34, &[mode.to_byte(), parameter]).encode_write()
         }
-        Command::SetEq(preset) => {
-            Frame::write(0x43, &[preset.to_byte()]).encode_write()
-        }
+        Command::SetEq(preset) => Frame::write(0x43, &[preset.to_byte()]).encode_write(),
         Command::SetEqIndex(index) => Frame::write(0x43, &[index]).encode_write(),
-        Command::SetCustomEq { dict_sort, anc, bands } => {
-            Bp1ProAnc::cmd_set_custom_eq(dict_sort, anc, &bands)
-        }
-        Command::QueryEq => {
-            Frame::write(0x30, &[]).encode_write()
-        }
+        Command::SetCustomEq {
+            dict_sort,
+            anc,
+            bands,
+        } => Bp1ProAnc::cmd_set_custom_eq(dict_sort, anc, &bands),
+        Command::QueryEq => Frame::write(0x30, &[]).encode_write(),
         Command::QueryBattery => {
             // EarphoneFunctionShowFragmentNewUI: companion.c(model, "BA02", sn)
             Frame::write(0x02, &[]).encode_write()
@@ -65,9 +65,7 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             Frame::write(0x43, &[mode.to_byte()]).encode_write()
         }
         Command::QueryBassBoost => Frame::write(0x53, &[]).encode_write(),
-        Command::SetBassBoost(level) => {
-            Frame::write(0x54, &[level]).encode_write()
-        }
+        Command::SetBassBoost(level) => Frame::write(0x54, &[level]).encode_write(),
         Command::SetLdac(enabled) => {
             // LdacSettingActivity.K0: BA75 + 00 when enabled, 01 when disabled.
             Frame::write(0x75, &[if enabled { 0x00 } else { 0x01 }]).encode_write()
@@ -97,8 +95,18 @@ pub fn init_state_payload() -> Vec<u8> {
 pub fn decode_notification(
     data: &[u8],
     last_anc: Option<AncMode>,
+    framing: crate::catalog::WireFraming,
 ) -> Result<DeviceEvent, DecodeError> {
-    let frames = unwrap_notify(data);
+    let frames = match framing {
+        crate::catalog::WireFraming::BareAaBa if data.first() == Some(&0xAA) => vec![data.to_vec()],
+        crate::catalog::WireFraming::Headphone789c if data.starts_with(&[0x78, 0x9C]) => {
+            unwrap_notify(data)
+        }
+        crate::catalog::WireFraming::Headphone789c => Vec::new(),
+        crate::catalog::WireFraming::BareAaBa | crate::catalog::WireFraming::Unresolved => {
+            Vec::new()
+        }
+    };
     let mut last_err: Option<DecodeError> = None;
     for f in frames {
         match Frame::decode_notify(&f) {

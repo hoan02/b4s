@@ -6,7 +6,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 ## Baseline
 
 - Started from clean `main`, commit `09b4c67`.
-- Existing SolidJS/Tauri framework and legacy BLE facade preserved.
+- Existing SolidJS/Tauri framework retained. The legacy BLE facade is being replaced; no compatibility runtime path is allowed.
 - First safety slice: unknown startup query denied, CRC-invalid/truncated wrapped notifications rejected, raw battery salvage removed, invalid ANC/EQ/spatial values rejected.
 - Validation: frontend build (includes TypeScript), five-locale parity, 69 Rust library tests and Cargo check passed on the safety slice.
 - No hardware verification, firmware manifest, Android captures, or signed installer evidence collected.
@@ -25,14 +25,14 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
-| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — confirmed write/query seam; full single-path replacement still required |
-| P3.2 | Tách framing/reassembly khỏi feature decoder | In progress |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — exact profile UUIDs only; same-name entries stay explicit, full runtime extraction still required |
+| P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards integrated; actor/cancellation outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
-| P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — connection descriptors migrated; firmware/feature evidence outstanding |
+| P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — typed snapshot present; compatibility listeners/bridge still need removal |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — typed snapshot present; old frontend listeners/commands still need migration and removal |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store and listener cleanup; feature controller extraction outstanding |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; device inventory/visual acceptance outstanding |
@@ -42,7 +42,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; hearing threshold/spatial policy outstanding |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
 | P6.5 | Multipoint/find/device settings | Open |
-| P7.1 | Classify headphone-only catalog và legacy migration | In progress |
+| P7.1 | Classify headphone-only catalog và legacy migration | In progress — static 124-model resolver and substring matching removed; explicit one-time stored-ID migration remains |
 | P7.2 | Adapter của family kế tiếp | Open |
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
@@ -386,3 +386,12 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - User direction now requires one clean runtime architecture with no legacy runtime fallback or dual execution. The plan and desktop-scope ADR supersede earlier instructions to keep `ble.rs`/compatibility listeners as a bridge. P3.1 and P4.3 now require replacing those paths; P7.1 requires an explicit one-time ID migration followed by removal of legacy resolution.
 - Data-preserving migrations remain allowed when versioned and one-shot. Unknown model/firmware/transport remains unavailable; it cannot route through a generic adapter.
 - This records a policy change, not implementation completion. Replacement slices and regression evidence remain required. The pending EQ type guard passed `npx tsc --noEmit`; no tests were run locally.
+
+
+## Increment 47 — explicit catalog and single-path BLE selection
+
+- Removed the static legacy model registry, inferred protocol/capability defaults, substring identity matching, and generic Baseus AA/BA protocol family. Reviewed profile JSON is the only control source; public catalog entries remain passive scan metadata, and schema v2 is mandatory.
+- BLE connect now targets the selected entry and exact profile service/write/notify UUIDs. Same-name Windows entries remain separately selectable; generic characteristic probing, alternate notify selection, sibling auto-connect, and name-based peripheral re-resolution were removed. Disconnect unsubscribes only the reviewed notification characteristic.
+- Notification reassembly and decoding now require the profile's declared bare-AA/BA or 789C framing. Unresolved framing is passive, and wrapped framing cannot accept bare notifications.
+- Removed the unused legacy `set_anc_mode` command and frontend heuristic that fabricated ANC range/adaptive support from model IDs. The typed listening-state command and resolved profile constraints are the only control path.
+- `cargo test --lib` passed: 101 tests. One stale provenance assertion failed in the first run and was updated; the complete rerun passed. `git diff --check` passed. BP1 Ultra transport, firmware scope, full BLE runtime extraction, stored-ID migration, frontend contract replacement, and hardware acceptance remain open.

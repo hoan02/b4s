@@ -8,7 +8,7 @@ mod device;
 mod desktop;
 mod protocol;
 
-use protocol::{AncMode, BatteryState, EqBand, ListeningCommand, SpatialMode};
+use protocol::{BatteryState, EqBand, ListeningCommand, SpatialMode};
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_updater::UpdaterExt;
@@ -162,29 +162,6 @@ async fn set_listening_state(
             }
         }
         _ => return Err(format!("Unknown listening mode: {mode}")),
-    };
-    ble::send_listening(command).await
-}
-
-#[tauri::command]
-async fn set_anc_mode(
-    mode: String,
-    strength: Option<u8>,
-    parameter: Option<u8>,
-) -> Result<(), String> {
-    let anc = match mode.to_lowercase().as_str() {
-        "off" => AncMode::Off,
-        "transparency" | "ambient" => AncMode::Transparency,
-        "anc" => AncMode::Anc,
-        _ => return Err(format!("Unknown ANC mode: {mode}")),
-    };
-    let parameter = parameter.unwrap_or_else(|| anc.level_from_percent(strength.unwrap_or(70)));
-    let command = match anc {
-        AncMode::Off => ListeningCommand::Normal,
-        AncMode::Transparency if parameter == 1 => ListeningCommand::TransparencyVoice,
-        AncMode::Transparency => ListeningCommand::TransparencyFull,
-        AncMode::Anc if parameter >= 100 => ListeningCommand::AdaptiveEnvironment(parameter as u16),
-        AncMode::Anc => ListeningCommand::CustomLevel(parameter),
     };
     ble::send_listening(command).await
 }
@@ -452,7 +429,6 @@ pub fn run() {
             get_battery,
             get_device_snapshot,
             query_battery,
-            set_anc_mode,
             set_listening_state,
             set_eq_preset,
             set_eq_index,

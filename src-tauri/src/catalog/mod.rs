@@ -1,8 +1,8 @@
-mod types;
 pub mod public;
+mod types;
 
-pub use types::ModelProfile;
 pub use types::Capabilities;
+pub use types::ModelProfile;
 pub use types::{ConnectionProfile, ControlTransport, WireFraming};
 
 include!(concat!(env!("OUT_DIR"), "/model_profiles.rs"));
@@ -39,42 +39,64 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
         }
         if let Some(hearing) = &profile.hearing {
             let unique: std::collections::HashSet<_> = hearing.thresholds.iter().collect();
-            if hearing.provenance.trim().is_empty() || hearing.thresholds.is_empty() ||
-                unique.len() != hearing.thresholds.len() ||
-                hearing.thresholds.iter().any(|value| ![75, 80, 85, 90, 95, 100].contains(value)) {
+            if hearing.provenance.trim().is_empty()
+                || hearing.thresholds.is_empty()
+                || unique.len() != hearing.thresholds.len()
+                || hearing
+                    .thresholds
+                    .iter()
+                    .any(|value| ![75, 80, 85, 90, 95, 100].contains(value))
+            {
                 return Err(format!("invalid hearing constraints in {}", profile.id));
             }
         }
-        if !(1..=2).contains(&profile.schema_version) {
+        if profile.schema_version != 2 {
             return Err(format!("unsupported profile schema in {}", profile.id));
         }
-        if profile.schema_version == 2 && profile.connection.is_none() {
+        if profile.connection.is_none() {
             return Err(format!("missing connection profile in {}", profile.id));
         }
         if let Some(connection) = &profile.connection {
             if connection.provenance.trim().is_empty() {
                 return Err(format!("missing transport provenance in {}", profile.id));
             }
-            for uuid in [&connection.service_uuid, &connection.write_uuid, &connection.notify_uuid].into_iter().flatten() {
-                uuid::Uuid::parse_str(uuid).map_err(|_| format!("invalid transport UUID in {}", profile.id))?;
+            for uuid in [
+                &connection.service_uuid,
+                &connection.write_uuid,
+                &connection.notify_uuid,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                uuid::Uuid::parse_str(uuid)
+                    .map_err(|_| format!("invalid transport UUID in {}", profile.id))?;
             }
-            if connection.transport == ControlTransport::BleGatt &&
-                (connection.service_uuid.is_none() || connection.write_uuid.is_none() || connection.notify_uuid.is_none()
-                || connection.framing == WireFraming::Unresolved) {
-                return Err(format!("incomplete BLE connection profile in {}", profile.id));
+            if connection.transport == ControlTransport::BleGatt
+                && (connection.service_uuid.is_none()
+                    || connection.write_uuid.is_none()
+                    || connection.notify_uuid.is_none()
+                    || connection.framing == WireFraming::Unresolved)
+            {
+                return Err(format!(
+                    "incomplete BLE connection profile in {}",
+                    profile.id
+                ));
             }
-            if connection.transport == ControlTransport::Unresolved &&
-                (profile.support != "scanOnly" || !connection.handshake.is_empty() || connection.init_state_query) {
-                return Err(format!("unresolved transport must remain passive in {}", profile.id));
+            if connection.transport == ControlTransport::Unresolved
+                && (profile.support != "scanOnly"
+                    || !connection.handshake.is_empty()
+                    || connection.init_state_query)
+            {
+                return Err(format!(
+                    "unresolved transport must remain passive in {}",
+                    profile.id
+                ));
             }
         }
         if !ids.insert(profile.id.clone()) {
             return Err(format!("duplicate model profile: {}", profile.id));
         }
-        if !matches!(
-            profile.protocol_family.as_str(),
-            "bp1" | "baseusAaBaExperimental" | "unknown"
-        ) {
+        if !matches!(profile.protocol_family.as_str(), "bp1" | "unknown") {
             return Err(format!("unknown protocol family in {}", profile.id));
         }
         if !matches!(
@@ -95,9 +117,17 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
                 if !preset.curve.is_empty() && preset.curve.len() != eq.bands.len() {
                     return Err(format!("EQ curve length mismatch in {}", profile.id));
                 }
-                if preset.filters.len() > 16 || preset.filters.iter().any(|filter|
-                    filter.frequency == 0 || !filter.q_value.is_finite() || filter.q_value <= 0.0 ||
-                    !filter.gain.is_finite() || filter.gain < eq.min_gain || filter.gain > eq.max_gain || filter.filter > 2) {
+                if preset.filters.len() > 16
+                    || preset.filters.iter().any(|filter| {
+                        filter.frequency == 0
+                            || !filter.q_value.is_finite()
+                            || filter.q_value <= 0.0
+                            || !filter.gain.is_finite()
+                            || filter.gain < eq.min_gain
+                            || filter.gain > eq.max_gain
+                            || filter.filter > 2
+                    })
+                {
                     return Err(format!("invalid EQ filter payload in {}", profile.id));
                 }
                 if !sorts.insert(preset.dict_sort) {
@@ -133,7 +163,10 @@ mod tests {
         let pro = profile_for("bass-bp1-pro").unwrap().connection.unwrap();
         assert_eq!(pro.transport, ControlTransport::BleGatt);
         assert_eq!(pro.framing, WireFraming::BareAaBa);
-        assert_eq!(pro.notify_uuid.as_deref(), Some("654b749c-e37f-ae1f-ebab-40ca133e3690"));
+        assert_eq!(
+            pro.notify_uuid.as_deref(),
+            Some("654b749c-e37f-ae1f-ebab-40ca133e3690")
+        );
         let ultra = profile_for("bass-bp1-ultra").unwrap().connection.unwrap();
         assert_eq!(ultra.transport, ControlTransport::Unresolved);
         assert!(ultra.handshake.is_empty());
@@ -174,12 +207,12 @@ mod tests {
         model.capabilities.hearing_protection = true;
         assert!(validate_profiles(&[model.clone()]).is_err());
         model.hearing = Some(types::HearingProfile {
-            thresholds: vec![75, 85, 100], preserve_threshold_sentinel: false,
+            thresholds: vec![75, 85, 100],
+            preserve_threshold_sentinel: false,
             provenance: "synthetic validation fixture".into(),
         });
         assert!(validate_profiles(&[model.clone()]).is_ok());
         model.hearing.as_mut().unwrap().thresholds = vec![1];
         assert!(validate_profiles(&[model]).is_err());
     }
-
 }

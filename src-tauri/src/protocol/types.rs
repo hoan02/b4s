@@ -3,30 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
-// GATT UUIDs — BP1 Pro ANC (confirmed via nRF Connect)
-// ---------------------------------------------------------------------------
-
-pub mod uuids {
-    use uuid::Uuid;
-
-    /// BP1 Pro / Ultra custom control service
-    pub fn write() -> Uuid {
-        Uuid::parse_str("ee684b1a-1e9b-ed3e-ee55-f894667e92ac").unwrap()
-    }
-    pub fn notify() -> Uuid {
-        Uuid::parse_str("654b749c-e37f-ae1f-ebab-40ca133e3690").unwrap()
-    }
-
-    /// Bluetrum CCSDK fallback
-    pub fn ccsdk_write() -> Uuid {
-        Uuid::parse_str("02f00000-0000-0000-0000-00000000ff01").unwrap()
-    }
-    pub fn ccsdk_notify() -> Uuid {
-        Uuid::parse_str("02f00000-0000-0000-0000-00000000ff02").unwrap()
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Battery / Case
 // ---------------------------------------------------------------------------
 
@@ -180,11 +156,21 @@ pub struct EqBand {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Command {
-    SetAnc { mode: AncMode, level: u8 },
-    SetNoise { mode: AncMode, parameter: u8 },
+    SetAnc {
+        mode: AncMode,
+        level: u8,
+    },
+    SetNoise {
+        mode: AncMode,
+        parameter: u8,
+    },
     SetEq(EqPreset),
     SetEqIndex(u8),
-    SetCustomEq { dict_sort: u8, anc: bool, bands: Vec<EqBand> },
+    SetCustomEq {
+        dict_sort: u8,
+        anc: bool,
+        bands: Vec<EqBand>,
+    },
     QueryEq,
     /// Official app: BA02 → battery report AA02
     QueryBattery,
@@ -198,7 +184,10 @@ pub enum Command {
     SetBassBoost(u8),
     QueryBassBoost,
     SetLdac(bool),
-    SetHearingProtection { enabled: bool, level: u8 },
+    SetHearingProtection {
+        enabled: bool,
+        level: u8,
+    },
     QueryLdac,
     QueryHearingProtection,
     FindBuds(bool),
@@ -219,9 +208,15 @@ pub enum DeviceEvent {
     BassBoost(u8),
     SpatialEnabled(bool),
     Ldac(bool),
-    HearingProtection { enabled: bool, level: u8 },
+    HearingProtection {
+        enabled: bool,
+        level: u8,
+    },
     /// Raw / unknown — forwarded for debug
-    Unknown { cmd: u8, payload: Vec<u8> },
+    Unknown {
+        cmd: u8,
+        payload: Vec<u8>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -246,6 +241,9 @@ mod intent_tests {
     fn invalid_eq_does_not_become_balanced() {
         assert!(EqPreset::from_ui("not-a-preset").is_err());
         assert_eq!(EqPreset::from_ui("balanced").unwrap(), EqPreset::Balanced);
-        assert_eq!(EqPreset::from_ui("powerful bass").unwrap(), EqPreset::BassBoost);
+        assert_eq!(
+            EqPreset::from_ui("powerful bass").unwrap(),
+            EqPreset::BassBoost
+        );
     }
 }

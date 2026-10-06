@@ -8,9 +8,7 @@ pub fn decode_frame(
     last_anc: Option<AncMode>,
 ) -> Result<super::DeviceEvent, super::DecodeError> {
     match family {
-        ProtocolFamily::Bp1Pro | ProtocolFamily::BaseusAaBaExperimental => {
-            Bp1ProAnc::decode_frame(frame, last_anc)
-        }
+        ProtocolFamily::Bp1Pro => Bp1ProAnc::decode_frame(frame, last_anc),
         ProtocolFamily::Unknown => Ok(super::DeviceEvent::Unknown {
             cmd: frame.cmd,
             payload: frame.payload.clone(),
@@ -63,18 +61,37 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::FindBuds(_) => Feature::Find,
     };
     authorize(profile, feature)?;
-    if let FeatureCommand::SetCustomEq { bands, dict_sort, anc } = &command {
+    if let FeatureCommand::SetCustomEq {
+        bands,
+        dict_sort,
+        anc,
+    } = &command
+    {
         if profile.protocol != ProtocolFamily::Bp1Pro || *dict_sort != 101 || *anc {
             return Err("Custom EQ slot/ANC selector is not reviewed for this model".into());
         }
-        if bands.iter().any(|band| band.q_value != 1.0 || band.filter != 1) {
+        if bands
+            .iter()
+            .any(|band| band.q_value != 1.0 || band.filter != 1)
+        {
             return Err("BP1 Pro custom EQ requires Q=1 and peak filters".into());
         }
-        let eq = profile.model_id.as_deref().and_then(crate::catalog::profile_for)
-            .and_then(|profile| profile.eq).ok_or("No reviewed custom EQ schema")?;
-        if bands.len() != eq.bands.len() || bands.iter().zip(&eq.bands).any(|(band, frequency)|
-            band.frequency != *frequency || !band.q_value.is_finite() || band.q_value <= 0.0 ||
-            !band.gain.is_finite() || band.gain < eq.min_gain || band.gain > eq.max_gain) {
+        let eq = profile
+            .model_id
+            .as_deref()
+            .and_then(crate::catalog::profile_for)
+            .and_then(|profile| profile.eq)
+            .ok_or("No reviewed custom EQ schema")?;
+        if bands.len() != eq.bands.len()
+            || bands.iter().zip(&eq.bands).any(|(band, frequency)| {
+                band.frequency != *frequency
+                    || !band.q_value.is_finite()
+                    || band.q_value <= 0.0
+                    || !band.gain.is_finite()
+                    || band.gain < eq.min_gain
+                    || band.gain > eq.max_gain
+            })
+        {
             return Err("Custom EQ values do not match the reviewed model schema".into());
         }
     }
@@ -86,9 +103,15 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
             return Err("Bass level is outside the current protocol range".into());
         }
         FeatureCommand::SetHearingProtection { level, .. } => {
-            let hearing = profile.model_id.as_deref().and_then(crate::catalog::profile_for)
-                .and_then(|model| model.hearing).ok_or("No reviewed hearing threshold schema")?;
-            if !hearing.thresholds.contains(level) && !(*level == 0xFF && hearing.preserve_threshold_sentinel) {
+            let hearing = profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.hearing)
+                .ok_or("No reviewed hearing threshold schema")?;
+            if !hearing.thresholds.contains(level)
+                && !(*level == 0xFF && hearing.preserve_threshold_sentinel)
+            {
                 return Err("Hearing threshold is outside the reviewed model schema".into());
             }
         }
@@ -116,33 +139,40 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
                 bands,
             },
         ) => Ok(Bp1ProAnc::cmd_set_custom_eq(dict_sort, anc, &bands)),
-        (_, FeatureCommand::SetEq(preset)) => Ok(encode_command(Command::SetEq(preset))),
-        (_, FeatureCommand::SetEqIndex(index)) => Ok(encode_command(Command::SetEqIndex(index))),
-        (_, FeatureCommand::SetGameMode(on)) => Ok(encode_command(Command::SetGameMode(on))),
-        (_, FeatureCommand::SetSpatial(mode)) => Ok(encode_command(Command::SetSpatial(mode))),
-        (_, FeatureCommand::SetBassBoost(level)) => {
+        (ProtocolFamily::Bp1Pro, FeatureCommand::SetSpatial(mode)) => {
+            Ok(encode_command(Command::SetSpatial(mode)))
+        }
+        (ProtocolFamily::Bp1Pro, FeatureCommand::SetBassBoost(level)) => {
             Ok(encode_command(Command::SetBassBoost(level)))
         }
-        (_, FeatureCommand::SetLdac(enabled)) => Ok(encode_command(Command::SetLdac(enabled))),
-        (_, FeatureCommand::SetHearingProtection { enabled, level }) => {
+        (ProtocolFamily::Bp1Pro, FeatureCommand::SetLdac(enabled)) => {
+            Ok(encode_command(Command::SetLdac(enabled)))
+        }
+        (ProtocolFamily::Bp1Pro, FeatureCommand::SetHearingProtection { enabled, level }) => {
             Ok(encode_command(Command::SetHearingProtection {
                 enabled,
                 level,
             }))
         }
-        (_, FeatureCommand::FindBuds(start)) => Ok(encode_command(Command::FindBuds(start))),
-        (_, FeatureCommand::SetCustomEq { .. }) => {
-            Err("Custom EQ protocol is not verified for this model".into())
-        }
+        (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
 }
 
 fn encode_profile_eq(profile: &DeviceProfile, index: u8) -> Result<Vec<u8>, String> {
-    let eq = profile.model_id.as_deref().and_then(crate::catalog::profile_for)
-        .and_then(|profile| profile.eq).ok_or("No model EQ schema")?;
-    let preset = eq.presets.iter().find(|preset| preset.dict_sort == index)
+    let eq = profile
+        .model_id
+        .as_deref()
+        .and_then(crate::catalog::profile_for)
+        .and_then(|profile| profile.eq)
+        .ok_or("No model EQ schema")?;
+    let preset = eq
+        .presets
+        .iter()
+        .find(|preset| preset.dict_sort == index)
         .ok_or("Preset index is absent from the model schema")?;
-    if preset.filters.is_empty() { return Err("Preset has no source-traced filter payload".into()); }
+    if preset.filters.is_empty() {
+        return Err("Preset has no source-traced filter payload".into());
+    }
     Ok(Bp1ProAnc::cmd_set_eq_filters(index, &preset.filters))
 }
 
@@ -186,9 +216,6 @@ pub fn encode_listening(
 
     match profile.protocol {
         ProtocolFamily::Bp1Pro => Ok(Bp1ProAnc::cmd_set_noise(mode, parameter)),
-        ProtocolFamily::BaseusAaBaExperimental => {
-            Ok(encode_command(Command::SetNoise { mode, parameter }))
-        }
         ProtocolFamily::Unknown => Err("No protocol is verified for this model".into()),
     }
 }
@@ -201,8 +228,19 @@ mod tests {
     #[test]
     fn custom_eq_rejects_wrong_layout_and_nonfinite_values_before_encoding() {
         let profile = profile_for(Some("bass-bp1-pro"), None, None);
-        let bands: Vec<_> = crate::catalog::profile_for("bass-bp1-pro").unwrap().eq.unwrap().bands
-            .into_iter().map(|frequency| EqBand { frequency, q_value: 1.0, gain: 0.0, filter: 1 }).collect();
+        let bands: Vec<_> = crate::catalog::profile_for("bass-bp1-pro")
+            .unwrap()
+            .eq
+            .unwrap()
+            .bands
+            .into_iter()
+            .map(|frequency| EqBand {
+                frequency,
+                q_value: 1.0,
+                gain: 0.0,
+                filter: 1,
+            })
+            .collect();
         for invalid in 0..3 {
             let mut changed = bands.clone();
             match invalid {
@@ -210,9 +248,15 @@ mod tests {
                 1 => changed[0].gain = f32::NAN,
                 _ => changed[0].q_value = 0.0,
             }
-            assert!(encode_feature(&profile, FeatureCommand::SetCustomEq {
-                dict_sort: 101, anc: false, bands: changed,
-            }).is_err());
+            assert!(encode_feature(
+                &profile,
+                FeatureCommand::SetCustomEq {
+                    dict_sort: 101,
+                    anc: false,
+                    bands: changed,
+                }
+            )
+            .is_err());
         }
     }
 
@@ -280,8 +324,19 @@ mod tests {
     #[test]
     fn bp1_custom_eq_uses_ba31_and_eight_band_payload() {
         let profile = profile_for(Some("bass-bp1-pro"), None, None);
-        let bands = crate::catalog::profile_for("bass-bp1-pro").unwrap().eq.unwrap().bands
-            .into_iter().map(|frequency| EqBand { frequency, q_value: 1.0, gain: 0.0, filter: 1 }).collect();
+        let bands = crate::catalog::profile_for("bass-bp1-pro")
+            .unwrap()
+            .eq
+            .unwrap()
+            .bands
+            .into_iter()
+            .map(|frequency| EqBand {
+                frequency,
+                q_value: 1.0,
+                gain: 0.0,
+                filter: 1,
+            })
+            .collect();
         let packet = encode_feature(
             &profile,
             FeatureCommand::SetCustomEq {
@@ -297,18 +352,40 @@ mod tests {
     #[test]
     fn bp1_custom_rejects_unreviewed_slot_selector_and_filter() {
         let profile = profile_for(Some("bass-bp1-pro"), None, None);
-        let bands: Vec<_> = crate::catalog::profile_for("bass-bp1-pro").unwrap().eq.unwrap().bands
-            .into_iter().map(|frequency| EqBand { frequency, q_value: 1.0, gain: 0.0, filter: 1 }).collect();
+        let bands: Vec<_> = crate::catalog::profile_for("bass-bp1-pro")
+            .unwrap()
+            .eq
+            .unwrap()
+            .bands
+            .into_iter()
+            .map(|frequency| EqBand {
+                frequency,
+                q_value: 1.0,
+                gain: 0.0,
+                filter: 1,
+            })
+            .collect();
         for (dict_sort, anc) in [(100, false), (102, false), (101, true)] {
-            assert!(encode_feature(&profile, FeatureCommand::SetCustomEq {
-                dict_sort, anc, bands: bands.clone(),
-            }).is_err());
+            assert!(encode_feature(
+                &profile,
+                FeatureCommand::SetCustomEq {
+                    dict_sort,
+                    anc,
+                    bands: bands.clone(),
+                }
+            )
+            .is_err());
         }
         let mut invalid = bands;
         invalid[0].filter = 2;
-        assert!(encode_feature(&profile, FeatureCommand::SetCustomEq {
-            dict_sort: 101, anc: false, bands: invalid,
-        }).is_err());
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetCustomEq {
+                dict_sort: 101,
+                anc: false,
+                bands: invalid,
+            }
+        )
+        .is_err());
     }
-
 }
