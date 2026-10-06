@@ -4,6 +4,7 @@
 
 use super::session::SessionToken;
 use crate::protocol::{DeviceEvent, EqPreset};
+use futures::future::BoxFuture;
 
 #[derive(Clone, Debug)]
 pub struct StateObservation {
@@ -23,6 +24,26 @@ pub enum ExpectedState {
     Hearing { enabled: bool, level: u8 },
 }
 
+/// Transport seam for a write followed by a state query.
+/// Implementations subscribe before the first write to avoid losing fast replies.
+pub trait ConfirmedTransport {
+    fn subscribe(&self) -> tokio::sync::broadcast::Receiver<StateObservation>;
+    fn write<'a>(&'a self, payload: &'a [u8]) -> BoxFuture<'a, Result<(), String>>;
+}
+
+pub async fn write_and_confirm<T: ConfirmedTransport + ?Sized>(
+    transport: &T,
+    session: SessionToken,
+    command: &[u8],
+    query: &[u8],
+    expected: ExpectedState,
+) -> Result<StateObservation, String> {
+    let mut replies = transport.subscribe();
+    transport.write(command).await?;
+    transport.write(query).await?;
+    await_state(&mut replies, session, expected).await
+}
+
 impl ExpectedState {
     pub fn matches(&self, session: SessionToken, observation: &StateObservation) -> bool {
         if session != observation.session {
@@ -30,9 +51,13 @@ impl ExpectedState {
         }
         match (self, observation.opcode, &observation.event) {
             (Self::Battery, 0x02, DeviceEvent::Battery(_)) => true,
-            (Self::Eq(expected), 0x30, DeviceEvent::EqIndex(actual)) => expected.to_byte() == *actual,
+            (Self::Eq(expected), 0x30, DeviceEvent::EqIndex(actual)) => {
+                expected.to_byte() == *actual
+            }
             (Self::EqIndex(expected), 0x30, DeviceEvent::EqIndex(actual)) => expected == actual,
-            (Self::SpatialEnabled(expected), 0x42, DeviceEvent::SpatialEnabled(actual)) => expected == actual,
+            (Self::SpatialEnabled(expected), 0x42, DeviceEvent::SpatialEnabled(actual)) => {
+                expected == actual
+            }
             (Self::Bass(expected), 0x53, DeviceEvent::BassBoost(actual)) => expected == actual,
             (Self::Game(expected), 0x23, DeviceEvent::GameMode(actual)) => expected == actual,
             (Self::Ldac(expected), 0x74, DeviceEvent::Ldac(actual)) => expected == actual,
@@ -56,9 +81,13 @@ pub async fn await_state(
     expected: ExpectedState,
 ) -> Result<StateObservation, String> {
     loop {
-        let observation = replies.recv().await
+        let observation = replies
+            .recv()
+            .await
             .map_err(|error| format!("State readback lost: {error}"))?;
-        if expected.matches(session, &observation) { return Ok(observation); }
+        if expected.matches(session, &observation) {
+            return Ok(observation);
+        }
     }
 }
 
@@ -67,6 +96,89 @@ mod tests {
     use super::*;
     use crate::device::session::SessionEpoch;
     use crate::protocol::BatteryState;
+    use std::{collections::VecDeque, sync::Mutex, time::Duration};
+
+    enum ScriptedWrite {
+        NoReply,
+        Reply(StateObservation),
+        DelayedReply(StateObservation, Duration),
+        Disconnect,
+        Fail(String),
+    }
+
+    struct FakeTransport {
+        observations: Mutex<Option<tokio::sync::broadcast::Sender<StateObservation>>>,
+        writes: Mutex<Vec<Vec<u8>>>,
+        script: Mutex<VecDeque<ScriptedWrite>>,
+    }
+
+    impl FakeTransport {
+        fn new(script: impl IntoIterator<Item = ScriptedWrite>) -> Self {
+            Self {
+                observations: Mutex::new(Some(tokio::sync::broadcast::channel(8).0)),
+                writes: Mutex::new(Vec::new()),
+                script: Mutex::new(script.into_iter().collect()),
+            }
+        }
+
+        fn push(&self, script: impl IntoIterator<Item = ScriptedWrite>) {
+            self.script.lock().unwrap().extend(script);
+        }
+    }
+
+    impl ConfirmedTransport for FakeTransport {
+        fn subscribe(&self) -> tokio::sync::broadcast::Receiver<StateObservation> {
+            self.observations
+                .lock()
+                .unwrap()
+                .as_ref()
+                .expect("transport is connected")
+                .subscribe()
+        }
+
+        fn write<'a>(&'a self, payload: &'a [u8]) -> BoxFuture<'a, Result<(), String>> {
+            let step = self.script.lock().unwrap().pop_front();
+            Box::pin(async move {
+                self.writes.lock().unwrap().push(payload.to_vec());
+                match step.unwrap_or(ScriptedWrite::NoReply) {
+                    ScriptedWrite::NoReply => Ok(()),
+                    ScriptedWrite::Reply(observation) => {
+                        if let Some(sender) = self.observations.lock().unwrap().as_ref() {
+                            let _ = sender.send(observation);
+                        }
+                        Ok(())
+                    }
+                    ScriptedWrite::DelayedReply(observation, delay) => {
+                        let sender = self
+                            .observations
+                            .lock()
+                            .unwrap()
+                            .as_ref()
+                            .cloned()
+                            .ok_or_else(|| "Disconnected".to_owned())?;
+                        tokio::spawn(async move {
+                            tokio::time::sleep(delay).await;
+                            let _ = sender.send(observation);
+                        });
+                        Ok(())
+                    }
+                    ScriptedWrite::Disconnect => {
+                        self.observations.lock().unwrap().take();
+                        Ok(())
+                    }
+                    ScriptedWrite::Fail(error) => Err(error),
+                }
+            })
+        }
+    }
+
+    fn bass_observation(session: SessionToken, opcode: u8, value: u8) -> StateObservation {
+        StateObservation {
+            session,
+            opcode,
+            event: DeviceEvent::BassBoost(value),
+        }
+    }
 
     #[test]
     fn unchanged_value_readback_confirms_but_ack_and_other_state_do_not() {
@@ -102,8 +214,11 @@ mod tests {
     fn spatial_enable_requires_query_state_not_ack_or_other_session() {
         let mut epoch = SessionEpoch::default();
         let session = epoch.token();
-        let mut observation = StateObservation { session, opcode: 0x42,
-            event: DeviceEvent::SpatialEnabled(true) };
+        let mut observation = StateObservation {
+            session,
+            opcode: 0x42,
+            event: DeviceEvent::SpatialEnabled(true),
+        };
         assert!(ExpectedState::SpatialEnabled(true).matches(session, &observation));
         assert!(!ExpectedState::SpatialEnabled(false).matches(session, &observation));
         observation.opcode = 0x43;
@@ -120,14 +235,27 @@ mod tests {
         epoch.invalidate();
         let session = epoch.token();
         let (tx, mut rx) = tokio::sync::broadcast::channel(8);
-        for (token, opcode, value) in [(old, 0x53, 1), (session, 0x54, 1),
-            (session, 0x53, 0), (session, 0x53, 1)] {
-            tx.send(StateObservation { session: token, opcode, event: DeviceEvent::BassBoost(value) }).unwrap();
+        for (token, opcode, value) in [
+            (old, 0x53, 1),
+            (session, 0x54, 1),
+            (session, 0x53, 0),
+            (session, 0x53, 1),
+        ] {
+            tx.send(StateObservation {
+                session: token,
+                opcode,
+                event: DeviceEvent::BassBoost(value),
+            })
+            .unwrap();
         }
-        let found = await_state(&mut rx, session, ExpectedState::Bass(1)).await.unwrap();
+        let found = await_state(&mut rx, session, ExpectedState::Bass(1))
+            .await
+            .unwrap();
         assert_eq!(found.opcode, 0x53);
         drop(tx);
-        assert!(await_state(&mut rx, session, ExpectedState::Bass(1)).await.is_err());
+        assert!(await_state(&mut rx, session, ExpectedState::Bass(1))
+            .await
+            .is_err());
     }
 
     #[tokio::test]
@@ -135,9 +263,113 @@ mod tests {
         let session = SessionEpoch::default().token();
         let (tx, mut rx) = tokio::sync::broadcast::channel(1);
         for _ in 0..3 {
-            tx.send(StateObservation { session, opcode: 0x53, event: DeviceEvent::BassBoost(1) }).unwrap();
+            tx.send(StateObservation {
+                session,
+                opcode: 0x53,
+                event: DeviceEvent::BassBoost(1),
+            })
+            .unwrap();
         }
-        assert!(await_state(&mut rx, session, ExpectedState::Bass(1)).await.is_err());
+        assert!(await_state(&mut rx, session, ExpectedState::Bass(1))
+            .await
+            .is_err());
     }
 
+    #[tokio::test]
+    async fn scripted_transport_writes_query_and_ignores_ack_until_readback() {
+        let session = SessionEpoch::default().token();
+        let transport = FakeTransport::new([
+            ScriptedWrite::Reply(bass_observation(session, 0x54, 1)),
+            ScriptedWrite::Reply(bass_observation(session, 0x53, 1)),
+        ]);
+
+        let found = write_and_confirm(
+            &transport,
+            session,
+            &[0xBA, 0x54, 1],
+            &[0xBA, 0x53],
+            ExpectedState::Bass(1),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(found.opcode, 0x53);
+        assert_eq!(
+            *transport.writes.lock().unwrap(),
+            vec![vec![0xBA, 0x54, 1], vec![0xBA, 0x53]]
+        );
+    }
+
+    #[tokio::test]
+    async fn disconnect_and_write_failure_never_confirm_a_feature() {
+        let session = SessionEpoch::default().token();
+        let disconnected = FakeTransport::new([ScriptedWrite::Disconnect]);
+        assert!(write_and_confirm(
+            &disconnected,
+            session,
+            &[0xBA, 0x54, 1],
+            &[0xBA, 0x53],
+            ExpectedState::Bass(1),
+        )
+        .await
+        .is_err());
+
+        let failed = FakeTransport::new([ScriptedWrite::Fail("write failed".into())]);
+        assert_eq!(
+            write_and_confirm(
+                &failed,
+                session,
+                &[0xBA, 0x54, 1],
+                &[0xBA, 0x53],
+                ExpectedState::Bass(1),
+            )
+            .await
+            .unwrap_err(),
+            "write failed"
+        );
+        assert_eq!(failed.writes.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn deadline_and_late_ack_do_not_confirm_or_poison_the_next_transaction() {
+        let session = SessionEpoch::default().token();
+        let transport = FakeTransport::new([
+            ScriptedWrite::DelayedReply(
+                bass_observation(session, 0x54, 1),
+                Duration::from_millis(10),
+            ),
+            ScriptedWrite::NoReply,
+        ]);
+        let timed_out = tokio::time::timeout(
+            Duration::from_millis(1),
+            write_and_confirm(
+                &transport,
+                session,
+                &[0xBA, 0x54, 1],
+                &[0xBA, 0x53],
+                ExpectedState::Bass(1),
+            ),
+        )
+        .await;
+        assert!(timed_out.is_err());
+
+        tokio::time::sleep(Duration::from_millis(15)).await;
+        transport.push([
+            ScriptedWrite::NoReply,
+            ScriptedWrite::DelayedReply(
+                bass_observation(session, 0x53, 1),
+                Duration::from_millis(1),
+            ),
+        ]);
+        let found = write_and_confirm(
+            &transport,
+            session,
+            &[0xBA, 0x54, 1],
+            &[0xBA, 0x53],
+            ExpectedState::Bass(1),
+        )
+        .await
+        .unwrap();
+        assert_eq!(found.opcode, 0x53);
+    }
 }

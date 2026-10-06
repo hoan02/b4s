@@ -24,8 +24,8 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P1.4 | Trace server dictionary/model-param consumers | In progress |
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
-| P2.3 | Replay harness và scripted fake transport | In progress — synthetic framing/decoder/confirmation replay; fake transport/timing matrix outstanding |
-| P3.1 | Tách BLE discovery/GATT facade khỏi session | Open |
+| P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
+| P3.1 | Tách BLE discovery/GATT facade khỏi session | In progress — confirmed write/query transport seam |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards integrated; actor/cancellation outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
@@ -336,3 +336,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Pairing empty/searching feedback now follows visible candidates, so seeing only filtered speakers does not leave a blank scan panel.
 - Contributor catalog guidance now distinguishes the offline audio metadata catalog from headphone pairing and documents the speaker and legacy-reconnect policy.
 - Added CI regression coverage for the five category exclusions, mixed regional categories and all legacy IDs. Local tests remain unrun by request; visual pairing review and the remaining catalog/family gates remain open.
+
+
+## Increment 40 — scripted confirmed-transport boundary
+
+- Extracted the write→query→matching-state sequence behind `ConfirmedTransport` and connected the production GATT writer through that seam. Subscription still happens before writes and the existing command executor retains deadline/cancellation ownership.
+- CI coverage scripts wrong-opcode ACK, matching readback, write failure, disconnect, deadline and a late ACK followed by a fresh transaction. This covers state confirmation behavior without hardware; it cannot establish command causality for a late matching state because AA/BA has no request ID.
+- Local tests remain unrun by request. Full connection/discovery GATT facade and captured notification replay remain open under P2.3/P3.1.

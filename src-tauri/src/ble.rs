@@ -1377,11 +1377,35 @@ async fn write_and_readback(
     expected: crate::device::confirmation::ExpectedState,
 ) -> Result<(), String> {
     let token = BLE.lock().await.session.token();
-    let mut replies = OBSERVATIONS.subscribe();
-    write_bytes(peripheral, data).await?;
-    write_bytes(peripheral, query).await?;
-    crate::device::confirmation::await_state(&mut replies, token, expected).await?;
+    let transport = GattConfirmedTransport { peripheral };
+    crate::device::confirmation::write_and_confirm(
+        &transport,
+        token,
+        data,
+        query,
+        expected,
+    )
+    .await?;
     Ok(())
+}
+
+struct GattConfirmedTransport<'a> {
+    peripheral: &'a Peripheral,
+}
+
+impl crate::device::confirmation::ConfirmedTransport for GattConfirmedTransport<'_> {
+    fn subscribe(
+        &self,
+    ) -> tokio::sync::broadcast::Receiver<crate::device::confirmation::StateObservation> {
+        OBSERVATIONS.subscribe()
+    }
+
+    fn write<'a>(
+        &'a self,
+        payload: &'a [u8],
+    ) -> futures::future::BoxFuture<'a, Result<(), String>> {
+        Box::pin(write_bytes(self.peripheral, payload))
+    }
 }
 
 pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
