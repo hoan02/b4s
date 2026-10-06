@@ -32,7 +32,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — scan generation/revision, connection session, and link session/revision envelopes are versioned and frontend reducers reject stale updates; consistent typed error semantics and remaining command DTO migration remain open |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — lifecycle envelopes/reducers reject stale updates and Tauri handlers are grouped into BLE, device, desktop, and update API modules; consistent typed error semantics and versioned command DTOs remain open |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions, find-buds, listening, EQ, game, spatial and advanced-sound workflows have dedicated owners; navigation/accessibility acceptance remains open |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
@@ -562,3 +562,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - The shared adapter stream now rechecks current OS connection state before honoring a disconnect event and verifies both the originating session token and selected entry ID after the asynchronous check. A delayed disconnect from the previous connection can no longer clear a newer session that selected the same OS entry.
 - Added a focused pure Rust regression for old-session and wrong-entry events. Selected-file `rustfmt --check` and `git diff --check` pass; current-head CI is the Rust compile/test gate. P3.3 remains open for session-actor ownership and complete event lifecycle management.
+
+## Increment 78 — organize Tauri API ownership
+
+- Split the Tauri command handlers out of `lib.rs` into `api/ble.rs`, `api/device.rs`, `api/desktop.rs`, and `api/updates.rs`, with `api/mod.rs` declaring the command boundary. `lib.rs` now owns application setup and handler registration only; command names and behavior are unchanged.
+- This prepares a single location for the remaining versioned request DTO and structured-error migration. Selected-file `rustfmt --check` and `git diff --check` pass; current-head CI covers compile and command registration.
