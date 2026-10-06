@@ -25,7 +25,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
-| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — scan/discovery, connection, command, and GATT I/O modules now split from `ble.rs`; central state ownership, transport interface, and remaining lifecycle cleanup still open |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan/discovery, connection, command, and GATT I/O remain separate modules; actor lifecycle, injected transport interface, and event ownership remain open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards integrated; actor/cancellation outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
@@ -421,3 +421,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Scan status, connection state, and link health now expose `contractVersion: 1` from both command responses and their matching events. Link health uses a closed `LinkLevel` enum with the five supported values; arbitrary strings are rejected at the Rust boundary and no longer admitted by the frontend type.
 - Frontend command and event adapters validate version 1 before delivering these states. Added serialization coverage for the versioned link contract and enum values. `cargo check`, TypeScript typecheck, and `git diff --check` passed; repository-wide `cargo fmt --check` still reports existing formatting differences outside this slice, so only the edited Rust file was formatted.
 - No local test suite was run; CI will exercise the serialization test. This advances P4.3 but does not close it: event sequence/session envelopes, typed error semantics, and remaining command DTO migration are open.
+
+
+## Increment 52 — central BLE state ownership
+
+- Moved the mutable BLE state aggregate, initialization/reset logic, and synchronized singleton into `ble/runtime.rs`. The root `ble.rs` now consumes the owner while discovery, scanning, connection, command, and transport modules share the same state without an alternate runtime.
+- `ble.rs` is now about 600 lines. `cargo check` and whitespace validation passed; no local test suite was run. P3.1 remains open for session actor/cancellation ownership, injected transport, and event stream lifecycle.

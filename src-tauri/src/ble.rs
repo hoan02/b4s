@@ -4,8 +4,10 @@ pub mod commands;
 pub mod connection;
 #[path = "ble/discovery.rs"]
 mod discovery;
+mod runtime;
 pub mod scanning;
 mod transport;
+use runtime::BLE;
 use transport::{
     with_connected_peripheral, write_and_readback, write_bytes, write_command, write_raw,
 };
@@ -23,7 +25,6 @@ use futures::stream::StreamExt;
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
@@ -167,85 +168,6 @@ pub struct ScanStatus {
 // Internal state
 // ---------------------------------------------------------------------------
 
-struct BleInner {
-    adapter: Option<Adapter>,
-    central_task: Option<tokio::task::JoinHandle<()>>,
-    peripherals: HashMap<String, Peripheral>,
-    connected_id: Option<String>,
-    scanning: bool,
-    scan_generation: u64,
-    session: crate::device::session::SessionEpoch,
-    snapshot: crate::device::snapshot::DeviceSnapshot,
-    devices: HashMap<String, BleDevice>,
-    /// Live battery merged from 0x02 + 0x27 notifies
-    battery: BatteryState,
-    last_anc: Option<AncMode>,
-    /// Best-effort record that a find-start write was accepted by the OS.
-    find_requested: bool,
-    /// true when using mock (no real GATT)
-    mock: bool,
-    /// Live link diagnostics for UI
-    has_write_uuid: bool,
-    has_notify_uuid: bool,
-    handshake_ok: bool,
-    notify_count: u64,
-    tx_count: u64,
-    last_notify_ms: Option<u64>,
-    last_tx_ms: Option<u64>,
-    last_rx_hex: Option<String>,
-    last_tx_hex: Option<String>,
-    write_char: Option<String>,
-    notify_char: Option<String>,
-}
-
-impl BleInner {
-    fn new() -> Self {
-        Self {
-            adapter: None,
-            central_task: None,
-            peripherals: HashMap::new(),
-            connected_id: None,
-            scanning: false,
-            scan_generation: 0,
-            session: Default::default(),
-            snapshot: crate::device::snapshot::DeviceSnapshot::new(0),
-            devices: HashMap::new(),
-            battery: BatteryState::default(),
-            last_anc: None,
-            find_requested: false,
-            mock: false,
-            has_write_uuid: false,
-            has_notify_uuid: false,
-            handshake_ok: false,
-            notify_count: 0,
-            tx_count: 0,
-            last_notify_ms: None,
-            last_tx_ms: None,
-            last_rx_hex: None,
-            last_tx_hex: None,
-            write_char: None,
-            notify_char: None,
-        }
-    }
-
-    fn reset_link(&mut self) {
-        self.session.invalidate();
-        self.snapshot = crate::device::snapshot::DeviceSnapshot::new(self.session.token().id());
-        self.has_write_uuid = false;
-        self.has_notify_uuid = false;
-        self.handshake_ok = false;
-        self.notify_count = 0;
-        self.tx_count = 0;
-        self.last_notify_ms = None;
-        self.last_tx_ms = None;
-        self.last_rx_hex = None;
-        self.last_tx_hex = None;
-        self.write_char = None;
-        self.notify_char = None;
-        self.find_requested = false;
-    }
-}
-
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -299,8 +221,6 @@ fn compute_link_level(h: &LinkHealth) -> (LinkLevel, String) {
 fn normalize_addr(a: &str) -> String {
     a.to_uppercase().replace('-', ":")
 }
-
-static BLE: Lazy<Arc<Mutex<BleInner>>> = Lazy::new(|| Arc::new(Mutex::new(BleInner::new())));
 
 fn model_fields(name: &str) -> (bool, Option<String>, Option<String>, Option<String>) {
     let resolved = DeviceRegistry::resolve(DeviceIdentity {
