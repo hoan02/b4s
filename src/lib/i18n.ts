@@ -66,7 +66,12 @@ export const t = (key: string, options?: Record<string, unknown>): string => {
 };
 
 export function formatError(error: unknown): string {
-  const details = error instanceof Error ? error.message : String(error);
+  const payload = typeof error === "object" && error !== null ? error as Record<string, unknown> : null;
+  const details = error instanceof Error
+    ? error.message
+    : typeof payload?.message === "string"
+      ? payload.message
+      : String(error);
   return `${t("error.operationFailed")}: ${details}`;
 }
 

@@ -1,3 +1,4 @@
+use super::error::{ApiError, ApiErrorCode};
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -6,14 +7,13 @@ pub(crate) fn set_experimental_mode(enabled: bool) {
 }
 
 #[tauri::command]
-pub(crate) fn get_start_at_login(app: AppHandle) -> Result<bool, String> {
+pub(crate) fn get_start_at_login(app: AppHandle) -> Result<bool, ApiError> {
     #[cfg(desktop)]
     {
         use tauri_plugin_autostart::ManagerExt;
-        return app
-            .autolaunch()
-            .is_enabled()
-            .map_err(|error| error.to_string());
+        return app.autolaunch().is_enabled().map_err(|error| {
+            ApiError::new(ApiErrorCode::PreferenceFailed, error.to_string(), false)
+        });
     }
     #[cfg(not(desktop))]
     {
@@ -23,7 +23,7 @@ pub(crate) fn get_start_at_login(app: AppHandle) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub(crate) fn set_start_at_login(app: AppHandle, enabled: bool) -> Result<(), String> {
+pub(crate) fn set_start_at_login(app: AppHandle, enabled: bool) -> Result<(), ApiError> {
     #[cfg(desktop)]
     {
         use tauri_plugin_autostart::ManagerExt;
@@ -33,11 +33,15 @@ pub(crate) fn set_start_at_login(app: AppHandle, enabled: bool) -> Result<(), St
         } else {
             manager.disable()
         }
-        .map_err(|error| error.to_string());
+        .map_err(|error| ApiError::new(ApiErrorCode::PreferenceFailed, error.to_string(), false));
     }
     #[cfg(not(desktop))]
     {
         let _ = (app, enabled);
-        Err("Start at login is only available on desktop".into())
+        Err(ApiError::new(
+            ApiErrorCode::PreferenceFailed,
+            "Start at login is only available on desktop",
+            false,
+        ))
     }
 }

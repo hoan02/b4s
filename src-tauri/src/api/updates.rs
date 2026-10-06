@@ -1,3 +1,4 @@
+use super::error::{ApiError, ApiErrorCode};
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_updater::UpdaterExt;
@@ -96,19 +97,41 @@ pub(crate) async fn check_for_updates(app: AppHandle) -> Result<UpdateCheckResul
 }
 
 #[tauri::command]
-pub(crate) async fn install_update(app: AppHandle) -> Result<(), String> {
-    let updater = app.updater().map_err(|error| format!("Updater: {error}"))?;
+pub(crate) async fn install_update(app: AppHandle) -> Result<(), ApiError> {
+    let updater = app.updater().map_err(|error| {
+        ApiError::new(
+            ApiErrorCode::UpdateInstallFailed,
+            format!("Updater: {error}"),
+            true,
+        )
+    })?;
     let update = updater
         .check()
         .await
-        .map_err(|error| format!("Check update: {error}"))?
+        .map_err(|error| {
+            ApiError::new(
+                ApiErrorCode::UpdateInstallFailed,
+                format!("Check update: {error}"),
+                true,
+            )
+        })?
         .ok_or_else(|| {
-            "Không có bản cập nhật ký số. Mở GitHub Releases để tải thủ công.".to_string()
+            ApiError::new(
+                ApiErrorCode::UpdateInstallFailed,
+                "Không có bản cập nhật ký số. Mở GitHub Releases để tải thủ công.",
+                false,
+            )
         })?;
     update
         .download_and_install(|_chunk, _total| {}, || {})
         .await
-        .map_err(|error| format!("Install update: {error}"))?;
+        .map_err(|error| {
+            ApiError::new(
+                ApiErrorCode::UpdateInstallFailed,
+                format!("Install update: {error}"),
+                true,
+            )
+        })?;
     app.restart();
     Ok(())
 }

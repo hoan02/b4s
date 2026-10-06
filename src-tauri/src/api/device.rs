@@ -1,3 +1,4 @@
+use super::error::{ApiError, ApiErrorCode};
 use crate::{ble, catalog, device, protocol};
 use protocol::{BatteryState, EqBand, ListeningCommand, SpatialMode};
 use serde::{Deserialize, Serialize};
@@ -85,12 +86,14 @@ pub(crate) struct DeviceCommandResponse {
     disposition: DeviceCommandDisposition,
 }
 
-fn validate_device_command_contract(version: u16) -> Result<(), String> {
+fn validate_device_command_contract(version: u16) -> Result<(), ApiError> {
     if version == DEVICE_COMMAND_CONTRACT_VERSION {
         Ok(())
     } else {
-        Err(format!(
-            "Unsupported device command contract version: {version}"
+        Err(ApiError::new(
+            ApiErrorCode::InvalidRequest,
+            format!("Unsupported device command contract version: {version}"),
+            false,
         ))
     }
 }
@@ -106,8 +109,14 @@ pub(crate) fn list_model_profiles() -> Vec<catalog::ModelProfile> {
 }
 
 #[tauri::command]
-pub(crate) fn get_model_profile(model_id: String) -> Result<catalog::ModelProfile, String> {
-    catalog::profile_for(&model_id).ok_or_else(|| format!("No profile for model: {model_id}"))
+pub(crate) fn get_model_profile(model_id: String) -> Result<catalog::ModelProfile, ApiError> {
+    catalog::profile_for(&model_id).ok_or_else(|| {
+        ApiError::new(
+            ApiErrorCode::DeviceUnavailable,
+            format!("No profile for model: {model_id}"),
+            false,
+        )
+    })
 }
 
 #[tauri::command]
@@ -116,14 +125,16 @@ pub(crate) async fn get_device_snapshot() -> device::snapshot::DeviceSnapshot {
 }
 
 #[tauri::command]
-pub(crate) async fn query_battery() -> Result<BatteryState, String> {
-    ble::connection::query_battery().await
+pub(crate) async fn query_battery() -> Result<BatteryState, ApiError> {
+    ble::connection::query_battery()
+        .await
+        .map_err(|error| ApiError::new(ApiErrorCode::BatteryReadFailed, error, true))
 }
 
 #[tauri::command]
 pub(crate) async fn apply_device_command(
     request: DeviceCommandRequest,
-) -> Result<DeviceCommandResponse, String> {
+) -> Result<DeviceCommandResponse, ApiError> {
     validate_device_command_contract(request.contract_version)?;
     let disposition = match request.command {
         DeviceCommand::SetListeningState {

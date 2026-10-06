@@ -1,3 +1,4 @@
+use super::error::{ApiError, ApiErrorCode};
 use crate::ble;
 
 #[tauri::command]
@@ -9,17 +10,20 @@ pub(crate) async fn ble_check_adapter() -> Result<bool, String> {
 pub(crate) async fn ble_start_scan(
     app: tauri::AppHandle,
     mock: Option<bool>,
-) -> Result<(), String> {
-    if mock.unwrap_or(false) {
+) -> Result<(), ApiError> {
+    let result = if mock.unwrap_or(false) {
         ble::start_mock_scan(app).await
     } else {
         ble::scanning::start_scan(app).await
-    }
+    };
+    result.map_err(|error| ApiError::new(ApiErrorCode::ScanFailed, error, true))
 }
 
 #[tauri::command]
-pub(crate) async fn ble_stop_scan(app: tauri::AppHandle) -> Result<(), String> {
-    ble::scanning::stop_scan(app).await
+pub(crate) async fn ble_stop_scan(app: tauri::AppHandle) -> Result<(), ApiError> {
+    ble::scanning::stop_scan(app)
+        .await
+        .map_err(|error| ApiError::new(ApiErrorCode::ScanFailed, error, true))
 }
 
 #[tauri::command]
@@ -27,17 +31,23 @@ pub(crate) async fn ble_connect(
     app: tauri::AppHandle,
     device_id: String,
     mock: Option<bool>,
-) -> Result<ble::BleDevice, String> {
+) -> Result<ble::BleDevice, ApiError> {
     if mock.unwrap_or(false) || device_id.starts_with("mock-") {
-        ble::mock_connect(app, device_id).await
+        ble::mock_connect(app, device_id)
+            .await
+            .map_err(|error| ApiError::new(ApiErrorCode::ConnectionFailed, error, true))
     } else {
-        ble::connection::connect(app, device_id).await
+        ble::connection::connect(app, device_id)
+            .await
+            .map_err(|error| ApiError::new(ApiErrorCode::ConnectionFailed, error, true))
     }
 }
 
 #[tauri::command]
-pub(crate) async fn ble_disconnect(app: tauri::AppHandle) -> Result<(), String> {
-    ble::connection::disconnect(app).await
+pub(crate) async fn ble_disconnect(app: tauri::AppHandle) -> Result<(), ApiError> {
+    ble::connection::disconnect(app)
+        .await
+        .map_err(|error| ApiError::new(ApiErrorCode::DisconnectFailed, error, true))
 }
 
 #[tauri::command]
