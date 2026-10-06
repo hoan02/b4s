@@ -687,3 +687,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - The central listener now captures the active scan generation before awaiting peripheral lookup and passes it through processing. The scanner validates that generation both before reading properties and immediately before registry mutation, so an old event cannot be relabeled as belonging to a restarted scan.
 - Added a regression for current, stopped and superseded scan generations. Selected-file formatting and `git diff --check` passed; no local test/build was run. Full Windows and Ubuntu CI on `b10b42e` passed, including frontend checks/build/session tests, translation validation, `cargo check`, Rust tests and Tauri build ([run](https://github.com/hoan02/b4s/actions/runs/37439043339)). A full session actor and injected transport remain open under P3.1/P3.3.
+
+## Increment 103 — join session workers on explicit disconnect
+
+- Explicit disconnect now removes notification and battery-poller handles while invalidating the session under the BLE lock, aborts them, and awaits both joins after releasing the lock and before GATT unsubscribe/disconnect. Reconnect and bounded app shutdown share this path.
+- Added focused ownership coverage proving cleanup returns both aborted handles for joining. Selected-file formatting and `git diff --check` passed; no local tests/build were run. Full Windows and Ubuntu CI on `c99563b` passed, including frontend checks/build/session tests, translation validation, `cargo check`, Rust tests and Tauri build ([run](https://github.com/hoan02/b4s/actions/runs/37441927270)). Session replacement paths outside explicit disconnect still abort without ordered joins; a full session actor remains open under P3.3.
