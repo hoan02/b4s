@@ -472,3 +472,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added a deterministic standard-library script and generated support matrix for all 124 headphone candidates in the current public snapshot. It lists reviewed profile permissions, protocol family, evidence limits, and the five audio products excluded as speakers.
 - All candidates without an exact reviewed profile remain scan-only with no controls. The matrix explicitly separates profile declarations from hardware acceptance; it does not promote support. Generation and Python syntax checks passed; per-feature hardware reports remain open under P8.3.
+
+## Increment 60 — extract listening feature controller
+
+- Moved transparency/adaptive/environment/level preferences and ANC/transparency command handlers from `App.tsx` into `features/listening/controller.ts`. The app shell now supplies current mode/profile and presentation callbacks; the controller owns feature intent and command error handling.
+- Behavior and existing capability inputs are preserved. `npx tsc --noEmit` and `git diff --check` passed; no test suite was run locally. P5.1 remains open for the remaining feature controllers and session/accessibility acceptance.

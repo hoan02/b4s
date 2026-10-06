@@ -1,5 +1,5 @@
 import { Component, createEffect, createSignal, Show, onMount, onCleanup } from "solid-js";
-import type { AncMode, NoiseEnvironment, EqPresetId, SpatialMode, TransparencyMode } from "./lib/device";
+import type { AncMode, EqPresetId, SpatialMode } from "./lib/device";
 import BlePairing from "./components/BlePairing";
 import HomePanel from "./components/HomePanel";
 import MorePanel from "./components/MorePanel";
@@ -12,6 +12,7 @@ import { createConfirmedOperation } from "./features/shared/confirmedOperation";
 import { resolveEqSelection } from "./features/equalizer/selection";
 import { subscribeDeviceRuntime } from "./features/devices/runtimeSubscriptions";
 import { createFindBudsController } from "./features/find-buds/controller";
+import { createListeningController } from "./features/listening/controller";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
@@ -24,7 +25,6 @@ import {
 } from "./lib/ble";
 import {
   queryBattery,
-  setListeningState,
   setEqIndex,
   setEqPreset,
   setCustomEq,
@@ -33,7 +33,6 @@ import {
   setBassBoost,
   setLdac as sendLdac,
   setHearingProtection as sendHearingProtection,
-  profileNoise,
 } from "./lib/device";
 import { defaultCustomBands } from "./lib/eq";
 import { readDesktopPreferences, writeAutoReconnect } from "./lib/desktopPreferences";
@@ -76,10 +75,6 @@ const App: Component = () => {
     case: null,
   });
   const [ancMode, setAncModeUi] = createSignal<AncMode>("off");
-  const [transparencyMode, setTransparencyMode] = createSignal<TransparencyMode>("full");
-  const [adaptiveNoise, setAdaptiveNoise] = createSignal(true);
-  const [noiseEnvironment, setNoiseEnvironment] = createSignal<NoiseEnvironment>(102);
-  const [noiseLevel, setNoiseLevel] = createSignal(3);
   const [modelProfiles, setModelProfiles] = createSignal<ModelProfile[]>([]);
   const [eqWireIndex, setEqWireIndex] = createSignal<number | null>(null);
   const modelEq = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.eq;
@@ -105,7 +100,6 @@ const App: Component = () => {
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
   const noiseCaps = () => device()?.deviceProfile?.noise;
-  const noiseProfile = () => profileNoise(noiseCaps());
 
   const applySnapshot = (snapshot: DeviceSnapshot | null) => {
     setBattery({
@@ -196,6 +190,17 @@ const App: Component = () => {
     const id = window.setTimeout(() => dismissToast(t.id), 2800);
     toastTimers.set(t.id, id);
   };
+
+  const listening = createListeningController({
+    mode: ancMode,
+    noiseCapabilities: noiseCaps,
+    clearError: () => setControlError(null),
+    setError: setControlError,
+    refreshLink: async () => {
+      applyLink(await getLinkHealth());
+    },
+    notify,
+  });
 
   const findController = createFindBudsController(notify);
 
@@ -316,23 +321,6 @@ const App: Component = () => {
     }
   };
 
-  const handleAncMode = async (mode: AncMode) => {
-    setControlError(null);
-    try {
-      await setListeningState({
-        mode,
-        transparencyMode: transparencyMode(),
-        adaptive: adaptiveNoise(),
-        environment: noiseEnvironment(),
-        level: noiseLevel(),
-      });
-      applyLink(await getLinkHealth());
-    } catch (e) {
-      setControlError(formatError(e));
-      notify(formatError(e), "error", t("toast.error"));
-    }
-  };
-
   const applyEqPreset = async (preset: EqPresetId) => {
     await equalizer.run(() => setEqPreset(preset), () => {
       if (link().mock) setEqCustomActive(false);
@@ -411,22 +399,6 @@ const App: Component = () => {
     }, (message) => notify(message, "error"));
   };
 
-  const applyNoiseParameter = async (mode: AncMode, parameter: number) => {
-    setControlError(null);
-    try {
-      await setListeningState({
-        mode,
-        transparencyMode: transparencyMode(),
-        adaptive: adaptiveNoise(),
-        environment: noiseEnvironment(),
-        level: mode === "anc" && parameter < 100 ? parameter : noiseLevel(),
-      });
-    } catch (e) {
-      setControlError(formatError(e));
-      notify(formatError(e), "error", t("toast.controlError"));
-    }
-  };
-
   const confirmEqAction = async () => {
     const action = pendingEqAction();
     setPendingEqAction(null);
@@ -447,26 +419,6 @@ const App: Component = () => {
     } catch (e) {
       notify(formatError(e), "error");
     }
-  };
-
-  const handleTransparencyMode = async (mode: TransparencyMode) => {
-    setTransparencyMode(mode);
-    if (ancMode() === "transparency") await applyNoiseParameter("transparency", mode === "voice" ? 1 : 0xff);
-  };
-
-  const handleAdaptiveNoise = async (on: boolean) => {
-    setAdaptiveNoise(on);
-    if (ancMode() === "anc") await applyNoiseParameter("anc", on ? noiseEnvironment() : noiseLevel());
-  };
-
-  const handleNoiseEnvironment = async (value: NoiseEnvironment) => {
-    setNoiseEnvironment(value);
-    if (ancMode() === "anc" && adaptiveNoise()) await applyNoiseParameter("anc", value);
-  };
-
-  const handleNoiseLevel = async (value: number) => {
-    setNoiseLevel(value);
-    if (ancMode() === "anc" && !adaptiveNoise()) await applyNoiseParameter("anc", value);
   };
 
   const handleLdac = async (enabled: boolean) => {
@@ -622,11 +574,11 @@ const App: Component = () => {
                 battery={battery()}
                 link={link()}
                 ancMode={ancMode()}
-                transparencyMode={transparencyMode()}
-                adaptiveNoise={adaptiveNoise()}
-                noiseEnvironment={noiseEnvironment()}
-                noiseLevel={noiseLevel()}
-                noiseMaxLevel={noiseProfile().maxLevel}
+                transparencyMode={listening.transparencyMode()}
+                adaptiveNoise={listening.adaptiveNoise()}
+                noiseEnvironment={listening.noiseEnvironment()}
+                noiseLevel={listening.noiseLevel()}
+                noiseMaxLevel={listening.noiseProfile().maxLevel}
                 noiseSupported={(noiseCaps()?.maxCustomLevel ?? 0) > 0}
                 adaptiveSupported={noiseCaps()?.supportsAdaptive ?? false}
                 transparencyVoiceSupported={noiseCaps()?.supportsTransparencyVoice ?? false}
@@ -648,11 +600,11 @@ const App: Component = () => {
                     ? t("eq.customize")
                     : modelEq()?.presets.find((preset) => preset.id === eqActive())?.label ?? "—"
                 }
-                onAncMode={handleAncMode}
-                onTransparencyMode={handleTransparencyMode}
-                onAdaptiveNoise={handleAdaptiveNoise}
-                onNoiseEnvironment={handleNoiseEnvironment}
-                onNoiseLevel={handleNoiseLevel}
+                onAncMode={listening.setMode}
+                onTransparencyMode={listening.setTransparencyMode}
+                onAdaptiveNoise={listening.setAdaptiveNoise}
+                onNoiseEnvironment={listening.setNoiseEnvironment}
+                onNoiseLevel={listening.setNoiseLevel}
                 onGameMode={handleGameMode}
                 onFindBuds={findController.request}
                 onOpenMore={() => setView("more")}
