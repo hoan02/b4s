@@ -33,7 +33,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — connection descriptors migrated; firmware/feature evidence outstanding |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
 | P4.3 | Device snapshot/error/event contract + compatibility bridge | In progress |
-| P4.4 | Scoped persistence, migrations, bounded diagnostic cache | Open |
+| P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store and listener cleanup; feature controller extraction outstanding |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; device inventory/visual acceptance outstanding |
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
@@ -365,3 +365,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Updated the five READMEs to describe reconnect as opt-in/off by default, the 12-second one-shot search, separate start-at-login preference, and close-to-tray/Quit behavior. Removed the unsupported claim that BP1 Ultra is verified for control; its transport remains scan-only pending evidence.
 - Added a desktop troubleshooting guide with current scan/connect steps, startup/tray behavior, issue-reporting fields, and explicit diagnostic collection/privacy limits. Updated the model catalog guidance to distinguish reviewed profile data from hardware verification.
 - Documentation links and claims were reviewed against current code and the support tracker; no local tests run. Full per-model/per-feature evidence matrix and P8.1/P8.2 external acceptance remain open.
+
+
+## Increment 44 — scoped EQ preference migration
+
+- Custom EQ remains keyed by device address, model ID and band layout. Stored data now uses a versioned envelope, validates IDs/labels/gains/band count, caps the saved list to the UI's two-preset limit, and migrates the legacy array shape on read without discarding usable values if storage is unavailable.
+- Locale preference reads and writes now tolerate browser storage denial; language switching remains available for the current session. Theme and reconnect preferences already handle storage errors independently.
+- No local tests run. The bounded diagnostic cache and broader persistence migration matrix remain open under P4.4.
