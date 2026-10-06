@@ -27,7 +27,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
 | P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan/discovery, connection, command, and GATT I/O remain separate modules; actor lifecycle, injected transport interface, and event ownership remain open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
-| P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards integrated; actor/cancellation outstanding |
+| P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards and connect-attempt cancellation lease integrated; session actor and full event-lifecycle ownership outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
@@ -532,3 +532,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added `aria-pressed` to the selected ANC, transparency, adaptive-environment, spatial-mode, EQ-tab and EQ-preset buttons. Named control groups expose their labels to assistive technology while retaining normal button keyboard behavior.
 - `npx tsc --noEmit` and `git diff --check` passed. Full keyboard, screen-reader, theme contrast and Windows scaling acceptance remains open under P5.3/P8.1.
+
+## Increment 72 — cancel connection attempts on session rollover
+
+- `ble::connection::connect` now leases the attempt session and selects cancellation against the complete `connect_one` future. The original token is passed into `connect_one`, so a reconnect cannot accidentally adopt a newer epoch while an older attempt is still running.
+- This closes the in-flight connect cancellation slice of P3.3; a session actor and full event ownership remain open. Rust validation is delegated to current-head CI; no local test suite was run.

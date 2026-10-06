@@ -94,6 +94,7 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     state.mock = false;
     state.reset_link();
     let attempt_token = state.session.token();
+    let mut attempt_lease = state.session.lease(attempt_token);
     drop(state);
 
     let _ = app.emit(
@@ -103,7 +104,12 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
             device_id: device_id.clone(),
         },
     );
-    match connect_one(app.clone(), device_id.clone()).await {
+    let result = tokio::select! {
+        biased;
+        _ = attempt_lease.cancelled() => Err("Connection attempt was cancelled".into()),
+        result = connect_one(app.clone(), device_id.clone(), attempt_token) => result,
+    };
+    match result {
         Ok(device) => Ok(device),
         Err(error) => {
             if let Ok(peripheral) = resolve_peripheral(&device_id).await {
@@ -121,8 +127,11 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     }
 }
 
-async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, String> {
-    let token = BLE.lock().await.session.token();
+async fn connect_one(
+    app: AppHandle,
+    device_id: String,
+    token: crate::device::session::SessionToken,
+) -> Result<BleDevice, String> {
     let peripheral = resolve_peripheral(&device_id).await?;
     let mut first_connect = handshake::Handshake::new(30_000);
 
