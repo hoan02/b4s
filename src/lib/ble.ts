@@ -171,15 +171,19 @@ function isNullable(value: unknown, guard: (item: unknown) => boolean): boolean 
   return value === null || guard(value);
 }
 
+function isCounter(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
 function isLinkHealth(value: unknown): value is LinkHealth {
   if (!isRecord(value)) return false;
   return value.contractVersion === 1 &&
     ["connected", "mock", "peripheralConnected", "hasWriteUuid", "hasNotifyUuid", "handshakeOk"]
       .every((key) => typeof value[key] === "boolean") &&
-    ["notifyCount", "txCount"].every((key) => typeof value[key] === "number") &&
+    ["notifyCount", "txCount"].every((key) => isCounter(value[key])) &&
     ["lastNotifyMs", "lastTxMs", "lastRxHex", "lastTxHex", "writeChar", "notifyChar"]
       .every((key) => isNullable(value[key], (item) =>
-        typeof item === (key.endsWith("Ms") ? "number" : "string"))) &&
+        key.endsWith("Ms") ? isCounter(item) : typeof item === "string")) &&
     ["live", "waiting", "dead", "demo", "offline"].includes(value.level as string) &&
     typeof value.message === "string";
 }

@@ -36,14 +36,19 @@ function isNullable(value: unknown, guard: (item: unknown) => boolean): boolean 
   return value === null || guard(value);
 }
 
+function isCounter(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
 function isBatteryReading(value: unknown): boolean {
-  return isRecord(value) && typeof value.percentage === "number" &&
-    typeof value.charging === "boolean" && typeof value.observedAtMs === "number";
+  return isRecord(value) && Number.isInteger(value.percentage) &&
+    (value.percentage as number) >= 0 && (value.percentage as number) <= 100 &&
+    typeof value.charging === "boolean" && isCounter(value.observedAtMs);
 }
 
 function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
   if (!isRecord(value) || value.schemaVersion !== 1 ||
-    !Number.isSafeInteger(value.sessionId) || !Number.isSafeInteger(value.revision) ||
+    !isCounter(value.sessionId) || !isCounter(value.revision) ||
     !isNullable(value.modelId, (item) => typeof item === "string") ||
     !isNullable(value.deviceId, (item) => typeof item === "string") ||
     typeof value.mock !== "boolean" || !isRecord(value.battery)) return false;
@@ -51,8 +56,9 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
   const battery = value.battery;
   const hearing = value.hearing;
   const validHearing = hearing === null || (isRecord(hearing) &&
-    typeof hearing.enabled === "boolean" && typeof hearing.level === "number" &&
-    typeof hearing.observedAtMs === "number");
+    typeof hearing.enabled === "boolean" && Number.isInteger(hearing.level) &&
+    (hearing.level as number) >= 0 && (hearing.level as number) <= 255 &&
+    isCounter(hearing.observedAtMs));
   return ["left", "right", "case"].every((key) =>
     isNullable(battery[key], isBatteryReading)) &&
     isNullable(value.anc, (item) => ["off", "anc", "transparency"].includes(item as string)) &&

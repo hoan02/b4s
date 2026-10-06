@@ -517,3 +517,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - The shared confirmation dialog now moves keyboard focus into the dialog, keeps Tab navigation inside it, handles Escape through the existing cancel path, and restores focus when closed. Dialog title/description relationships are explicit, and its decorative glyph is hidden from assistive technology.
 - The top-level control error is announced with an alert live region. `npx tsc --noEmit` and `git diff --check` passed; platform/visual accessibility acceptance remains open.
+
+## Increment 69 — constrain runtime counters and readings
+
+- Lifecycle DTO validation now requires nonnegative safe-integer counters/timestamps. Snapshot validation also bounds battery readings to 0–100 and hearing levels to the wire byte range before state publication.
+- `npx tsc --noEmit` and `git diff --check` passed; CI verifies cross-platform compilation. No full local suite was run.
