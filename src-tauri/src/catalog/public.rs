@@ -142,7 +142,10 @@ mod tests {
             .filter(|model| model.is_speaker_only())
             .collect();
         assert_eq!(speakers.len(), 5);
-        assert_eq!(headphone_models().count(), audio_models().count() - speakers.len());
+        assert_eq!(
+            headphone_models().count(),
+            audio_models().count() - speakers.len()
+        );
         assert!(speakers
             .iter()
             .all(|model| !is_headphone_candidate(&model.model)));
