@@ -29,10 +29,10 @@ async fn resolve_peripheral(device_id: &str) -> Result<Peripheral, String> {
     ))
 }
 
-pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, String> {
+pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, BleError> {
     let _attempt = CONNECT_ATTEMPT
         .try_lock()
-        .map_err(|_| "Another connection attempt is active")?;
+        .map_err(|_| BleError::ConnectionAttemptInProgress)?;
     // Public product metadata supplies recognition, not a command transport.
     // Reject before disconnecting a working device or probing an unknown GATT.
     {
@@ -40,7 +40,7 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         let device = state
             .devices
             .get(&device_id)
-            .ok_or("Device is no longer in the scan list")?;
+            .ok_or(BleError::DeviceUnavailable)?;
         if device
             .device_profile
             .connection
@@ -48,13 +48,10 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
             .map(|connection| connection.transport)
             != Some(crate::catalog::ControlTransport::BleGatt)
         {
-            return Err("This model has no reviewed BLE control transport; capture/transport verification is required".into());
+            return Err(BleError::UnsupportedControlTransport);
         }
         if device.device_profile.protocol == protocol::ProtocolFamily::Unknown {
-            return Err(
-                "This model is recognized only; its Bluetooth control protocol is not configured"
-                    .into(),
-            );
+            return Err(BleError::ProtocolUnconfigured);
         }
     }
     let _ = scanning::stop_scan(app.clone()).await;
@@ -98,8 +95,10 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     );
     let result = tokio::select! {
         biased;
-        _ = attempt_lease.cancelled() => Err("Connection attempt was cancelled".into()),
-        result = connect_one(app.clone(), device_id.clone(), attempt_token) => result,
+        _ = attempt_lease.cancelled() => Err(BleError::SessionCancelled),
+        result = connect_one(app.clone(), device_id.clone(), attempt_token) => {
+            result.map_err(BleError::Operation)
+        },
     };
     match result {
         Ok(device) => Ok(device),
@@ -107,7 +106,7 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
             let (peripheral, session_tasks) = {
                 let mut state = BLE.lock().await;
                 if !state.session.accepts(attempt_token) {
-                    return Err("Connection attempt was cancelled".into());
+                    return Err(BleError::SessionCancelled);
                 }
                 let peripheral = state.session.take_peripheral();
                 state.connected_id = None;

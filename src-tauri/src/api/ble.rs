@@ -39,7 +39,7 @@ pub(crate) async fn ble_connect(
     } else {
         ble::connection::connect(app, device_id)
             .await
-            .map_err(|error| ApiError::new(ApiErrorCode::ConnectionFailed, error, true))
+            .map_err(ApiError::from)
     }
 }
 

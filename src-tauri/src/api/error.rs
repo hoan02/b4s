@@ -43,6 +43,19 @@ impl From<String> for ApiError {
     }
 }
 
+impl From<crate::ble::BleError> for ApiError {
+    fn from(error: crate::ble::BleError) -> Self {
+        let code = match &error {
+            crate::ble::BleError::DeviceUnavailable
+            | crate::ble::BleError::UnsupportedControlTransport
+            | crate::ble::BleError::ProtocolUnconfigured => ApiErrorCode::DeviceUnavailable,
+            _ => ApiErrorCode::ConnectionFailed,
+        };
+        let retryable = error.is_retryable();
+        Self::new(code, error.to_string(), retryable)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,6 +74,16 @@ mod tests {
     fn uncertain_device_command_failures_do_not_claim_blind_retry_is_safe() {
         let value = serde_json::to_value(ApiError::from("readback timed out".to_owned())).unwrap();
         assert_eq!(value["code"], "deviceCommandFailed");
+        assert_eq!(value["retryable"], false);
+    }
+
+    #[test]
+    fn unsupported_ble_profiles_map_to_non_retryable_device_unavailable() {
+        let value = serde_json::to_value(ApiError::from(
+            crate::ble::BleError::UnsupportedControlTransport,
+        ))
+        .unwrap();
+        assert_eq!(value["code"], "deviceUnavailable");
         assert_eq!(value["retryable"], false);
     }
 }

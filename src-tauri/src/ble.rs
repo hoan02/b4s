@@ -7,6 +7,7 @@ mod contracts;
 mod diagnostics;
 #[path = "ble/discovery.rs"]
 mod discovery;
+mod error;
 mod mock;
 mod runtime;
 pub mod scanning;
@@ -15,6 +16,7 @@ mod transport;
 pub use contracts::{
     BleDevice, ConnectingState, ConnectionState, LinkHealth, LinkLevel, ScanStatus,
 };
+pub use error::BleError;
 use runtime::BLE;
 use transport::{
     with_connected_peripheral, write_and_observe, write_and_readback, write_bytes, write_command,
