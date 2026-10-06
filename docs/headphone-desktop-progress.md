@@ -42,12 +42,12 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; per-model hearing policy exists but feature remains disabled; spatial policy outstanding |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
 | P6.5 | Multipoint/find/device settings | Open |
-| P7.1 | Classify headphone-only catalog và legacy migration | In progress — static 124-model resolver removed; one-time exact-name ID migration now covers 112 catalog identities; 12 historical names have no exact catalog identity and remain inert |
+| P7.1 | Classify headphone-only catalog và legacy migration | Complete — 124 current headphone candidates are separated from five regionally consistent speaker products; one-time migration covers 112 exact identities and preserves 12 historical names without a current catalog target as inert data; runtime resolver removed |
 | P7.2 | Adapter của family kế tiếp | Open |
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
 | P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | In progress — tray lifecycle, bounded Quit cleanup, and opt-in startup/reconnect preferences; installer/signing and Windows acceptance remain external |
-| P8.3 | README/model matrix/diagnostics guide | In progress — architecture, catalog, and protocol guides now describe the single modern profile-driven runtime; full model/feature evidence matrix remains open |
+| P8.3 | README/model matrix/diagnostics guide | In progress — generated matrix covers all current public candidates and speaker exclusions; per-feature hardware evidence and acceptance report remain open |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | Open |
 
 ## Delivery sequence
@@ -466,3 +466,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - The in-progress connection event now carries a versioned `ConnectingState`; its frontend adapter validates the version before exposing the selected device ID. Device snapshot invoke/event adapters now reject unsupported `schemaVersion` values too.
 - Removed the unused `ble://bind-state` event that guessed binding actions by searching arbitrary notification bytes for English text; no frontend consumer existed.
 - `npx tsc --noEmit`, `cargo check`, and `git diff --check` passed. P4.3 remains open for session/sequence envelopes and structured command/error contracts; no compatibility event path remains for these states.
+
+
+## Increment 59 — generate the model support matrix
+
+- Added a deterministic standard-library script and generated support matrix for all 124 headphone candidates in the current public snapshot. It lists reviewed profile permissions, protocol family, evidence limits, and the five audio products excluded as speakers.
+- All candidates without an exact reviewed profile remain scan-only with no controls. The matrix explicitly separates profile declarations from hardware acceptance; it does not promote support. Generation and Python syntax checks passed; per-feature hardware reports remain open under P8.3.

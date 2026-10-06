@@ -39,6 +39,11 @@ Current family values are `bp1` and `unknown`. Support values are `verified`,
 capabilities; no registry fallback or transport default authorizes control. See
 [architecture](architecture.md) for the profile boundary.
 
+See the generated [headphone support matrix](model-support-matrix.md) for every
+current public headphone candidate and the five regionally consistent speaker
+exclusions. Regenerate it after changing the public snapshot or a reviewed
+profile with `python scripts/generate-headphone-support-matrix.py`.
+
 Run `cargo test --manifest-path src-tauri/Cargo.toml --lib` to validate all
 profiles. EQ curves must match the number of bands, gains need valid limits,
 and preset `dictSort` values must be unique within the model. BP1 custom EQ still
