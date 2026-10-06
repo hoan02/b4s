@@ -44,9 +44,10 @@ needs its own codec and evidence-backed profile before it can control hardware.
 Transport is model-profile driven. The connection path uses the selected OS
 device entry, declared service/write/notify UUIDs, handshake and notification
 framing. It does not probe generic characteristics, switch to a same-name
-sibling, or fall back to a different frame format. BLE discovery, connection,
-command handling and GATT I/O are separate modules; shared mutable state is
-owned by `ble/runtime.rs`.
+sibling, re-key a missing OS entry by address, or fall back to a different
+frame format. If Windows reports a new entry ID, the user scans and selects
+that entry explicitly. BLE discovery, connection, command handling and GATT
+I/O are separate modules; shared mutable state is owned by `ble/runtime.rs`.
 
 Device snapshots are the source of confirmed feature state. Write completion
 alone is not readback. Snapshot session IDs and revisions prevent stale updates

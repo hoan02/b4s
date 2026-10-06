@@ -25,7 +25,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
-| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan/discovery, connection, command, and GATT I/O remain separate modules; actor lifecycle, injected transport interface, and event ownership remain open |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; connection uses only the selected OS entry ID and profile UUIDs; actor lifecycle, injected transport interface, and event ownership remain open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards and connect-attempt cancellation lease integrated; session actor and full event-lifecycle ownership outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
@@ -537,3 +537,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - `ble::connection::connect` now leases the attempt session and selects cancellation against the complete `connect_one` future. The original token is passed into `connect_one`, so a reconnect cannot accidentally adopt a newer epoch while an older attempt is still running.
 - This closes the in-flight connect cancellation slice of P3.3; a session actor and full event ownership remain open. Rust validation is delegated to current-head CI; no local test suite was run.
+
+## Increment 73 — remove address-based OS entry re-keying
+
+- Peripheral resolution no longer adopts a different Windows OS entry when the selected entry ID disappears, even when the Bluetooth address matches. The app now reports that the selected entry is unavailable and requires a fresh scan/explicit selection.
+- This removes the remaining alternate-entry resolution path and aligns connection behavior with the exact selected-entry policy. `git diff --check` passed; Rust validation is delegated to current-head CI, with no hardware claim.

@@ -2,18 +2,16 @@ use super::*;
 
 async fn resolve_peripheral(device_id: &str) -> Result<Peripheral, String> {
     init_adapter().await?;
-    let (adapter, known_addr) = {
+    let adapter = {
         let state = BLE.lock().await;
         if let Some(p) = state.peripherals.get(device_id) {
             return Ok(p.clone());
         }
-        let adapter = state
+        state
             .adapter
             .as_ref()
             .ok_or("Adapter not initialized")?
-            .clone();
-        let dev = state.devices.get(device_id);
-        (adapter, dev.map(|d| d.address.clone()))
+            .clone()
     };
 
     let peris = adapter
@@ -27,26 +25,9 @@ async fn resolve_peripheral(device_id: &str) -> Result<Peripheral, String> {
             state.peripherals.insert(id, p.clone());
             return Ok(p);
         }
-        // Match by address / name after reconnect (id string can change on Windows)
-        if let Ok(Some(props)) = p.properties().await {
-            let addr = props.address.to_string();
-            let addr_ok = known_addr
-                .as_ref()
-                .map(|a| !a.is_empty() && a.eq_ignore_ascii_case(&addr))
-                .unwrap_or(false);
-            if addr_ok {
-                let mut state = BLE.lock().await;
-                // Re-key under original device_id for session continuity
-                state.peripherals.insert(device_id.to_string(), p.clone());
-                if let Some(d) = state.devices.get_mut(device_id) {
-                    d.address = addr;
-                }
-                return Ok(p);
-            }
-        }
     }
     Err(format!(
-        "Device not found after disconnect — tap Scan again, then Connect ({device_id})"
+        "The selected Bluetooth entry is no longer available; scan again and select it explicitly ({device_id})"
     ))
 }
 
