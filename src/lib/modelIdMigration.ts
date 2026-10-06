@@ -1,5 +1,6 @@
 /** One-time data migration only; never used to resolve live devices. */
 export const LEGACY_MODEL_ID_MAP = {
+  "bass-bc1": "server-bass-bc1-ec048a8e",
   "bass-bp1-pro": "bass-bp1-pro",
   "bass-bp1-ultra": "bass-bp1-ultra",
   "bass-bp1-nc": "server-bass-bp1-nc",

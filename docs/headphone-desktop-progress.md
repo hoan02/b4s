@@ -42,7 +42,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; per-model hearing policy exists but feature remains disabled; spatial policy outstanding |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
 | P6.5 | Multipoint/find/device settings | Open |
-| P7.1 | Classify headphone-only catalog và legacy migration | In progress — static 124-model resolver removed; one-time exact-name ID migration now covers 111 catalog identities; 13 unmatched historical names remain inert and unmapped |
+| P7.1 | Classify headphone-only catalog và legacy migration | In progress — static 124-model resolver removed; one-time exact-name ID migration now covers 112 catalog identities; 12 historical names have no exact catalog identity and remain inert |
 | P7.2 | Adapter của family kế tiếp | Open |
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
@@ -412,8 +412,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 ## Increment 50 — explicit one-time model ID migration
 
-- Added a frozen table mapping 111 historical model IDs to canonical runtime/catalog IDs by exact full product identity. Startup migrates the remembered-device record and model-scoped custom-EQ keys once; bytes are copied only when the destination is absent, and no mapping participates in scan or live identity resolution.
-- Thirteen historical names have no exact identity in the current public snapshot; their stored data is left untouched and inactive rather than assigned by substring or similarity. The 111-entry explicit table was generated from exact normalized full-name equality against the current snapshot/reviewed profiles; `npx tsc --noEmit` passed.
+- Added a frozen table mapping 112 historical model IDs to canonical runtime/catalog IDs by exact full product identity. Startup migrates the remembered-device record and model-scoped custom-EQ keys once; bytes are copied only when the destination is absent, and no mapping participates in scan or live identity resolution.
+- Twelve historical names have no exact identity in the current public snapshot; their stored data is left untouched and inactive rather than assigned by substring or similarity. The explicit table is based on exact normalized full-name equality against the current snapshot/reviewed profiles; `npx tsc --noEmit` passed.
 
 
 ## Increment 51 — versioned link and lifecycle DTOs
