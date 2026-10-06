@@ -94,56 +94,59 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
     let _ = scanning::stop_scan(app.clone()).await;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    let mut state = BLE.lock().await;
-    state.mock = true;
-    state.reset_link();
-    state.has_write_uuid = false;
-    state.has_notify_uuid = false;
-    state.handshake_ok = false;
-    state.diagnostics = Default::default();
-    let mut device = state
-        .devices
-        .get_mut(&device_id)
-        .ok_or("Mock device not found")?
-        .clone();
-    device.connected = true;
-    state.connected_id = Some(device_id);
-    if let Some(current) = state.devices.get_mut(&device.id) {
-        current.connected = true;
-    }
-    state.battery = BatteryState {
-        left: 87,
-        right: 92,
-        case: 64,
-        left_charging: false,
-        right_charging: false,
-        case_charging: true,
+    let (device, session_tasks) = {
+        let mut state = BLE.lock().await;
+        let mut device = state
+            .devices
+            .get(&device_id)
+            .ok_or("Mock device not found")?
+            .clone();
+        let session_tasks = state.reset_link();
+        state.mock = true;
+        state.has_write_uuid = false;
+        state.has_notify_uuid = false;
+        state.handshake_ok = false;
+        state.diagnostics = Default::default();
+        device.connected = true;
+        state.connected_id = Some(device_id);
+        if let Some(current) = state.devices.get_mut(&device.id) {
+            current.connected = true;
+        }
+        state.battery = BatteryState {
+            left: 87,
+            right: 92,
+            case: 64,
+            left_charging: false,
+            right_charging: false,
+            case_charging: true,
+        };
+        let battery = state.battery.clone();
+        state.snapshot.device_id = Some(device.id.clone());
+        state.snapshot.model_id = device.model_id.clone();
+        state.snapshot.mock = true;
+        state
+            .snapshot
+            .observe(2, &DeviceEvent::Battery(battery.clone()), now_ms());
+        state
+            .snapshot
+            .observe(0x27, &DeviceEvent::Battery(battery), now_ms());
+        state.snapshot.observe(
+            0x34,
+            &DeviceEvent::Anc {
+                mode: AncMode::Anc,
+                parameter: 0xFF,
+            },
+            now_ms(),
+        );
+        state
+            .snapshot
+            .observe(0x42, &DeviceEvent::Eq(EqPreset::Balanced), now_ms());
+        state
+            .snapshot
+            .observe(0x23, &DeviceEvent::GameMode(false), now_ms());
+        (device, session_tasks)
     };
-    let battery = state.battery.clone();
-    state.snapshot.device_id = Some(device.id.clone());
-    state.snapshot.model_id = device.model_id.clone();
-    state.snapshot.mock = true;
-    state
-        .snapshot
-        .observe(2, &DeviceEvent::Battery(battery.clone()), now_ms());
-    state
-        .snapshot
-        .observe(0x27, &DeviceEvent::Battery(battery), now_ms());
-    state.snapshot.observe(
-        0x34,
-        &DeviceEvent::Anc {
-            mode: AncMode::Anc,
-            parameter: 0xFF,
-        },
-        now_ms(),
-    );
-    state
-        .snapshot
-        .observe(0x42, &DeviceEvent::Eq(EqPreset::Balanced), now_ms());
-    state
-        .snapshot
-        .observe(0x23, &DeviceEvent::GameMode(false), now_ms());
-    drop(state);
+    super::runtime::join_session_tasks(session_tasks).await;
 
     emit_connection_state(&app).await;
     let snapshot = BLE.lock().await.snapshot.clone();

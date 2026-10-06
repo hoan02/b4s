@@ -8,9 +8,13 @@ pub(super) struct SessionTasks {
 }
 
 impl SessionTasks {
-    pub(super) fn reset_for_session(&mut self, session_id: u64) {
-        self.abort_all();
+    pub(super) fn reset_for_session(
+        &mut self,
+        session_id: u64,
+    ) -> Vec<tokio::task::JoinHandle<()>> {
+        let tasks = self.abort_and_drain();
         self.session_id = Some(session_id);
+        tasks
     }
 
     pub(super) fn register_notification(
@@ -50,13 +54,11 @@ impl SessionTasks {
             task.abort();
             return false;
         }
-        if let Some(previous) = slot.replace(task) {
-            previous.abort();
+        if slot.is_some() {
+            task.abort();
+            return false;
         }
+        *slot = Some(task);
         true
-    }
-
-    fn abort_all(&mut self) {
-        let _ = self.abort_and_drain();
     }
 }

@@ -62,9 +62,10 @@ impl BleInner {
         }
     }
 
-    pub(super) fn reset_link(&mut self) {
+    pub(super) fn reset_link(&mut self) -> Vec<tokio::task::JoinHandle<()>> {
         self.session.invalidate();
-        self.session_tasks
+        let tasks = self
+            .session_tasks
             .reset_for_session(self.session.token().id());
         self.touch_link();
         self.snapshot = crate::device::snapshot::DeviceSnapshot::new(self.session.token().id());
@@ -75,6 +76,7 @@ impl BleInner {
         self.write_char = None;
         self.notify_char = None;
         self.find_requested = false;
+        tasks
     }
 
     pub(super) fn touch_link(&mut self) {
@@ -82,14 +84,20 @@ impl BleInner {
     }
 }
 
+pub(super) async fn join_session_tasks(tasks: Vec<tokio::task::JoinHandle<()>>) {
+    for task in tasks {
+        let _ = task.await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::BleInner;
+    use super::{join_session_tasks, BleInner};
 
     #[tokio::test]
-    async fn resetting_session_aborts_its_owned_background_tasks() {
+    async fn resetting_session_aborts_and_returns_its_owned_tasks_for_joining() {
         let mut state = BleInner::new();
-        state.reset_link();
+        let _ = state.reset_link();
         let session_id = state.session.token().id();
         let notification = tokio::spawn(std::future::pending::<()>());
         let notification_abort = notification.abort_handle();
@@ -102,8 +110,9 @@ mod tests {
             .session_tasks
             .register_battery_poller(session_id, poller));
 
-        state.reset_link();
-        tokio::task::yield_now().await;
+        let tasks = state.reset_link();
+        assert_eq!(tasks.len(), 2);
+        join_session_tasks(tasks).await;
 
         assert!(notification_abort.is_finished());
         assert!(poller_abort.is_finished());
@@ -112,9 +121,9 @@ mod tests {
     #[tokio::test]
     async fn old_session_task_is_aborted_if_registration_loses_the_reset_race() {
         let mut state = BleInner::new();
-        state.reset_link();
+        let _ = state.reset_link();
         let old_session_id = state.session.token().id();
-        state.reset_link();
+        let _ = state.reset_link();
 
         let stale_task = tokio::spawn(std::future::pending::<()>());
         let abort_handle = stale_task.abort_handle();
@@ -127,24 +136,27 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn explicit_cleanup_returns_aborted_session_tasks_for_joining() {
+    async fn duplicate_role_registration_keeps_the_owned_task_and_aborts_the_duplicate() {
         let mut state = BleInner::new();
-        state.reset_link();
+        let _ = state.reset_link();
         let session_id = state.session.token().id();
-        let notification = tokio::spawn(std::future::pending::<()>());
-        let poller = tokio::spawn(std::future::pending::<()>());
-        assert!(state
-            .session_tasks
-            .register_notification(session_id, notification));
-        assert!(state
-            .session_tasks
-            .register_battery_poller(session_id, poller));
+        let owned = tokio::spawn(std::future::pending::<()>());
+        let owned_abort = owned.abort_handle();
+        assert!(state.session_tasks.register_notification(session_id, owned));
 
-        let tasks = state.session_tasks.abort_and_drain();
-        assert_eq!(tasks.len(), 2);
-        for task in tasks {
-            assert!(task.await.is_err());
-        }
+        let duplicate = tokio::spawn(std::future::pending::<()>());
+        let duplicate_abort = duplicate.abort_handle();
+        assert!(!state
+            .session_tasks
+            .register_notification(session_id, duplicate));
+        tokio::task::yield_now().await;
+        assert!(!owned_abort.is_finished());
+        assert!(duplicate_abort.is_finished());
+
+        let tasks = state.reset_link();
+        assert_eq!(tasks.len(), 1);
+        join_session_tasks(tasks).await;
+        assert!(owned_abort.is_finished());
     }
 }
 

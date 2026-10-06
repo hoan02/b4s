@@ -81,25 +81,30 @@ async fn listen_central_events(
                     }
                 }
 
-                let mut state = BLE.lock().await;
-                let still_active = was_active
-                    && event_is_current_connection(
-                        state.session.token(),
-                        token,
-                        state.connected_id.as_deref(),
-                        &id_str,
-                    );
-                if still_active {
-                    state.connected_id = None;
-                    state.battery = BatteryState::default();
-                    state.reset_link();
-                }
-                if still_active || state.connected_id.as_ref() != Some(&id_str) {
-                    if let Some(d) = state.devices.get_mut(&id_str) {
-                        d.connected = false;
+                let (still_active, session_tasks) = {
+                    let mut state = BLE.lock().await;
+                    let still_active = was_active
+                        && event_is_current_connection(
+                            state.session.token(),
+                            token,
+                            state.connected_id.as_deref(),
+                            &id_str,
+                        );
+                    let session_tasks = if still_active {
+                        state.connected_id = None;
+                        state.battery = BatteryState::default();
+                        state.reset_link()
+                    } else {
+                        Vec::new()
+                    };
+                    if still_active || state.connected_id.as_ref() != Some(&id_str) {
+                        if let Some(d) = state.devices.get_mut(&id_str) {
+                            d.connected = false;
+                        }
                     }
-                }
-                drop(state);
+                    (still_active, session_tasks)
+                };
+                super::runtime::join_session_tasks(session_tasks).await;
                 if still_active {
                     emit_connection_state(&app).await;
                 }
