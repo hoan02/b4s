@@ -78,6 +78,8 @@ pub struct EqPresetProfile {
 #[serde(rename_all = "camelCase")]
 pub struct EqProfile {
     pub bands: Vec<u16>,
+    #[serde(default)]
+    pub q_values: Vec<f32>,
     pub min_gain: f32,
     pub max_gain: f32,
     pub custom_slots: u8,

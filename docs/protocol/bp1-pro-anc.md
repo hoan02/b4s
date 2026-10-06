@@ -1,7 +1,7 @@
 # BP1 Pro protocol reference
 
-This reference applies only to the reviewed BP1 Pro profile. BP1 Ultra remains
-scan-only until its model/firmware/transport path is captured. Other Baseus
+This reference applies only to the reviewed BP1 Pro profile. BP1 Ultra has a
+separate experimental BLE/789C battery profile in [bp1-ultra-ble.md](bp1-ultra-ble.md). Other Baseus
 models require their own evidence and profile.
 
 Sources: reviewed BLE packet notes and official app analysis (APK 2.14.1 and

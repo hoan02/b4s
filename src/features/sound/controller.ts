@@ -15,6 +15,7 @@ interface Dependencies {
   refreshSnapshot(): Promise<void>;
   isDemo(): boolean;
   hearingThreshold(): number | null;
+  hearingEnabled(): boolean | null;
   setBassBoost(value: number): void;
   setLdac(value: boolean): void;
   setHearingProtection(value: boolean): void;
@@ -47,6 +48,13 @@ export function createSoundController(dependencies: Dependencies) {
       return operation.run(() => setLdac(enabled), () => {
         if (dependencies.isDemo()) dependencies.setLdac(enabled);
       }, dependencies.notifyError);
+    },
+    setHearingThreshold(level: number) {
+      return operation.run(() => {
+        const enabled = dependencies.hearingEnabled();
+        if (enabled === null) throw new Error(t("control.unknown"));
+        return setHearingProtection(enabled, level);
+      }, () => {}, dependencies.notifyError);
     },
     setHearingProtection(enabled: boolean) {
       return operation.run(() => {

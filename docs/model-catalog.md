@@ -62,8 +62,10 @@ as well. Route reply decoding alongside writes, and review startup queries,
 handshake, UUID selection and wrapping for the new family.
 
 BP1 Pro has a reviewed JSON profile at
-`src-tauri/catalog/models/bass-bp1-pro.json`. BP1 Ultra is recognizable but
-remains scan-only while its control transport is unverified. Keep their model
+`src-tauri/catalog/models/bass-bp1-pro.json`. BP1 Ultra has an experimental
+BLE/789C connection and feature profile documented in `protocol/bp1-ultra-ble.md`.
+Its `bp1Ultra` decoder handles AA33 noise state, two-byte spatial state and
+Bass Boost levels separately from Pro. EQ/SoundFit remain unavailable. Keep their model
 records separate because framing and firmware behavior can differ. Do not infer
 that the JSON catalog is complete from public metadata or a shared family name. The app's `verified`
 support label is reserved for model and feature behavior checked on real

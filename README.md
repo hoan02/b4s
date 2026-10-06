@@ -13,8 +13,9 @@ Screenshots show the Vietnamese interface.
 
 ## Device support
 
-BP1 Pro has a reviewed model profile. BP1 Ultra is recognizable but remains
-scan-only while its control transport is unverified. Other catalog entries may
+BP1 Pro has a reviewed model profile. BP1 Ultra supports experimental BLE/789C
+connection, battery reporting, ANC, game mode, spatial audio, Bass Boost, LDAC,
+hearing protection and gestures. EQ/SoundFit remain unavailable. Other catalog entries may
 be experimental or recognition-only. A name match does not mean that control
 has been verified; check the support level shown by the app and the model
 catalog before relying on a feature.

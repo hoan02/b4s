@@ -123,6 +123,7 @@ const App: Component = () => {
     listening.observeSnapshot(snapshot.anc);
     setGameOn(snapshot.game ?? null);
     setSpatialOn(snapshot.spatialEnabled ?? null);
+    spatialController.observeMode(snapshot.spatialMode ?? null);
     setLdac(snapshot.ldac ?? null);
     setBassBoostUi(snapshot.bassBoost ?? null);
     setHearingProtect(snapshot.hearing?.enabled ?? null);
@@ -195,6 +196,7 @@ const App: Component = () => {
     refreshSnapshot,
     isDemo: () => link().mock,
     hearingThreshold,
+    hearingEnabled: hearingProtect,
     setBassBoost: setBassBoostUi,
     setLdac,
     setHearingProtection: setHearingProtect,
@@ -491,6 +493,7 @@ const App: Component = () => {
           <section class="section section-scroll">
             <MorePanel
               bassSupported={device()?.deviceProfile.capabilities.bassBoost ?? false}
+              bassMaxLevel={device()?.deviceProfile.protocol === "bp1Ultra" ? 5 : 1}
               ldacSupported={device()?.deviceProfile.capabilities.ldac ?? false}
               pending={sound.pending()}
               error={sound.error()}
@@ -498,6 +501,9 @@ const App: Component = () => {
               bassBoost={bassBoost()}
               ldac={ldac()}
               hearingProtect={hearingProtect()}
+              hearingThreshold={hearingThreshold()}
+              hearingThresholds={modelProfiles().find((profile) => profile.id === device()?.modelId)?.hearing?.thresholds ?? []}
+              onHearingThreshold={sound.setHearingThreshold}
               onBack={() => setView("home")}
               onBassBoost={sound.setBassBoost}
               onLdac={sound.setLdac}
@@ -619,13 +625,6 @@ const App: Component = () => {
                 onRestore={() => setRestorePrompt(true)}
                 onSpatialOn={spatialController.setEnabled}
                 onSpatialMode={spatialController.selectMode}
-                onSoundFit={() =>
-                  notify(
-                    t("toast.soundFitUnavailable"),
-                    "warn",
-                    "SoundFit"
-                  )
-                }
               />
             </section>
           </Show>

@@ -50,7 +50,7 @@ export interface DeviceProfile {
   modelId?: string | null;
   modelName?: string | null;
   firmware?: string | null;
-  protocol: "bp1Pro" | "unknown";
+  protocol: "bp1Pro" | "bp1Ultra" | "unknown";
   verified: boolean;
   noise: {
     supportsAdaptive: boolean;
@@ -114,6 +114,7 @@ export interface ModelProfile {
   };
   eq: {
     bands: number[];
+    qValues: number[];
     minGain: number;
     maxGain: number;
     customSlots: number;
@@ -125,6 +126,7 @@ export interface ModelProfile {
     provenance: string;
   } | null;
   inEar: { provenance: string } | null;
+  hearing: { thresholds: number[]; preserveThresholdSentinel: boolean; provenance: string } | null;
   experimentalFeatures: string[];
   image: string | null;
 }
@@ -238,7 +240,7 @@ function isDeviceProfile(value: unknown): value is DeviceProfile {
     isNullable(value.modelId, (item) => typeof item === "string") &&
     isNullable(value.modelName, (item) => typeof item === "string") &&
     isNullable(value.firmware, (item) => typeof item === "string") &&
-    ["bp1Pro", "unknown"].includes(value.protocol as string) &&
+    ["bp1Pro", "bp1Ultra", "unknown"].includes(value.protocol as string) &&
     typeof value.verified === "boolean" &&
     typeof noise.supportsAdaptive === "boolean" &&
     Array.isArray(noise.environments) && noise.environments.every((item) => Number.isInteger(item)) &&

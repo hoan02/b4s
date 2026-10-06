@@ -323,11 +323,19 @@ async fn connect_one(
             if !still {
                 break;
             }
-            if let Ok(p) = resolve_peripheral(&poll_id).await {
-                tokio::select! {
-                    biased;
-                    _ = lease.cancelled() => break,
-                    _ = send_battery_queries(&p) => {},
+            let can_query = {
+                let state = BLE.lock().await;
+                state.devices.get(&poll_id).is_some_and(|device| {
+                    crate::device::capability::authorize_control(&device.device_profile).is_ok()
+                })
+            };
+            if can_query {
+                if let Ok(p) = resolve_peripheral(&poll_id).await {
+                    tokio::select! {
+                        biased;
+                        _ = lease.cancelled() => break,
+                        _ = send_battery_queries(&p) => {},
+                    }
                 }
             }
             emit_connection_state(&app_h).await;
@@ -408,6 +416,13 @@ async fn subscribe_notifications(
                 .to_string()
         })?;
 
+    // Subscribe can immediately trigger the Ultra's initial battery reports.
+    // Create the receiver first so those reports are buffered during setup.
+    let mut stream = peripheral
+        .notifications()
+        .await
+        .map_err(|e| format!("notifications stream: {e}"))?;
+
     // Retry subscribe once after re-discover (stale handles after disconnect)
     let subscribe_result = peripheral.subscribe(&ch).await;
     let subscribe_result = match subscribe_result {
@@ -445,11 +460,6 @@ async fn subscribe_notifications(
         state.has_write_uuid = true;
         state.touch_link();
     }
-
-    let mut stream = peripheral
-        .notifications()
-        .await
-        .map_err(|e| format!("notifications stream: {e}"))?;
 
     let mut lease = BLE.lock().await.session.lease(token);
     let task = tokio::spawn(async move {
@@ -618,7 +628,7 @@ async fn apply_event(event: DeviceEvent, token: crate::device::session::SessionT
                 log::info!("ANC mode → {:?}", mode);
             }
         }
-        DeviceEvent::SpatialEnabled(_) => {}
+        DeviceEvent::SpatialEnabled(_) | DeviceEvent::SpatialMode(_) => {}
         DeviceEvent::EqIndex(_)
         | DeviceEvent::Eq(_)
         | DeviceEvent::GameMode(_)
@@ -696,7 +706,10 @@ async fn send_battery_queries(peripheral: &Peripheral) -> Result<(), String> {
     let query_case = {
         let state = BLE.lock().await;
         state.devices.get(&id).is_some_and(|device| {
-            device.device_profile.protocol == protocol::ProtocolFamily::Bp1Pro
+            matches!(
+                device.device_profile.protocol,
+                protocol::ProtocolFamily::Bp1Pro | protocol::ProtocolFamily::Bp1Ultra
+            )
         })
     };
     if query_case {

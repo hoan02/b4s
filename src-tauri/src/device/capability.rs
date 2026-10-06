@@ -140,14 +140,21 @@ mod tests {
     }
 
     #[test]
-    fn experimental_switch_never_authorizes_scan_only_or_unreviewed_profiles() {
+    fn experimental_switch_only_authorizes_reviewed_profiles() {
         let pro = profile_for(Some("bass-bp1-pro"), None, None);
         assert!(pro.verified);
         let ultra = profile_for(Some("bass-bp1-ultra"), None, None);
+        let passive_model = crate::protocol::identify_model("Baseus Bowie MA10").unwrap();
+        let passive = profile_for(Some(&passive_model.id), None, None);
+        let unknown = profile_for(None, None, None);
         assert!(!ultra.verified);
         set_experimental_mode(true);
         assert!(authorize_control(&pro).is_ok());
-        assert!(authorize_control(&ultra).is_err());
+        assert!(authorize_control(&ultra).is_ok());
+        assert!(authorize_control(&passive).is_err());
+        assert!(authorize_control(&unknown).is_err());
+        assert!(authorize(&ultra, Feature::Listening).is_ok());
+        assert!(authorize(&ultra, Feature::Eq).is_err());
         set_experimental_mode(false);
         assert!(authorize_control(&ultra).is_err());
     }

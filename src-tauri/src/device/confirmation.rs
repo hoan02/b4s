@@ -24,6 +24,7 @@ pub enum ExpectedState {
     Game(bool),
     Bass(u8),
     SpatialEnabled(bool),
+    SpatialMode(crate::protocol::SpatialMode),
     Ldac(bool),
     Hearing {
         enabled: bool,
@@ -93,7 +94,7 @@ impl ExpectedState {
             (Self::Battery, 0x02, DeviceEvent::Battery(_)) => true,
             (
                 Self::Anc { mode, parameter },
-                0x34,
+                0x33 | 0x34,
                 DeviceEvent::Anc {
                     mode: actual_mode,
                     parameter: actual_parameter,
@@ -104,6 +105,9 @@ impl ExpectedState {
             }
             (Self::EqIndex(expected), 0x30, DeviceEvent::EqIndex(actual)) => expected == actual,
             (Self::SpatialEnabled(expected), 0x42, DeviceEvent::SpatialEnabled(actual)) => {
+                expected == actual
+            }
+            (Self::SpatialMode(expected), 0x42, DeviceEvent::SpatialMode(actual)) => {
                 expected == actual
             }
             (Self::Bass(expected), 0x53, DeviceEvent::BassBoost(actual)) => expected == actual,
@@ -301,6 +305,20 @@ mod tests {
         observation.opcode = 0x42;
         epoch.invalidate();
         assert!(!ExpectedState::SpatialEnabled(true).matches(epoch.token(), &observation));
+    }
+
+    #[test]
+    fn ultra_spatial_confirmation_requires_the_exact_selected_mode() {
+        use crate::protocol::SpatialMode;
+        let session = SessionEpoch::default().token();
+        let observation = StateObservation {
+            session,
+            opcode: 0x42,
+            event: DeviceEvent::SpatialMode(SpatialMode::Music),
+        };
+        assert!(ExpectedState::SpatialMode(SpatialMode::Music).matches(session, &observation));
+        assert!(!ExpectedState::SpatialMode(SpatialMode::Cinema).matches(session, &observation));
+        assert!(!ExpectedState::SpatialEnabled(true).matches(session, &observation));
     }
 
     #[tokio::test]

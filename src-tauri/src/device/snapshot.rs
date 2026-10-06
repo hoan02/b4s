@@ -79,6 +79,7 @@ pub struct DeviceSnapshot {
     pub game: Option<bool>,
     pub ldac: Option<bool>,
     pub spatial_enabled: Option<bool>,
+    pub spatial_mode: Option<crate::protocol::SpatialMode>,
     pub bass_boost: Option<u8>,
     pub hearing: Option<HearingReading>,
     pub in_ear: Option<InEarReading>,
@@ -104,6 +105,7 @@ impl DeviceSnapshot {
             game: None,
             ldac: None,
             spatial_enabled: None,
+            spatial_mode: None,
             bass_boost: None,
             hearing: None,
             in_ear: None,
@@ -146,7 +148,14 @@ impl DeviceSnapshot {
             DeviceEvent::EqIndex(value) => self.eq_index = Some(*value),
             DeviceEvent::GameMode(value) => self.game = Some(*value),
             DeviceEvent::Ldac(value) => self.ldac = Some(*value),
-            DeviceEvent::SpatialEnabled(value) => self.spatial_enabled = Some(*value),
+            DeviceEvent::SpatialEnabled(value) => {
+                self.spatial_enabled = Some(*value);
+                self.spatial_mode = None;
+            }
+            DeviceEvent::SpatialMode(mode) => {
+                self.spatial_enabled = Some(*mode != crate::protocol::SpatialMode::Off);
+                self.spatial_mode = Some(*mode);
+            }
             DeviceEvent::BassBoost(value) => self.bass_boost = Some(*value),
             DeviceEvent::HearingProtection { enabled, level } => {
                 self.hearing = Some(HearingReading {

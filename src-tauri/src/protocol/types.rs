@@ -172,6 +172,8 @@ pub enum Command {
         bands: Vec<EqBand>,
     },
     QueryEq,
+    QueryAnc,
+    QueryGameMode,
     /// Official app: BA02 → battery report AA02
     QueryBattery,
     /// Official app: BA27 separately requests charging-case battery (AA27).
@@ -224,6 +226,7 @@ pub enum DeviceEvent {
     GameMode(bool),
     BassBoost(u8),
     SpatialEnabled(bool),
+    SpatialMode(SpatialMode),
     Ldac(bool),
     HearingProtection {
         enabled: bool,

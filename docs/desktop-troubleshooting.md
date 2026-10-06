@@ -11,8 +11,9 @@ endpoint is not necessarily controllable by B4S.
 2. Put the earbuds in their discoverable state, then use **Scan** in B4S.
 3. If the earbuds appear but controls are unavailable, check their support level
    in the app and [model catalog](model-catalog.md). Recognition alone does not
-   enable a control connection. BP1 Ultra is currently scan-only while its
-   control transport remains unverified.
+   enable all controls. BP1 Ultra has an experimental BLE/789C connection and
+   battery/feature profile. Enable Experimental mode for its reviewed controls;
+   EQ/SoundFit remain unavailable.
 4. If a saved device is supported, enable **Reconnect automatically** in
    Settings to perform one scan of up to 12 seconds at app startup. This option
    is off by default. Use manual scan if the device is not found.
@@ -37,10 +38,12 @@ service, so connecting to the wrong entry fails.
   service discovery, the exact services and characteristics that entry exposes.
   A connection to the audio entry typically reports "Reviewed control service is
   missing on this entry".
-- A model shown **without** a verified/beta tag is scan-only. BP1 Ultra is
-  scan-only in the current build because its control transport (Classic SPP/789C
-  versus BLE) is not yet verified; connecting is intentionally refused until a
-  capture confirms it. See the capture guide.
+- A model shown **without** a verified/experimental tag is scan-only. BP1 Ultra
+  now has an experimental BLE/789C profile based on Windows hardware observations.
+  It reports initial battery values on subscribe. Enable Experimental mode for
+  battery refresh/polling and the reviewed ANC, game, spatial, bass, LDAC,
+  hearing and gesture controls. EQ/SoundFit remain unavailable. Firmware
+  scope is unknown. See [transport evidence](protocol/bp1-ultra-ble.md).
 
 Collect the terminal log around the failed attempt, the exact on-screen error, and
 both entry names before reporting.

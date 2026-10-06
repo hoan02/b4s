@@ -4,7 +4,7 @@ Generated from `src-tauri/catalog/baseus-public.json` (fetched 2026-10-05T17:05:
 
 The public snapshot has 174 products, of which 129 are audio products. Category data consistently classifies 5 audio products as speakers; the remaining 124 identities are candidates for headphone discovery. Recognition is metadata only. `scanOnly` and `unknown` mean no feature can be controlled.
 
-The matrix records profile permissions, not per-feature hardware acceptance. The BP1 Pro profile currently enables the listed features, while its firmware scope and release acceptance remain tracked in [`headphone-desktop-progress.md`](headphone-desktop-progress.md). BP1 Ultra remains scan-only pending captured transport/firmware evidence. Every public candidate without a reviewed profile is scan-only with no inferred feature support.
+The matrix records profile permissions, not per-feature hardware acceptance. The BP1 Pro profile currently enables the listed features, while its firmware scope and release acceptance remain tracked in [`headphone-desktop-progress.md`](headphone-desktop-progress.md). BP1 Ultra has an experimental BLE/789C profile for battery, ANC, game, spatial, bass, LDAC, hearing protection and gestures. EQ/SoundFit remain unavailable and firmware scope is unknown. See [`protocol/bp1-ultra-ble.md`](protocol/bp1-ultra-ble.md). Every public candidate without a reviewed profile is scan-only with no inferred feature support.
 
 | Catalog ID | Product | Catalog group | Support | Family | Profile-enabled features | Evidence / limit |
 |---|---|---|---|---|---|---|
@@ -33,7 +33,7 @@ The matrix records profile permissions, not per-feature hardware acceptance. The
 | `server-bass-bh1-nc` | Baseus Bass BH1 NC | Headwear series | `scanOnly` | `unknown` | — | No reviewed control profile; recognition metadata only. |
 | `server-bass-bp1-nc` | Baseus Bass BP1 NC | In ear series | `scanOnly` | `unknown` | — | No reviewed control profile; recognition metadata only. |
 | `server-bass-bp1-pro` | Baseus Bass BP1 Pro | tws | `verified` | `bp1` | ANC/transparency, EQ presets, Custom EQ, Game mode, Bass boost, Spatial, Find buds | docs/protocol/bp1-pro-anc.md; firmware scope not yet captured |
-| `server-bass-bp1-ultra` | Baseus Bass BP1 Ultra | tws | `scanOnly` | `unknown` | — | docs/re/findings-2.17.0.1.md; 789C source candidate; U01 transport capture required |
+| `server-bass-bp1-ultra` | Baseus Bass BP1 Ultra | tws | `experimental` | `bp1Ultra` | ANC/transparency, Game mode, Bass boost, Spatial, LDAC, Hearing protection | docs/protocol/bp1-ultra-ble.md; Windows hardware verified GATT, 789C notifications and battery queries on 2026-10-06; firmware scope unknown |
 | `server-bass-bs1` | Baseus Bass BS1 | In ear series | `scanOnly` | `unknown` | — | No reviewed control profile; recognition metadata only. |
 | `server-bass-bs1-nc` | Baseus Bass BS1 NC | In ear series | `scanOnly` | `unknown` | — | No reviewed control profile; recognition metadata only. |
 | `server-bass-bs2-lite` | Baseus Bass BS2 Lite | In ear series | `scanOnly` | `unknown` | — | No reviewed control profile; recognition metadata only. |

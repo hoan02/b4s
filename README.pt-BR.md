@@ -13,8 +13,9 @@ As capturas mostram a interface em vietnamita.
 
 ## Compatibilidade
 
-BP1 Pro tem um perfil de modelo revisado. O BP1 Ultra é reconhecido, mas continua
-somente para busca enquanto seu transporte de controle não for verificado.
+BP1 Pro tem um perfil de modelo revisado. O BP1 Ultra oferece conexão BLE/789C
+e bateria, ANC, modo de jogo, áudio espacial, Bass Boost, LDAC, proteção
+auditiva e gestos experimentais. EQ/SoundFit ainda não estão disponíveis.
 Outros modelos do catálogo podem ser experimentais ou apenas reconhecidos.
 Identificar o nome do dispositivo não significa que os controles foram
 verificados.

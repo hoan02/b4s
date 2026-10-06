@@ -398,6 +398,7 @@ const DeviceRow: Component<{
           </Show>
         </div>
         <div class="device-meta">
+          <span class="entry-address">{props.device.address}</span>
           <span class="rssi">
             <SignalBars level={bars()} />
             {props.device.rssi}

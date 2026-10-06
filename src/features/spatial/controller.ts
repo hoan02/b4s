@@ -32,14 +32,14 @@ export function createSpatialController(dependencies: Dependencies) {
     pending,
     error,
     mode,
+    observeMode: (value: SpatialMode | null) => setMode(value),
     reset() {
       operation.reset();
       setMode(null);
     },
     setEnabled(enabled: boolean) {
       if (enabled) {
-        const selectedMode = mode();
-        if (selectedMode === null) return;
+        const selectedMode = mode() && mode() !== "off" ? mode()! : "music";
         return operation.run(() => setSpatialMode(selectedMode), () => {
           if (dependencies.isDemo()) dependencies.setSpatialEnabled(true);
         }, dependencies.notifyError);

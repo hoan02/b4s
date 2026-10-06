@@ -37,6 +37,7 @@
     "supportsTransparencyVoice": true
   },
   "eq": {
+    "qValues": [1, 1, 1, 1, 1, 1, 1, 1],
     "bands": [
       100,
       200,

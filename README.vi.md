@@ -13,8 +13,9 @@ trên Windows, macOS và Linux. Ứng dụng được xây dựng bằng SolidJS
 
 ## Hỗ trợ thiết bị
 
-BP1 Pro có profile model đã được rà soát. BP1 Ultra có thể được nhận diện nhưng
-vẫn chỉ ở chế độ quét vì transport điều khiển chưa được xác minh. Các model khác
+BP1 Pro có profile model đã được rà soát. BP1 Ultra hỗ trợ kết nối BLE/789C và
+hiển thị pin, ANC, chế độ game, âm thanh không gian, Bass Boost, LDAC, bảo vệ
+thính giác và thao tác chạm ở mức thử nghiệm. EQ/SoundFit chưa khả dụng. Các model khác
 trong catalog có thể ở mức thử nghiệm hoặc chỉ nhận diện. Nhận diện được tên
 thiết bị không đồng nghĩa với việc điều khiển đã được xác minh. Hãy xem mức hỗ
 trợ trong ứng dụng và catalog model trước khi sử dụng.

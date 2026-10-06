@@ -57,7 +57,7 @@ export function createListeningController(dependencies: Dependencies) {
         mode,
         transparencyMode: overrides.transparencyMode ?? transparencyMode() ?? "full",
         adaptive: overrides.adaptive ?? adaptiveNoise() ?? true,
-        environment: (mode === "anc" && parameter >= 100
+        environment: (mode === "anc" && parameter >= 100 && parameter !== 0xff
           ? parameter
           : overrides.environment ?? noiseEnvironment() ?? 102) as NoiseEnvironment,
         level: overrides.level ?? (mode === "anc" && parameter < 100

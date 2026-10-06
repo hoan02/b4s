@@ -97,7 +97,7 @@ Generated from `src-tauri/catalog/baseus-public.json` (fetched {snapshot['fetche
 
 The public snapshot has {len(snapshot['models'])} products, of which {len(audio)} are audio products. Category data consistently classifies {len(speakers)} audio products as speakers; the remaining {len(headphones)} identities are candidates for headphone discovery. Recognition is metadata only. `scanOnly` and `unknown` mean no feature can be controlled.
 
-The matrix records profile permissions, not per-feature hardware acceptance. The BP1 Pro profile currently enables the listed features, while its firmware scope and release acceptance remain tracked in [`headphone-desktop-progress.md`](headphone-desktop-progress.md). BP1 Ultra remains scan-only pending captured transport/firmware evidence. Every public candidate without a reviewed profile is scan-only with no inferred feature support.
+The matrix records profile permissions, not per-feature hardware acceptance. The BP1 Pro profile currently enables the listed features, while its firmware scope and release acceptance remain tracked in [`headphone-desktop-progress.md`](headphone-desktop-progress.md). BP1 Ultra has an experimental BLE/789C profile for battery, ANC, game, spatial, bass, LDAC, hearing protection and gestures. EQ/SoundFit remain unavailable and firmware scope is unknown. See [`protocol/bp1-ultra-ble.md`](protocol/bp1-ultra-ble.md). Every public candidate without a reviewed profile is scan-only with no inferred feature support.
 
 | Catalog ID | Product | Catalog group | Support | Family | Profile-enabled features | Evidence / limit |
 |---|---|---|---|---|---|---|

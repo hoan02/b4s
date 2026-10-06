@@ -9,6 +9,7 @@ pub fn decode_frame(
 ) -> Result<super::DeviceEvent, super::DecodeError> {
     match family {
         ProtocolFamily::Bp1Pro => Bp1ProAnc::decode_frame(frame, last_anc),
+        ProtocolFamily::Bp1Ultra => super::families::bp1_ultra::Bp1Ultra::decode_frame(frame),
         ProtocolFamily::Unknown => Ok(super::DeviceEvent::Unknown {
             cmd: frame.cmd,
             payload: frame.payload.clone(),
@@ -84,12 +85,6 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         if profile.protocol != ProtocolFamily::Bp1Pro || *dict_sort != 101 || *anc {
             return Err("Custom EQ slot/ANC selector is not reviewed for this model".into());
         }
-        if bands
-            .iter()
-            .any(|band| band.q_value != 1.0 || band.filter != 1)
-        {
-            return Err("BP1 Pro custom EQ requires Q=1 and peak filters".into());
-        }
         let eq = profile
             .model_id
             .as_deref()
@@ -97,14 +92,20 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
             .and_then(|profile| profile.eq)
             .ok_or("No reviewed custom EQ schema")?;
         if bands.len() != eq.bands.len()
-            || bands.iter().zip(&eq.bands).any(|(band, frequency)| {
-                band.frequency != *frequency
-                    || !band.q_value.is_finite()
-                    || band.q_value <= 0.0
-                    || !band.gain.is_finite()
-                    || band.gain < eq.min_gain
-                    || band.gain > eq.max_gain
-            })
+            || bands
+                .iter()
+                .zip(&eq.bands)
+                .enumerate()
+                .any(|(index, (band, frequency))| {
+                    band.frequency != *frequency
+                        || band.q_value != eq.q_values.get(index).copied().unwrap_or(1.0)
+                        || band.filter != 1
+                        || !band.q_value.is_finite()
+                        || band.q_value <= 0.0
+                        || !band.gain.is_finite()
+                        || band.gain < eq.min_gain
+                        || band.gain > eq.max_gain
+                })
         {
             return Err("Custom EQ values do not match the reviewed model schema".into());
         }
@@ -112,7 +113,14 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
     // Reject values outside the protocol's reviewed range instead of silently
     // clamping intent into a different command.
     match &command {
-        FeatureCommand::SetBassBoost(level) if *level > 1 => {
+        FeatureCommand::SetBassBoost(level)
+            if *level
+                > if profile.protocol == ProtocolFamily::Bp1Ultra {
+                    5
+                } else {
+                    1
+                } =>
+        {
             return Err("Bass level is outside the current protocol range".into());
         }
         FeatureCommand::SetHearingProtection { level, .. } => {
@@ -186,43 +194,56 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
     }
 
     match (profile.protocol, command) {
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetEq(preset)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetEq(preset)) => {
             encode_profile_eq(profile, preset.to_byte())
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetEqIndex(index)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetEqIndex(index)) => {
             encode_profile_eq(profile, index)
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetGameMode(on)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetGameMode(on)) => {
             Ok(Bp1ProAnc::cmd_set_game_mode(on))
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::FindBuds(start)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::FindBuds(start)) => {
             Ok(Bp1ProAnc::cmd_find_buds(start))
         }
         (
-            ProtocolFamily::Bp1Pro,
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
             FeatureCommand::SetCustomEq {
                 dict_sort,
                 anc,
                 bands,
             },
         ) => Ok(Bp1ProAnc::cmd_set_custom_eq(dict_sort, anc, &bands)),
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetSpatial(mode)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetSpatial(mode)) => {
             Ok(encode_command(Command::SetSpatial(mode)))
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetBassBoost(level)) => {
-            Ok(encode_command(Command::SetBassBoost(level)))
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetBassBoost(level),
+        ) => {
+            if profile.protocol == ProtocolFamily::Bp1Ultra {
+                Ok(vec![
+                    0xBA,
+                    0x54,
+                    u8::from(level != 0),
+                    if level == 0 { 0xFF } else { level },
+                ])
+            } else {
+                Ok(encode_command(Command::SetBassBoost(level)))
+            }
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetLdac(enabled)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetLdac(enabled)) => {
             Ok(encode_command(Command::SetLdac(enabled)))
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetHearingProtection { enabled, level }) => {
-            Ok(encode_command(Command::SetHearingProtection {
-                enabled,
-                level,
-            }))
-        }
         (
-            ProtocolFamily::Bp1Pro,
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetHearingProtection { enabled, level },
+        ) => Ok(encode_command(Command::SetHearingProtection {
+            enabled,
+            level,
+        })),
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
             FeatureCommand::SetGesture {
                 layout,
                 left,
@@ -233,18 +254,20 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
             left,
             right,
         })),
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetInEar(enabled)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetInEar(enabled)) => {
             Ok(encode_command(Command::SetInEar(enabled)))
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetMultipoint(enabled)) => {
-            Ok(encode_command(Command::SetMultipoint(enabled)))
-        }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::RestoreDefaults) => {
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetMultipoint(enabled),
+        ) => Ok(encode_command(Command::SetMultipoint(enabled))),
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::RestoreDefaults) => {
             Ok(encode_command(Command::RestoreDefaults))
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetAdaptiveLr(enabled)) => {
-            Ok(encode_command(Command::SetAdaptiveLr(enabled)))
-        }
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetAdaptiveLr(enabled),
+        ) => Ok(encode_command(Command::SetAdaptiveLr(enabled))),
         (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
 }
@@ -306,7 +329,9 @@ pub fn encode_listening(
     };
 
     match profile.protocol {
-        ProtocolFamily::Bp1Pro => Ok(Bp1ProAnc::cmd_set_noise(mode, parameter)),
+        ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra => {
+            Ok(Bp1ProAnc::cmd_set_noise(mode, parameter))
+        }
         ProtocolFamily::Unknown => Err("No protocol is verified for this model".into()),
     }
 }
@@ -315,6 +340,53 @@ pub fn encode_listening(
 mod tests {
     use super::*;
     use crate::protocol::profile_for;
+
+    #[test]
+    fn ultra_encodes_only_reviewed_controls_with_its_own_limits() {
+        crate::device::capability::set_experimental_mode(true);
+        let profile = profile_for(Some("bass-bp1-ultra"), None, None);
+        assert_eq!(
+            encode_listening(&profile, ListeningCommand::Normal).unwrap(),
+            vec![0xBA, 0x34, 0, 255]
+        );
+        assert_eq!(
+            encode_listening(&profile, ListeningCommand::CustomLevel(5)).unwrap(),
+            vec![0xBA, 0x34, 1, 5]
+        );
+        assert!(encode_listening(&profile, ListeningCommand::CustomLevel(6)).is_err());
+        assert!(encode_listening(&profile, ListeningCommand::TransparencyVoice).is_err());
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetBassBoost(3)).unwrap(),
+            vec![0xBA, 0x54, 1, 3]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetBassBoost(0)).unwrap(),
+            vec![0xBA, 0x54, 0, 255]
+        );
+        assert!(encode_feature(&profile, FeatureCommand::SetBassBoost(6)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetEqIndex(0)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::FindBuds(true)).is_err());
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetHearingProtection {
+                enabled: true,
+                level: 81
+            }
+        )
+        .is_err());
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetGesture {
+                layout: 3,
+                left: Some(18),
+                right: None
+            }
+        )
+        .is_err());
+        crate::device::capability::set_experimental_mode(false);
+        assert!(encode_feature(&profile, FeatureCommand::SetGameMode(true)).is_err());
+    }
 
     #[test]
     fn custom_eq_rejects_wrong_layout_and_nonfinite_values_before_encoding() {

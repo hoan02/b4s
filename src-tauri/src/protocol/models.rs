@@ -18,6 +18,8 @@ pub enum SupportLevel {
 pub enum ProtocolFamily {
     /// Packet table verified on Bass BP1 Pro / Ultra hardware.
     Bp1Pro,
+    /// Ultra uses AA33 state and 789C framing, distinct from Pro.
+    Bp1Ultra,
     Unknown,
 }
 
@@ -120,6 +122,7 @@ fn support_level(value: &str) -> SupportLevel {
 fn protocol_family(value: &str) -> ProtocolFamily {
     match value {
         "bp1" => ProtocolFamily::Bp1Pro,
+        "bp1Ultra" => ProtocolFamily::Bp1Ultra,
         _ => ProtocolFamily::Unknown,
     }
 }
@@ -381,15 +384,27 @@ mod tests {
     }
 
     #[test]
-    fn bp1_ultra_remains_explicitly_unresolved() {
+    fn bp1_ultra_has_its_own_experimental_feature_profile() {
         let model = identify("Baseus Bass BP1 Ultra").unwrap();
         assert_eq!(model.id, "bass-bp1-ultra");
-        assert_eq!(model.support, SupportLevel::ScanOnly);
-        assert_eq!(model.protocol, ProtocolFamily::Unknown);
-        assert!(model.transport.write_uuid.is_none());
+        assert_eq!(model.support, SupportLevel::Experimental);
+        assert_eq!(model.protocol, ProtocolFamily::Bp1Ultra);
+        assert_eq!(
+            model.transport.write_uuid.as_deref(),
+            Some("ee684b1a-1e9b-ed3e-ee55-f894667e92ac")
+        );
         let profile = profile_for(Some(&model.id), None, None);
-        assert!(profile.connection.is_none());
-        assert!(!profile.capabilities.anc);
+        let connection = profile.connection.as_ref().unwrap();
+        assert_eq!(
+            connection.framing,
+            crate::catalog::WireFraming::Headphone789c
+        );
+        assert!(connection.handshake.is_empty());
+        assert!(!connection.init_state_query);
+        assert!(profile.capabilities.anc);
+        assert!(profile.capabilities.game_mode);
+        assert!(profile.capabilities.gesture);
+        assert!(profile.capabilities.spatial);
         assert!(!profile.capabilities.eq);
         assert!(!profile.verified);
     }

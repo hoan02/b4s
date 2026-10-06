@@ -87,7 +87,7 @@ export function createEqualizerController(dependencies: Dependencies) {
         throw new Error("Custom EQ draft does not match the model schema");
       }
       return setCustomEq(bands.map((gain, index) => ({
-        frequency: schema.bands[index], qValue: 1, gain, filter: 1,
+        frequency: schema.bands[index], qValue: schema.qValues?.[index] ?? 1, gain, filter: 1,
       })), 101, false);
     }, () => {
       if (dependencies.isDemo()) setCustomActive(true);

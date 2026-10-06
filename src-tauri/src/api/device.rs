@@ -13,7 +13,12 @@ pub(crate) struct DeviceCommandRequest {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
 enum DeviceCommand {
     SetListeningState {
         mode: ListeningMode,
@@ -255,6 +260,39 @@ pub(crate) async fn apply_device_command(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn frontend_listening_and_custom_eq_use_camel_case_fields() {
+        let listening = serde_json::json!({
+            "contractVersion": 1,
+            "command": {"kind": "setListeningState", "mode": "off", "transparencyMode": "full", "adaptive": true, "environment": 102, "level": 3}
+        });
+        let request: DeviceCommandRequest = serde_json::from_value(listening.clone()).unwrap();
+        assert!(matches!(
+            request.command,
+            DeviceCommand::SetListeningState {
+                transparency_mode: TransparencyMode::Full,
+                ..
+            }
+        ));
+        let request: DeviceCommandRequest = serde_json::from_value(serde_json::json!({
+            "contractVersion": 1,
+            "command": {"kind": "setCustomEq", "dictSort": 101, "anc": false,
+                "bands": [{"frequency":100,"qValue":1,"gain":0,"filter":1}]}
+        }))
+        .unwrap();
+        assert!(matches!(
+            request.command,
+            DeviceCommand::SetCustomEq { dict_sort: 101, .. }
+        ));
+        let mut legacy = listening;
+        legacy["command"]["transparency_mode"] = legacy["command"]["transparencyMode"].take();
+        legacy["command"]
+            .as_object_mut()
+            .unwrap()
+            .remove("transparencyMode");
+        assert!(serde_json::from_value::<DeviceCommandRequest>(legacy).is_err());
+    }
 
     #[test]
     fn device_command_contract_is_versioned_and_closed() {

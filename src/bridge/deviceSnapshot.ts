@@ -47,6 +47,7 @@ export interface DeviceSnapshot {
   game: boolean | null;
   ldac: boolean | null;
   spatialEnabled: boolean | null;
+  spatialMode?: "off" | "music" | "cinema" | "game" | null;
   bassBoost: number | null;
   hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
   inEar: InEarReading | null;
@@ -121,6 +122,7 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
     isNullable(value.eqIndex, (item) => Number.isInteger(item)) &&
     ["game", "ldac", "spatialEnabled"].every((key) =>
       isNullable(value[key], (item) => typeof item === "boolean")) &&
+    (value.spatialMode === undefined || isNullable(value.spatialMode, (item) => ["off", "music", "cinema", "game"].includes(item as string))) &&
     isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing &&
     validInEar && validMultipoint && validAdaptiveLr && validGesture &&
     isNullable(value.restoreAvailable, (item) => typeof item === "boolean");

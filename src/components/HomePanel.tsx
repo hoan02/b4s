@@ -1,5 +1,5 @@
 /**
- * Home — noise tiles; spatial + SoundFit on root; find/battery as action chips
+ * Home — model-supported noise, spatial and feature controls
  */
 import { Component, Show } from "solid-js";
 import type { BatteryData } from "./Battery";
@@ -91,7 +91,6 @@ interface Props {
   onRestore: () => void;
   onSpatialOn: (on: boolean) => void;
   onSpatialMode: (m: SpatialMode) => void;
-  onSoundFit: () => void;
 }
 
 const AdaptiveEnvironmentCards = (props: {
@@ -189,6 +188,7 @@ const HomePanel: Component<Props> = (props) => {
       </div>
 
       {/* Noise — only square tiles */}
+      <Show when={props.listeningSupported}>
       <div>
         <p class="home-section-label">{t("home.noise")}</p>
         <div class="noise-tiles" aria-busy={props.ancPending}>
@@ -249,6 +249,8 @@ const HomePanel: Component<Props> = (props) => {
           </div>
         </Show>
       </div>
+
+      </Show>
 
       {/* Spatial on home root */}
       <Show when={props.spatialSupported}>
@@ -402,19 +404,6 @@ const HomePanel: Component<Props> = (props) => {
             </label>
           </div>
           </Show>
-
-          <button
-            type="button"
-            class="list-row action"
-            onClick={() => props.onSoundFit()}
-          >
-            <span class="list-ico list-ico-text">SF</span>
-            <div class="list-text">
-              <span class="list-title">SoundFit</span>
-              <span class="list-sub">{t("home.hearingPersonalization")}</span>
-            </div>
-            <span class="list-chev">›</span>
-          </button>
 
           <Show when={props.moreSupported}>
           <button type="button" class="list-row action" onClick={() => props.onOpenMore()}>

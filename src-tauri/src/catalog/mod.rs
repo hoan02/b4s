@@ -175,7 +175,10 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
         if !ids.insert(profile.id.clone()) {
             return Err(format!("duplicate model profile: {}", profile.id));
         }
-        if !matches!(profile.protocol_family.as_str(), "bp1" | "unknown") {
+        if !matches!(
+            profile.protocol_family.as_str(),
+            "bp1" | "bp1Ultra" | "unknown"
+        ) {
             return Err(format!("unknown protocol family in {}", profile.id));
         }
         if !matches!(
@@ -188,6 +191,12 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
             return Err("profiles must define an id and aliases".into());
         }
         if let Some(eq) = &profile.eq {
+            if !eq.q_values.is_empty()
+                && (eq.q_values.len() != eq.bands.len()
+                    || eq.q_values.iter().any(|q| !q.is_finite() || *q <= 0.0))
+            {
+                return Err(format!("invalid EQ Q values in {}", profile.id));
+            }
             if eq.bands.is_empty() || eq.min_gain >= eq.max_gain {
                 return Err(format!("invalid EQ bands or gain limits in {}", profile.id));
             }
@@ -232,7 +241,8 @@ mod tests {
         profile.connection.as_mut().unwrap().notify_uuid = Some("not-a-uuid".into());
         assert!(validate_profiles(&[profile]).is_err());
         let mut profile = profile_for("bass-bp1-ultra").unwrap();
-        assert_eq!(profile.support, "scanOnly");
+        profile.support = "scanOnly".into();
+        profile.connection.as_mut().unwrap().transport = ControlTransport::Unresolved;
         profile.connection.as_mut().unwrap().handshake = vec![0xBA, 5, 0];
         assert!(validate_profiles(&[profile]).is_err());
     }
@@ -247,7 +257,8 @@ mod tests {
             Some("654b749c-e37f-ae1f-ebab-40ca133e3690")
         );
         let ultra = profile_for("bass-bp1-ultra").unwrap().connection.unwrap();
-        assert_eq!(ultra.transport, ControlTransport::Unresolved);
+        assert_eq!(ultra.transport, ControlTransport::BleGatt);
+        assert_eq!(ultra.framing, WireFraming::Headphone789c);
         assert!(ultra.handshake.is_empty());
         assert!(!ultra.init_state_query);
     }
@@ -354,5 +365,22 @@ mod tests {
         model.capabilities.gesture = false;
         model.experimental_features = vec!["rawOpcode".into()];
         assert!(validate_profiles(&[model]).is_err());
+    }
+
+    #[test]
+    fn custom_eq_q_values_require_one_positive_finite_value_per_band() {
+        let mut model = profile_for("bass-bp1-pro").unwrap();
+        assert!(validate_profiles(&[model.clone()]).is_ok());
+        for invalid in [
+            vec![1.0],
+            vec![0.0; 8],
+            vec![f32::NAN; 8],
+            vec![f32::INFINITY; 8],
+        ] {
+            model.eq.as_mut().unwrap().q_values = invalid;
+            assert!(validate_profiles(&[model.clone()]).is_err());
+        }
+        model.eq.as_mut().unwrap().q_values.clear();
+        assert!(validate_profiles(&[model]).is_ok());
     }
 }

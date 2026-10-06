@@ -10,6 +10,7 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), CommandErro
             .map(|device| device.device_profile.clone())
             .ok_or("Connected device profile is missing")?
     };
+    let readback = profile.protocol == protocol::ProtocolFamily::Bp1Ultra;
     let data = protocol::encode_listening(&profile, command)?;
     let mode = match command {
         ListeningCommand::Normal => AncMode::Off,
@@ -30,12 +31,12 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), CommandErro
     with_connected_peripheral(|p| {
         let d = data.clone();
         Box::pin(async move {
-            write_and_observe(
-                &p,
-                &d,
-                crate::device::confirmation::ExpectedState::Anc { mode, parameter },
-            )
-            .await
+            let expected = crate::device::confirmation::ExpectedState::Anc { mode, parameter };
+            if readback {
+                write_and_readback(&p, &d, &[0xBA, 0x33], expected).await
+            } else {
+                write_and_observe(&p, &d, expected).await
+            }
         })
     })
     .await
@@ -143,6 +144,9 @@ pub async fn shutdown(app: AppHandle) {
 }
 
 pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), CommandError> {
+    let ultra = BLE.lock().await.devices.values().any(|device| {
+        device.connected && device.device_profile.protocol == protocol::ProtocolFamily::Bp1Ultra
+    });
     let data = encode_connected_feature(protocol::FeatureCommand::SetSpatial(mode)).await?;
     if BLE.lock().await.mock {
         return observe_mock_state(
@@ -157,9 +161,13 @@ pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), CommandErro
                 &p,
                 &data,
                 &[0xBA, 0x42],
-                crate::device::confirmation::ExpectedState::SpatialEnabled(
-                    mode != protocol::SpatialMode::Off,
-                ),
+                if ultra {
+                    crate::device::confirmation::ExpectedState::SpatialMode(mode)
+                } else {
+                    crate::device::confirmation::ExpectedState::SpatialEnabled(
+                        mode != protocol::SpatialMode::Off,
+                    )
+                },
             )
             .await
         })

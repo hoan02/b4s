@@ -3,6 +3,8 @@ use crate::protocol::{Command, DeviceProfile, ModelInfo};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StartupQuery {
     Battery,
+    Anc,
+    Game,
     Eq,
     Bass,
     Spatial,
@@ -28,6 +30,15 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
     }
     use super::capability::{authorize, Feature};
     plan.push(StartupQuery::Battery);
+    // AA33 is reviewed for Ultra; keep the Pro startup behavior unchanged.
+    if profile.protocol == crate::protocol::ProtocolFamily::Bp1Ultra
+        && authorize(profile, Feature::Listening).is_ok()
+    {
+        plan.push(StartupQuery::Anc);
+    }
+    if authorize(profile, Feature::Game).is_ok() {
+        plan.push(StartupQuery::Game);
+    }
     for (feature, query) in [
         (Feature::Eq, StartupQuery::Eq),
         (Feature::Bass, StartupQuery::Bass),
@@ -62,6 +73,8 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
 
 pub fn command_for(query: StartupQuery) -> Option<Command> {
     match query {
+        StartupQuery::Anc => Some(Command::QueryAnc),
+        StartupQuery::Game => Some(Command::QueryGameMode),
         StartupQuery::Battery => Some(Command::QueryBattery),
         StartupQuery::Eq => Some(Command::QueryEq),
         StartupQuery::Bass => Some(Command::QueryBassBoost),
@@ -95,6 +108,7 @@ mod tests {
             plan_for(Some(&model), &profile),
             vec![
                 StartupQuery::Battery,
+                StartupQuery::Game,
                 StartupQuery::Eq,
                 StartupQuery::Bass,
                 StartupQuery::Spatial,
@@ -114,6 +128,34 @@ mod tests {
     fn unknown_device_gets_no_speculative_query() {
         let profile = profile_for(None, None, None);
         assert!(plan_for(None, &profile).is_empty());
+    }
+
+    #[test]
+    fn ultra_queries_only_its_enabled_state_layouts_after_opt_in() {
+        let model = catalog_json()
+            .into_iter()
+            .find(|model| model.id == "bass-bp1-ultra")
+            .unwrap();
+        let profile = profile_for(Some(&model.id), None, None);
+        crate::device::capability::set_experimental_mode(true);
+        assert_eq!(
+            plan_for(Some(&model), &profile),
+            vec![
+                StartupQuery::Battery,
+                StartupQuery::Anc,
+                StartupQuery::Game,
+                StartupQuery::Bass,
+                StartupQuery::Spatial,
+                StartupQuery::Ldac,
+                StartupQuery::HearingProtection,
+                StartupQuery::Gesture(0),
+                StartupQuery::Gesture(1),
+                StartupQuery::Gesture(2),
+                StartupQuery::Gesture(3),
+            ]
+        );
+        crate::device::capability::set_experimental_mode(false);
+        assert!(plan_for(Some(&model), &profile).is_empty());
     }
 
     #[test]
