@@ -273,25 +273,42 @@ fn merge_public_models(models: &mut Vec<ModelInfo>) {
 
         let patterns = public.name_patterns();
         let aliases: Vec<_> = patterns.iter().map(String::as_str).collect();
-        let mut model = m(
+        let model = scan_only_model(
             &public.id,
             &public.model,
             &aliases,
-            SupportLevel::ScanOnly,
-            ProtocolFamily::Unknown,
-            false,
-            false,
-            false,
             "audio",
             &public.group(),
         );
-        // Category metadata is not GATT/transport evidence.
-        model.transport.service_uuid = None;
-        model.transport.write_uuid = None;
-        model.transport.notify_uuid = None;
         model.color_variants = public.color_codes();
         models.push(model);
     }
+}
+
+fn scan_only_model(
+    id: &str,
+    display: &str,
+    patterns: &[&str],
+    category: &str,
+    group: &str,
+) -> ModelInfo {
+    let mut model = m(
+        id,
+        display,
+        patterns,
+        SupportLevel::ScanOnly,
+        ProtocolFamily::Unknown,
+        false,
+        false,
+        false,
+        category,
+        group,
+    );
+    // Public metadata is not GATT/transport evidence.
+    model.transport.service_uuid = None;
+    model.transport.write_uuid = None;
+    model.transport.notify_uuid = None;
+    model
 }
 
 // Compatibility catalog: migrate entries only when model-specific data is available.
@@ -414,15 +431,10 @@ fn legacy_models() -> Vec<ModelInfo> {
         m("aequr-vo20", "Baseus AeQur VO20", &["aequr vo20", "vo20"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "AeQur"),
         // Keep the historical identity resolvable while excluding its speaker-only
         // public-catalog entry from new headphone discovery.
-        m(
+        scan_only_model(
             "server-sleep-sk1",
             "Baseus Sleep SK1",
             &["sleep sk1"],
-            SupportLevel::ScanOnly,
-            ProtocolFamily::Unknown,
-            false,
-            false,
-            false,
             "audio",
             "Speaker series",
         ),

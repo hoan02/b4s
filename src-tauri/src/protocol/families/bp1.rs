@@ -285,9 +285,22 @@ mod tests {
     }
 
     #[test]
+    fn spatial_enabled_notification_is_state_while_ack_is_not() {
+        assert_eq!(
+            dec(&[0xAA, 0x42, 0x01]).unwrap(),
+            DeviceEvent::SpatialEnabled(true)
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x42, 0x00]).unwrap(),
+            DeviceEvent::SpatialEnabled(false)
+        );
+        assert!(dec(&[0xAA, 0x43, 0x01]).is_err());
+    }
+
+    #[test]
     fn empty_invalid_and_ack_only_payloads_never_create_state() {
         for packet in [vec![0xAA, 0x23], vec![0xAA, 0x23, 2],
-            vec![0xAA, 0x30], vec![0xAA, 0x30, 0, 1], vec![0xAA, 0x42, 1], vec![0xAA, 0x43, 1],
+            vec![0xAA, 0x30], vec![0xAA, 0x30, 0, 1], vec![0xAA, 0x43, 1],
             vec![0xAA, 0x74], vec![0xAA, 0x74, 2], vec![0xAA, 0x75, 1],
             vec![0xAA, 0x34, 1]] {
             assert!(dec(&packet).is_err(), "unexpected state from {packet:02X?}");

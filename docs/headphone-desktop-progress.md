@@ -343,3 +343,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Extracted the write→query→matching-state sequence behind `ConfirmedTransport` and connected the production GATT writer through that seam. Subscription still happens before writes and the existing command executor retains deadline/cancellation ownership.
 - CI coverage scripts wrong-opcode ACK, matching readback, write failure, disconnect, deadline and a late ACK followed by a fresh transaction. This covers state confirmation behavior without hardware; it cannot establish command causality for a late matching state because AA/BA has no request ID.
 - Local tests remain unrun by request. Full connection/discovery GATT facade and captured notification replay remain open under P2.3/P3.1.
+
+
+## Increment 41 — correct CI decoder and scan-only regressions
+
+- The first CI run passed frontend checks and Cargo check; Rust tests exposed an outdated ACK-only fixture that still rejected valid AA42 spatial state, plus Sleep SK1 inheriting the legacy GATT UUID default.
+- Updated spatial decoder coverage to accept AA42 state while rejecting ACK AA43, and routed all catalog-derived scan-only entries through a helper that clears transport UUIDs. This preserves Sleep SK1 recognition without guessing a control connection.
+- CI rerun required. No local tests run; validation remains pending for the correction.
