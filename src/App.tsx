@@ -1,47 +1,36 @@
 import { Component, createSignal, Show, onMount, onCleanup } from "solid-js";
-import type { AncMode, NoiseEnvironment, EqPresetId, SpatialMode, TransparencyMode } from "./lib/device";
+import type { AncMode } from "./lib/device";
 import BlePairing from "./components/BlePairing";
 import HomePanel from "./components/HomePanel";
 import MorePanel from "./components/MorePanel";
 import EqPanel from "./components/EqPanel";
+import GesturePanel from "./components/GesturePanel";
 import Settings from "./components/Settings";
 import ToastHost from "./components/ToastHost";
 import ConfirmDialog from "./components/ConfirmDialog";
+import { getDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot";
+import { createEqualizerController } from "./features/equalizer/controller";
+import { subscribeDeviceRuntime } from "./features/devices/runtimeSubscriptions";
+import { createFindBudsController } from "./features/find-buds/controller";
+import { createListeningController } from "./features/listening/controller";
+import { createSoundController } from "./features/sound/controller";
+import { createGameModeController } from "./features/game-mode/controller";
+import { createSpatialController } from "./features/spatial/controller";
+import { createGestureController } from "./features/gestures/controller";
+import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
-import type { BleDevice, LinkHealth } from "./lib/ble";
+import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
 import {
   disconnect as bleDisconnect,
-  onDisconnected,
-  onConnection,
-  onLinkHealth,
   getConnection,
   getLinkHealth,
   emptyLink,
+  listModelProfiles,
 } from "./lib/ble";
-import {
-  fetchBattery,
-  queryBattery,
-  setListeningState,
-  setEqIndex,
-  setCustomEq,
-  setGameMode,
-  setSpatialMode,
-  setBassBoost,
-  setLdac as sendLdac,
-  setHearingProtection as sendHearingProtection,
-  findBuds,
-  profileNoise,
-  onBattery,
-  onAnc,
-  onEq,
-  onGameMode,
-  onBassBoost,
-  onLdac,
-  onHearingProtection,
-  toBatteryData,
-} from "./lib/device";
-import { EQ_BANDS, EQ_LABEL, defaultCustomBands, presetSort } from "./lib/eq";
-import { getAppInfo } from "./lib/app";
+import { queryBattery } from "./lib/device";
+import { readDesktopPreferences, writeAutoReconnect, writeExperimentalMode } from "./lib/desktopPreferences";
+import { migrateModelIdsOnce } from "./lib/modelIdMigration";
+import { getAppInfo, setExperimentalMode } from "./lib/app";
 import {
   applyTheme,
   getStoredTheme,
@@ -52,14 +41,10 @@ import { formatError, t } from "./lib/i18n";
 import { IconBack } from "./components/Icons";
 import "./styles/main.scss";
 
-type View = "home" | "more" | "eq" | "settings";
-type PendingEqAction =
-  | { kind: "preset"; preset: EqPresetId }
-  | { kind: "customBands"; bands: number[] }
-  | { kind: "applyCustom" }
-  | { kind: "resetCustom" };
-
+type View = "home" | "more" | "eq" | "settings" | "gestures";
 const App: Component = () => {
+  migrateModelIdsOnce();
+  const savedDesktopPreferences = readDesktopPreferences();
   const [view, setView] = createSignal<View>("home");
   const [settingsSubpage, setSettingsSubpage] = createSignal<"language" | "appearance" | null>(null);
   const [theme, setTheme] = createSignal<ThemeMode>("dark");
@@ -67,42 +52,107 @@ const App: Component = () => {
   const [appVersion, setAppVersion] = createSignal("…");
   const [connected, setConnected] = createSignal(false);
   const [connectionReady, setConnectionReady] = createSignal(false);
+  const [autoReconnectEnabled, setAutoReconnectEnabled] = createSignal(savedDesktopPreferences.autoReconnect);
+  const [autoReconnectThisLaunch, setAutoReconnectThisLaunch] = createSignal(savedDesktopPreferences.autoReconnect);
   const [autoReconnectAvailable, setAutoReconnectAvailable] = createSignal(true);
+  const [experimentalMode, setExperimentalModeEnabled] = createSignal(savedDesktopPreferences.experimentalMode);
+  const [experimentalModeReady, setExperimentalModeReady] = createSignal(false);
+  const [savingExperimentalMode, setSavingExperimentalMode] = createSignal(false);
   const [device, setDevice] = createSignal<BleDevice | null>(null);
   const [battery, setBattery] = createSignal<BatteryData>({
-    left: 0,
-    right: 0,
-    case: 0,
+    left: null,
+    right: null,
+    case: null,
   });
-  const [ancMode, setAncModeUi] = createSignal<AncMode>("off");
-  const [ancStrength, setAncStrength] = createSignal(70);
-  const [transparencyMode, setTransparencyMode] = createSignal<TransparencyMode>("full");
-  const [adaptiveNoise, setAdaptiveNoise] = createSignal(true);
-  const [noiseEnvironment, setNoiseEnvironment] = createSignal<NoiseEnvironment>(102);
-  const [noiseLevel, setNoiseLevel] = createSignal(3);
-  const [eqActive, setEqActive] = createSignal<EqPresetId>("classic");
-  const [eqCustomBands, setEqCustomBands] = createSignal(defaultCustomBands());
-  const [eqCustomActive, setEqCustomActive] = createSignal(false);
-  const [gameOn, setGameOn] = createSignal(false);
-  const [findActive, setFindActive] = createSignal(false);
-  const [findConfirmOpen, setFindConfirmOpen] = createSignal(false);
-  const [findDialogMode, setFindDialogMode] = createSignal<"confirm" | "active">("confirm");
-  const [spatialOn, setSpatialOn] = createSignal(false);
-  const [spatialMode, setSpatialModeUi] = createSignal<SpatialMode>("music");
-  const [bassBoost, setBassBoostUi] = createSignal(0);
-  const [ldac, setLdac] = createSignal(false);
-  const [hearingProtect, setHearingProtect] = createSignal(false);
-  const [pendingEqAction, setPendingEqAction] = createSignal<PendingEqAction | null>(null);
+  const [ancMode, setAncModeUi] = createSignal<AncMode | null>(null);
+  const [modelProfiles, setModelProfiles] = createSignal<ModelProfile[]>([]);
+  const modelEq = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.eq;
+  const modelGesture = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.gesture ?? null;
+  const modelInEar = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.inEar ?? null;
+  const [gameOn, setGameOn] = createSignal<boolean | null>(null);
+  const [spatialOn, setSpatialOn] = createSignal<boolean | null>(null);
+  const [bassBoost, setBassBoostUi] = createSignal<number | null>(null);
+  const [ldac, setLdac] = createSignal<boolean | null>(null);
+  const [hearingThreshold, setHearingThreshold] = createSignal<number | null>(null);
+  const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
+  const [inEarOn, setInEarOn] = createSignal<boolean | null>(null);
+  const [multipointOn, setMultipointOn] = createSignal<boolean | null>(null);
+  const [restoreAvailable, setRestoreAvailable] = createSignal<boolean | null>(null);
+  const [adaptiveLrOn, setAdaptiveLrOn] = createSignal<boolean | null>(null);
+  const [restorePrompt, setRestorePrompt] = createSignal(false);
+  const [gestureState, setGestureState] = createSignal<Array<{ layout: number; left: number; right: number }>>([]);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
-  const noiseCaps = () => device()?.deviceProfile?.noise;
-  const noiseProfile = () => profileNoise(noiseCaps());
+  let latestLinkSession = -1;
+  let latestLinkRevision = -1;
+  const noiseCaps = () => device()?.deviceProfile.noise;
 
-  let unsubs: Array<() => void> = [];
+  const applySnapshot = (snapshot: DeviceSnapshot | null) => {
+    setBattery({
+      left: snapshot?.battery.left?.percentage ?? null,
+      right: snapshot?.battery.right?.percentage ?? null,
+      case: snapshot?.battery.case?.percentage ?? null,
+      leftCharging: snapshot?.battery.left?.charging,
+      rightCharging: snapshot?.battery.right?.charging,
+      caseCharging: snapshot?.battery.case?.charging,
+    });
+    equalizer.observeSnapshot(snapshot?.eqIndex ?? null, snapshot?.eq ?? null);
+    if (!snapshot) {
+      equalizer.reset();
+      sound.reset();
+      spatialController.reset();
+      gameModeController.reset();
+      setBassBoostUi(null);
+      setHearingProtect(null);
+      setHearingThreshold(null);
+      setInEarOn(null);
+      setMultipointOn(null);
+      setRestoreAvailable(null);
+      setAdaptiveLrOn(null);
+      setRestorePrompt(false);
+      setGestureState([]);
+      setSpatialOn(null);
+      setAncModeUi(null);
+      listening.reset();
+      gestures.reset();
+      setGameOn(null);
+      setLdac(null);
+      return;
+    }
+    setAncModeUi(snapshot.anc?.mode ?? null);
+    listening.observeSnapshot(snapshot.anc);
+    setGameOn(snapshot.game ?? null);
+    setSpatialOn(snapshot.spatialEnabled ?? null);
+    spatialController.observeMode(snapshot.spatialMode ?? null);
+    setLdac(snapshot.ldac ?? null);
+    setBassBoostUi(snapshot.bassBoost ?? null);
+    setHearingProtect(snapshot.hearing?.enabled ?? null);
+    setHearingThreshold(snapshot.hearing?.level ?? null);
+    setInEarOn(snapshot.inEar?.enabled ?? null);
+    setMultipointOn(snapshot.multipoint?.enabled ?? null);
+    setRestoreAvailable(snapshot.restoreAvailable ?? null);
+    setAdaptiveLrOn(snapshot.adaptiveLr?.enabled ?? null);
+    setGestureState(snapshot.gesture.map((value) => ({ layout: value.layout, left: value.left, right: value.right })));
+  };
+  const session = createDeviceSession(applySnapshot);
+  const refreshSnapshot = async () => {
+    const generation = session.capture();
+    const snapshot = await getDeviceSnapshot();
+    if (session.isCurrent(generation)) session.accept(snapshot);
+  };
+  let disposed = false;
+  let stopRuntimeSubscriptions: (() => void) | undefined;
   let linkPoll: number | undefined;
   let toastTimers = new Map<number, number>();
 
-  const applyLink = (l: LinkHealth) => setLink(l);
+  const applyLink = (value: LinkHealth): boolean => {
+    if (value.sessionId < latestLinkSession ||
+      (value.sessionId === latestLinkSession && value.revision < latestLinkRevision)) return false;
+    latestLinkSession = value.sessionId;
+    latestLinkRevision = value.revision;
+    setLink(value);
+    return true;
+  };
 
   const notify = (
     message: string,
@@ -114,6 +164,95 @@ const App: Component = () => {
     const id = window.setTimeout(() => dismissToast(t.id), 2800);
     toastTimers.set(t.id, id);
   };
+
+  const equalizer = createEqualizerController({
+    session,
+    refreshSnapshot,
+    deviceId: () => device()?.id,
+    model: () => modelEq() ?? null,
+    customEqSupported: () => device()?.deviceProfile.capabilities.customEq ?? false,
+    isDemo: () => link().mock,
+    spatialOn,
+    spatialSupported: () => device()?.deviceProfile.capabilities.spatial ?? false,
+    setSpatialOffInDemo: () => setSpatialOn(false),
+    formatError,
+    notify,
+  });
+
+  const listening = createListeningController({
+    mode: ancMode,
+    session,
+    refreshSnapshot,
+    noiseCapabilities: noiseCaps,
+    clearError: () => setControlError(null),
+    setError: setControlError,
+    refreshLink: async () => {
+      applyLink(await getLinkHealth());
+    },
+    notify,
+  });
+  const sound = createSoundController({
+    session,
+    refreshSnapshot,
+    isDemo: () => link().mock,
+    hearingThreshold,
+    hearingEnabled: hearingProtect,
+    setBassBoost: setBassBoostUi,
+    setLdac,
+    setHearingProtection: setHearingProtect,
+    formatError,
+    notifyError: (message) => notify(message, "error"),
+  });
+  const gameModeController = createGameModeController({
+    session,
+    refreshSnapshot,
+    isDemo: () => link().mock,
+    setGameMode: setGameOn,
+    formatError,
+    notifyChanged: (enabled) => notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info"),
+    notifyError: (message) => notify(message, "error"),
+  });
+  const spatialController = createSpatialController({
+    session,
+    refreshSnapshot,
+    isDemo: () => link().mock,
+    setSpatialEnabled: setSpatialOn,
+    formatError,
+    notifyError: (message) => notify(message, "error"),
+  });
+  const gestures = createGestureController({
+    session,
+    refreshSnapshot,
+    formatError,
+    notifyError: (message) => notify(message, "error"),
+  });
+
+  const experimentalUnlocked = (key: string): boolean => {
+    const profile = device()?.deviceProfile;
+    if (!profile) return false;
+    const experimental = profile.experimentalFeatures ?? [];
+    return !experimental.includes(key) || experimentalMode();
+  };
+  const inEarSupported = () =>
+    (device()?.deviceProfile.capabilities.inEar ?? false) &&
+    !!modelInEar() &&
+    experimentalUnlocked("inEar");
+  const gestureSupported = () =>
+    (device()?.deviceProfile.capabilities.gesture ?? false) &&
+    !!modelGesture() &&
+    experimentalUnlocked("gesture");
+  const multipointSupported = () =>
+    (device()?.deviceProfile.capabilities.multipoint ?? false) &&
+    experimentalUnlocked("multipoint");
+  const restoreSupported = () =>
+    (device()?.deviceProfile.capabilities.restoreDefaults ?? false) &&
+    restoreAvailable() === true &&
+    experimentalUnlocked("restoreDefaults");
+  const adaptiveLrSupported = () =>
+    (device()?.deviceProfile.capabilities.adaptiveLr ?? false) &&
+    experimentalUnlocked("adaptiveLr");
+
+  const findController = createFindBudsController(notify);
 
   const dismissToast = (id: number) => {
     setToasts((prev) => prev.filter((x) => x.id !== id));
@@ -142,10 +281,20 @@ const App: Component = () => {
   };
 
   onMount(async () => {
+    try {
+      await setExperimentalMode(savedDesktopPreferences.experimentalMode);
+      setExperimentalModeReady(true);
+    } catch {
+      setExperimentalModeEnabled(false);
+      writeExperimentalMode(false);
+      notify(t("settings.preferenceSaveFailed"), "error");
+    }
+
     const storedTheme = getStoredTheme();
     applyTheme(storedTheme);
     setTheme(storedTheme);
 
+    try { setModelProfiles(await listModelProfiles()); } catch { /* unavailable outside Tauri */ }
     try {
       const info = await getAppInfo();
       setAppVersion(info.version);
@@ -154,16 +303,19 @@ const App: Component = () => {
     }
     try {
       const state = await getConnection();
-      if (state.link) applyLink(state.link);
-      if (state.connected && state.device) {
+      if (disposed) return;
+      const current = !state.link || applyLink(state.link);
+      if (current && state.connected && state.device) {
         setAutoReconnectAvailable(false);
+        session.selectDevice(state.device.id);
         setDevice(state.device);
         setConnected(true);
         startLinkPoll();
         try {
-          setBattery(toBatteryData(await queryBattery()));
+          await queryBattery();
+          await refreshSnapshot();
         } catch {
-          setBattery(toBatteryData(await fetchBattery()));
+          await refreshSnapshot();
         }
       }
     } catch {
@@ -171,72 +323,45 @@ const App: Component = () => {
     }
 
     try {
-      unsubs.push(
-        await onDisconnected(() => {
-          setConnected(false);
-          setDevice(null);
-          setBattery({ left: 0, right: 0, case: 0 });
-          setLink(emptyLink());
-          setControlError(null);
-          setView("home");
-          stopLinkPoll();
-          notify(t("toast.disconnected"), "info");
-        })
-      );
-      unsubs.push(
-        await onConnection((state) => {
+      stopRuntimeSubscriptions = await subscribeDeviceRuntime({
+        connection: (state) => {
+          if (state.link && !applyLink(state.link)) return;
+          session.selectDevice(state.connected ? state.device?.id ?? null : null);
+          if (state.connected) void refreshSnapshot().catch(() => {});
           setConnected(state.connected);
           setDevice(state.device);
-          if (state.link) applyLink(state.link);
           if (!state.connected) {
-            setBattery({ left: 0, right: 0, case: 0 });
-            setLink(emptyLink());
+            setControlError(null);
+            setView("home");
+            setBattery({ left: null, right: null, case: null });
             stopLinkPoll();
+            notify(t("toast.disconnected"), "info");
           } else startLinkPoll();
-        })
-      );
-      unsubs.push(await onLinkHealth((l) => applyLink(l)));
-      unsubs.push(await onBattery((b) => setBattery(toBatteryData(b))));
-      unsubs.push(await onAnc((m) => setAncModeUi(m)));
-      unsubs.push(
-        await onEq((p) => {
-          const map: Record<string, EqPresetId> = {
-            balanced: "classic",
-            classic: "classic",
-            bassboost: "bass",
-            bass: "bass",
-            voice: "voice",
-            clear: "clear",
-            hifilive: "hifi",
-            pop: "pop",
-            jazzrock: "jazz",
-            classical: "classical",
-            acoustic: "acoustic",
-          };
-          const key = p.toLowerCase().replace(/[^a-z]/g, "");
-          setEqActive(map[key] ?? "classic");
-        })
-      );
-      unsubs.push(await onGameMode((on) => setGameOn(on)));
-      unsubs.push(await onBassBoost((level) => setBassBoostUi(level)));
-      unsubs.push(await onLdac((on) => setLdac(on)));
-      unsubs.push(await onHearingProtection((state) => setHearingProtect(state.enabled)));
+        },
+        link: applyLink,
+        snapshot: (snapshot) => session.accept(snapshot),
+      }, () => !disposed);
+      await refreshSnapshot();
     } catch (e) {
       console.warn("[App] events", e);
     }
-    setConnectionReady(true);
+    if (!disposed) setConnectionReady(true);
   });
 
   onCleanup(() => {
-    unsubs.forEach((u) => u());
+    disposed = true;
+    session.selectDevice(null);
+    stopRuntimeSubscriptions?.();
     stopLinkPoll();
     toastTimers.forEach((id) => window.clearTimeout(id));
   });
 
   const handleConnected = async (dev: BleDevice) => {
+    session.selectDevice(dev.id);
     setDevice(dev);
     setConnected(true);
-    setFindActive(false);
+    findController.reset();
+    gestures.reset();
     setControlError(null);
     setView("home");
     startLinkPoll();
@@ -245,267 +370,13 @@ const App: Component = () => {
       const state = await getConnection();
       if (state.link) applyLink(state.link);
       try {
-        setBattery(toBatteryData(await queryBattery()));
+        await queryBattery();
+          await refreshSnapshot();
       } catch {
-        setBattery(toBatteryData(await fetchBattery()));
+        await refreshSnapshot();
       }
     } catch {
       /* */
-    }
-  };
-
-  const handleAncMode = async (mode: AncMode) => {
-    setAncModeUi(mode);
-    setControlError(null);
-    try {
-      await setListeningState({
-        mode,
-        transparencyMode: transparencyMode(),
-        adaptive: adaptiveNoise(),
-        environment: noiseEnvironment(),
-        level: noiseLevel(),
-      });
-      applyLink(await getLinkHealth());
-    } catch (e) {
-      setControlError(formatError(e));
-      notify(formatError(e), "error", t("toast.error"));
-    }
-  };
-
-  const handleAncStrength = async (value: number) => {
-    setAncStrength(value);
-    try {
-      await setListeningState({
-        mode: ancMode(),
-        transparencyMode: transparencyMode(),
-        adaptive: adaptiveNoise(),
-        environment: noiseEnvironment(),
-        level: noiseLevel(),
-      });
-    } catch (e) {
-      setControlError(formatError(e));
-    }
-  };
-
-  const applyEqPreset = async (preset: EqPresetId) => {
-    setEqActive(preset);
-    setEqCustomActive(false);
-    try {
-      await setEqIndex(presetSort(preset));
-      applyLink(await getLinkHealth());
-      notify(`EQ · ${t(`eqPreset.${preset}`)}`, "success");
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const requestEqAction = (action: PendingEqAction): boolean => {
-    if (!spatialOn()) return true;
-    setPendingEqAction(action);
-    return false;
-  };
-
-  const handleEq = async (preset: EqPresetId) => {
-    if (!requestEqAction({ kind: "preset", preset })) return;
-    await applyEqPreset(preset);
-  };
-
-  const handleCustomBands = (bands: number[]) => {
-    if (!requestEqAction({ kind: "customBands", bands })) return false;
-    setEqCustomBands(bands);
-    return true;
-  };
-
-  const handleApplyCustomEq = async (bands = eqCustomBands(), label = t("eq.customize")) => {
-    if (!requestEqAction({ kind: "applyCustom" })) return;
-    setEqCustomActive(true);
-    const customLabel = label.trim() || t("eq.customize");
-    // Official Self-Define uses multi-band frames; desktop best-effort:
-    // reset path BA43 00 then stay on custom UI (curve kept locally).
-    try {
-      await setCustomEq(
-        bands.map((gain, index) => ({
-          frequency: EQ_BANDS[index].frequency,
-          qValue: 1,
-          gain,
-          filter: 1,
-        }))
-      );
-      notify(
-        t("toast.customEqSaved"),
-        "success",
-        `EQ custom · ${customLabel}`
-      );
-    } catch (e) {
-      notify(formatError(e), "error", customLabel);
-    }
-  };
-
-  const handleResetCustomEq = async () => {
-    if (!requestEqAction({ kind: "resetCustom" })) return;
-    setEqCustomBands(defaultCustomBands());
-    setEqCustomActive(false);
-    try {
-      await setEqIndex(0);
-      notify(t("toast.resetEq"), "info");
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const handleGameMode = async (enabled: boolean) => {
-    setGameOn(enabled);
-    try {
-      await setGameMode(enabled);
-      notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info");
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const handleSpatialOn = async (on: boolean) => {
-    setSpatialOn(on);
-    try {
-      await setSpatialMode(on ? spatialMode() : "off");
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const handleSpatialMode = async (m: SpatialMode) => {
-    setSpatialModeUi(m);
-    setSpatialOn(true);
-    try {
-      await setSpatialMode(m);
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const handleBassBoost = async (level: number) => {
-    setBassBoostUi(level);
-    try {
-      await setBassBoost(level);
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const startFindBuds = async () => {
-    try {
-      await findBuds(true);
-      setFindActive(true);
-      setFindDialogMode("active");
-      notify(t("toast.finding"), "info", t("toast.findingTitle"));
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const stopFindBuds = async () => {
-    try {
-      await findBuds(false);
-      setFindActive(false);
-      setFindConfirmOpen(false);
-      setFindDialogMode("confirm");
-      notify(t("toast.findStopped"), "info", t("toast.stopped"));
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const handleFindBuds = async () => {
-    if (!findActive()) {
-      setFindDialogMode("confirm");
-      setFindConfirmOpen(true);
-      return;
-    }
-    const start = !findActive();
-    try {
-      await findBuds(start);
-      setFindActive(start);
-      if (!start) setFindConfirmOpen(false);
-      notify(
-        start ? t("toast.finding") : t("toast.findStopped"),
-        "info",
-        start ? t("toast.findingTitle") : t("toast.stopped")
-      );
-    } catch (e) {
-      notify(formatError(e), "error", t("home.find"));
-    }
-  };
-
-  const applyNoiseParameter = async (mode: AncMode, parameter: number) => {
-    setControlError(null);
-    try {
-      await setListeningState({
-        mode,
-        transparencyMode: transparencyMode(),
-        adaptive: adaptiveNoise(),
-        environment: noiseEnvironment(),
-        level: mode === "anc" && parameter < 100 ? parameter : noiseLevel(),
-      });
-    } catch (e) {
-      setControlError(formatError(e));
-      notify(formatError(e), "error", t("toast.controlError"));
-    }
-  };
-
-  const confirmEqAction = async () => {
-    const action = pendingEqAction();
-    setPendingEqAction(null);
-    if (!action) return;
-    try {
-      if (spatialOn()) {
-        setSpatialOn(false);
-        await setSpatialMode("off");
-      }
-      if (action.kind === "preset") await applyEqPreset(action.preset);
-      if (action.kind === "customBands") setEqCustomBands(action.bands);
-      if (action.kind === "applyCustom") await handleApplyCustomEq();
-      if (action.kind === "resetCustom") await handleResetCustomEq();
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const handleTransparencyMode = async (mode: TransparencyMode) => {
-    setTransparencyMode(mode);
-    if (ancMode() === "transparency") await applyNoiseParameter("transparency", mode === "voice" ? 1 : 0xff);
-  };
-
-  const handleAdaptiveNoise = async (on: boolean) => {
-    setAdaptiveNoise(on);
-    if (ancMode() === "anc") await applyNoiseParameter("anc", on ? noiseEnvironment() : noiseLevel());
-  };
-
-  const handleNoiseEnvironment = async (value: NoiseEnvironment) => {
-    setNoiseEnvironment(value);
-    if (ancMode() === "anc" && adaptiveNoise()) await applyNoiseParameter("anc", value);
-  };
-
-  const handleNoiseLevel = async (value: number) => {
-    setNoiseLevel(value);
-    if (ancMode() === "anc" && !adaptiveNoise()) await applyNoiseParameter("anc", value);
-  };
-
-  const handleLdac = async (enabled: boolean) => {
-    setLdac(enabled);
-    try {
-      await sendLdac(enabled);
-    } catch (e) {
-      setLdac(!enabled);
-      notify(formatError(e), "error");
-    }
-  };
-
-  const handleHearingProtection = async (enabled: boolean) => {
-    setHearingProtect(enabled);
-    try {
-      await sendHearingProtection(enabled, 1);
-    } catch (e) {
-      setHearingProtect(!enabled);
-      notify(formatError(e), "error");
     }
   };
 
@@ -518,8 +389,8 @@ const App: Component = () => {
     }
     setConnected(false);
     setDevice(null);
-    setFindActive(false);
-    setLink(emptyLink());
+    findController.reset();
+    gestures.reset();
     setControlError(null);
     setView("home");
     stopLinkPoll();
@@ -528,6 +399,34 @@ const App: Component = () => {
   const handleTheme = (mode: ThemeMode) => {
     applyTheme(mode);
     setTheme(mode);
+  };
+
+  const handleAutoReconnectChange = (enabled: boolean) => {
+    if (!writeAutoReconnect(enabled)) {
+      notify(t("settings.preferenceSaveFailed"), "error");
+      return;
+    }
+    setAutoReconnectEnabled(enabled);
+    if (!enabled) setAutoReconnectThisLaunch(false);
+  };
+
+  const handleExperimentalModeChange = async (enabled: boolean) => {
+    if (!experimentalModeReady() || savingExperimentalMode()) return;
+    if (!writeExperimentalMode(enabled)) {
+      notify(t("settings.preferenceSaveFailed"), "error");
+      return;
+    }
+    setSavingExperimentalMode(true);
+    try {
+      await setExperimentalMode(enabled);
+      setExperimentalModeEnabled(enabled);
+    } catch {
+      writeExperimentalMode(false);
+      setExperimentalModeEnabled(false);
+      notify(t("settings.preferenceSaveFailed"), "error");
+    } finally {
+      setSavingExperimentalMode(false);
+    }
   };
 
   return (
@@ -553,6 +452,11 @@ const App: Component = () => {
             <Settings
               theme={theme()}
               onSelectTheme={handleTheme}
+              autoReconnect={autoReconnectEnabled()}
+              onAutoReconnectChange={handleAutoReconnectChange}
+              experimentalMode={experimentalMode()}
+              experimentalModeDisabled={!experimentalModeReady() || savingExperimentalMode()}
+              onExperimentalModeChange={handleExperimentalModeChange}
               onNotify={notify}
               activeSubpage={settingsSubpage()}
               onNavigate={setSettingsSubpage}
@@ -564,15 +468,22 @@ const App: Component = () => {
         <Show when={view() === "eq" && connected()}>
           <section class="section section-scroll">
             <EqPanel
-              eqActive={eqActive()}
-              customBands={eqCustomBands()}
-              customActive={eqCustomActive()}
-              storageKey={device()?.address || device()?.modelId || "default"}
+              frequencies={modelEq()?.bands ?? []}
+              minGain={modelEq()?.minGain ?? -12}
+              maxGain={modelEq()?.maxGain ?? 12}
+              customSupported={device()?.deviceProfile.capabilities.customEq ?? false}
+              presets={(modelEq()?.presets ?? []).map((preset) => ({ ...preset, sub: preset.description }))}
+              eqActive={equalizer.active()}
+              pending={equalizer.pending()}
+              error={equalizer.error()}
+              customBands={equalizer.customBands()}
+              customActive={equalizer.customActive()}
+              storageKey={`${device()?.address ?? "default"}.${device()?.modelId ?? "unknown"}.${modelEq()?.bands.join("-") ?? "none"}`}
               onBack={() => setView("home")}
-              onEq={handleEq}
-              onCustomBands={handleCustomBands}
-              onApplyCustom={handleApplyCustomEq}
-              onResetCustom={handleResetCustomEq}
+              onEq={equalizer.selectPreset}
+              onCustomBands={equalizer.updateCustomBands}
+              onApplyCustom={equalizer.applyCustom}
+              onResetCustom={equalizer.resetCustom}
             />
           </section>
         </Show>
@@ -581,13 +492,41 @@ const App: Component = () => {
         <Show when={view() === "more" && connected()}>
           <section class="section section-scroll">
             <MorePanel
+              bassSupported={device()?.deviceProfile.capabilities.bassBoost ?? false}
+              bassMaxLevel={device()?.deviceProfile.protocol === "bp1Ultra" ? 5 : 1}
+              ldacSupported={device()?.deviceProfile.capabilities.ldac ?? false}
+              pending={sound.pending()}
+              error={sound.error()}
+              hearingSupported={device()?.deviceProfile.capabilities.hearingProtection ?? false}
               bassBoost={bassBoost()}
               ldac={ldac()}
               hearingProtect={hearingProtect()}
+              hearingThreshold={hearingThreshold()}
+              hearingThresholds={modelProfiles().find((profile) => profile.id === device()?.modelId)?.hearing?.thresholds ?? []}
+              onHearingThreshold={sound.setHearingThreshold}
               onBack={() => setView("home")}
-              onBassBoost={handleBassBoost}
-              onLdac={handleLdac}
-              onHearingProtect={handleHearingProtection}
+              onBassBoost={sound.setBassBoost}
+              onLdac={sound.setLdac}
+              onHearingProtect={sound.setHearingProtection}
+            />
+          </section>
+        </Show>
+
+        {/* —— Gestures / in-ear (experimental capability) —— */}
+        <Show when={view() === "gestures" && connected()}>
+          <section class="section section-scroll">
+            <GesturePanel
+              dualButton={modelGesture()?.dualButton ?? false}
+              layouts={modelGesture()?.layouts ?? []}
+              gestureState={gestureState()}
+              inEarSupported={inEarSupported()}
+              inEarOn={inEarOn()}
+              pending={gestures.pending()}
+              error={gestures.error()}
+              experimental={device()?.deviceProfile.experimentalFeatures?.includes("gesture") ?? false}
+              onBack={() => setView("home")}
+              onInEar={gestures.setInEar}
+              onGesture={gestures.setGesture}
             />
           </section>
         </Show>
@@ -603,7 +542,7 @@ const App: Component = () => {
                     onConnected={handleConnected}
                     onOpenSettings={() => setView("settings")}
                     appVersion={appVersion()}
-                    autoReconnect={autoReconnectAvailable()}
+                    autoReconnect={autoReconnectThisLaunch() && autoReconnectAvailable()}
                     onAutoReconnectAttempt={() => setAutoReconnectAvailable(false)}
                   />
                 </Show>
@@ -612,7 +551,7 @@ const App: Component = () => {
           >
             <section class="section section-scroll">
               <Show when={controlError()}>
-                <div class="control-error" style={{ "margin-bottom": "12px" }}>
+                <div class="control-error" role="alert" aria-live="assertive" style={{ "margin-bottom": "12px" }}>
                   {controlError()}
                 </div>
               </Show>
@@ -623,85 +562,104 @@ const App: Component = () => {
                 battery={battery()}
                 link={link()}
                 ancMode={ancMode()}
-                ancStrength={ancStrength()}
-                transparencyMode={transparencyMode()}
-                adaptiveNoise={adaptiveNoise()}
-                noiseEnvironment={noiseEnvironment()}
-                noiseLevel={noiseLevel()}
-                noiseMaxLevel={noiseProfile().maxLevel}
+                ancPending={listening.pending()}
+                ancError={listening.error()}
+                transparencyMode={listening.transparencyMode()}
+                adaptiveNoise={listening.adaptiveNoise()}
+                noiseEnvironment={listening.noiseEnvironment()}
+                noiseLevel={listening.noiseLevel()}
+                listeningSupported={device()?.deviceProfile.capabilities.anc ?? false}
+                noiseMaxLevel={listening.noiseProfile().maxLevel}
                 noiseSupported={(noiseCaps()?.maxCustomLevel ?? 0) > 0}
                 adaptiveSupported={noiseCaps()?.supportsAdaptive ?? false}
                 transparencyVoiceSupported={noiseCaps()?.supportsTransparencyVoice ?? false}
                 gameMode={gameOn()}
-                findActive={findActive()}
+                gamePending={gameModeController.pending()}
+                gameError={gameModeController.error()}
+                findActive={findController.active()}
+                spatialSupported={device()?.deviceProfile.capabilities.spatial ?? false}
+                gameSupported={device()?.deviceProfile.capabilities.gameMode ?? false}
+                eqSupported={device()?.deviceProfile.capabilities.eq ?? false}
+                findSupported={device()?.deviceProfile.capabilities.findBuds ?? false}
+                gestureSupported={gestureSupported()}
+                inEarSupported={inEarSupported()}
+                inEarOn={inEarOn()}
+                inEarPending={gestures.pending()}
+                inEarError={gestures.error()}
+                multipointSupported={multipointSupported()}
+                multipointOn={multipointOn()}
+                multipointPending={gestures.pending()}
+                multipointError={gestures.error()}
+                restoreSupported={restoreSupported()}
+                restorePending={gestures.pending()}
+                restoreError={gestures.error()}
+                adaptiveLrSupported={adaptiveLrSupported()}
+                adaptiveLrOn={adaptiveLrOn()}
+                adaptiveLrPending={gestures.pending()}
+                adaptiveLrError={gestures.error()}
+                moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
+                spatialPending={spatialController.pending()}
+                spatialError={spatialController.error()}
                 spatialOn={spatialOn()}
-                spatialMode={spatialMode()}
+                spatialMode={spatialController.mode()}
                 eqLabel={
-                  eqCustomActive()
+                  equalizer.customActive()
                     ? t("eq.customize")
-                    : EQ_LABEL[eqActive()] ?? eqActive()
+                    : modelEq()?.presets.find((preset) => preset.id === equalizer.active())?.label ?? "—"
                 }
-                onAncMode={handleAncMode}
-                onAncStrength={handleAncStrength}
-                onTransparencyMode={handleTransparencyMode}
-                onAdaptiveNoise={handleAdaptiveNoise}
-                onNoiseEnvironment={handleNoiseEnvironment}
-                onNoiseLevel={handleNoiseLevel}
-                onGameMode={handleGameMode}
-                onFindBuds={handleFindBuds}
+                onAncMode={listening.setMode}
+                onTransparencyMode={listening.setTransparencyMode}
+                onAdaptiveNoise={listening.setAdaptiveNoise}
+                onNoiseEnvironment={listening.setNoiseEnvironment}
+                onNoiseLevel={listening.setNoiseLevel}
+                onGameMode={gameModeController.setMode}
+                onFindBuds={findController.request}
                 onOpenMore={() => setView("more")}
                 onOpenSettings={() => setView("settings")}
                 onDisconnect={handleDisconnect}
                 onOpenEq={() => setView("eq")}
-                onSpatialOn={handleSpatialOn}
-                onSpatialMode={handleSpatialMode}
-                onSoundFit={() =>
-                  notify(
-                    t("toast.soundFitUnavailable"),
-                    "warn",
-                    "SoundFit"
-                  )
-                }
+                onOpenGestures={() => setView("gestures")}
+                onInEar={gestures.setInEar}
+                onMultipoint={gestures.setMultipoint}
+                onAdaptiveLr={gestures.setAdaptiveLr}
+                onRestore={() => setRestorePrompt(true)}
+                onSpatialOn={spatialController.setEnabled}
+                onSpatialMode={spatialController.selectMode}
               />
             </section>
           </Show>
         </Show>
       </main>
-      <Show when={pendingEqAction()}>
+      <Show when={equalizer.pendingAction()}>
         <ConfirmDialog
           title={t("dialog.turnOffSpatialTitle")}
           message={t("dialog.turnOffSpatialMessage")}
-          onCancel={() => setPendingEqAction(null)}
-          onConfirm={confirmEqAction}
+          onCancel={equalizer.clearPendingAction}
+          onConfirm={equalizer.confirmPendingAction}
         />
       </Show>
-      <Show when={findConfirmOpen() || findActive()}>
+      <Show when={restorePrompt()}>
+        <ConfirmDialog
+          title={t("restore.title")}
+          message={t("restore.message")}
+          confirmLabel={t("restore.confirm")}
+          onCancel={() => setRestorePrompt(false)}
+          onEscape={() => setRestorePrompt(false)}
+          onConfirm={() => {
+            setRestorePrompt(false);
+            void gestures.restoreDefaults();
+          }}
+        />
+      </Show>
+      <Show when={findController.confirmationOpen() || findController.active()}>
         <ConfirmDialog
           title={t("dialog.loudSoundTitle")}
           message={t("dialog.loudSoundMessage")}
-          showCancel={findDialogMode() === "confirm"}
-          confirmLabel={findDialogMode() === "active" ? t("dialog.stopFinding") : t("dialog.ready")}
-          onCancel={() => setFindConfirmOpen(false)}
-          onConfirm={() => (findDialogMode() === "active" ? stopFindBuds() : startFindBuds())}
-        />
-      </Show>
-      <Show when={false}>
-        <ConfirmDialog
-          title={t("dialog.loudSoundTitle")}
-          message={t("dialog.loudSoundMessage")}
-          confirmLabel={t("dialog.ready")}
-          onCancel={() => setFindConfirmOpen(false)}
-          onConfirm={startFindBuds}
-        />
-      </Show>
-      <Show when={false}>
-        <ConfirmDialog
-          title={t("dialog.findingTitle")}
-          message={t("dialog.findingMessage")}
-          cancelLabel={t("dialog.continue")}
-          confirmLabel={t("dialog.stopFinding")}
-          onCancel={() => undefined}
-          onConfirm={handleFindBuds}
+          showCancel={findController.dialogMode() === "confirm"}
+          confirmLabel={findController.dialogMode() === "active" ? t("dialog.stopFinding") : t("dialog.ready")}
+          onCancel={findController.closeConfirmation}
+          onEscape={() => findController.dialogMode() === "active" ? findController.stop() : findController.closeConfirmation()}
+          onConfirm={() => (findController.dialogMode() === "active" ? findController.stop() : findController.start())}
         />
       </Show>
     </div>

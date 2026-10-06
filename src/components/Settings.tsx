@@ -5,9 +5,11 @@ import { Component, Show, createSignal, onMount } from "solid-js";
 import { formatError, locale, LOCALE_NAMES, LOCALES, setLocale, t, type Locale } from "../lib/i18n";
 import {
   getAppInfo,
+  getStartAtLogin,
   checkForUpdates,
   installUpdate,
   openExternal,
+  setStartAtLogin,
   type AppInfo,
   type UpdateCheckResult,
 } from "../lib/app";
@@ -26,6 +28,11 @@ import {
 interface Props {
   theme: ThemeMode;
   onSelectTheme: (mode: ThemeMode) => void;
+  autoReconnect: boolean;
+  onAutoReconnectChange: (enabled: boolean) => void;
+  experimentalMode: boolean;
+  experimentalModeDisabled: boolean;
+  onExperimentalModeChange: (enabled: boolean) => void;
   onNotify?: (msg: string, kind?: ToastKind, title?: string) => void;
   activeSubpage: "language" | "appearance" | null;
   onNavigate: (page: "language" | "appearance" | null) => void;
@@ -36,6 +43,8 @@ const Settings: Component<Props> = (props) => {
   const [checking, setChecking] = createSignal(false);
   const [installing, setInstalling] = createSignal(false);
   const [update, setUpdate] = createSignal<UpdateCheckResult | null>(null);
+  const [startAtLogin, setStartAtLoginState] = createSignal<boolean | null>(null);
+  const [savingStartAtLogin, setSavingStartAtLogin] = createSignal(false);
   const [status, setStatus] = createSignal<{
     kind: "ok" | "warn" | "err" | "info";
     text?: string;
@@ -49,7 +58,27 @@ const Settings: Component<Props> = (props) => {
     } catch (e) {
       setStatus({ kind: "err", text: formatError(e) });
     }
+    try {
+      setStartAtLoginState(await getStartAtLogin());
+    } catch (e) {
+      setStartAtLoginState(false);
+      setStatus({ kind: "err", text: formatError(e) });
+    }
   });
+
+  const handleStartAtLoginChange = async (enabled: boolean) => {
+    setSavingStartAtLogin(true);
+    setStatus(null);
+    try {
+      await setStartAtLogin(enabled);
+      setStartAtLoginState(enabled);
+    } catch (e) {
+      setStatus({ kind: "err", text: formatError(e) });
+      props.onNotify?.(t("settings.preferenceSaveFailed"), "error");
+    } finally {
+      setSavingStartAtLogin(false);
+    }
+  };
 
   const handleCheck = async () => {
     setChecking(true);
@@ -120,6 +149,44 @@ const Settings: Component<Props> = (props) => {
             <span class="settings-row-value">{LOCALE_NAMES[locale()]}</span>
             <span class="settings-row-chev" aria-hidden="true">›</span>
           </button>
+          <label class="settings-row settings-preference">
+            <span class="settings-row-copy">
+              <span class="settings-row-label">{t("settings.autoReconnect")}</span>
+              <span class="settings-row-hint">{t("settings.autoReconnectHint")}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={props.autoReconnect}
+              aria-label={t("settings.autoReconnect")}
+              onChange={(event) => props.onAutoReconnectChange(event.currentTarget.checked)}
+            />
+          </label>
+          <label class="settings-row settings-preference">
+            <span class="settings-row-copy">
+              <span class="settings-row-label">{t("settings.experimentalMode")}</span>
+              <span class="settings-row-hint">{t("settings.experimentalModeHint")}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={props.experimentalMode}
+              disabled={props.experimentalModeDisabled}
+              aria-label={t("settings.experimentalMode")}
+              onChange={(event) => props.onExperimentalModeChange(event.currentTarget.checked)}
+            />
+          </label>
+          <label class="settings-row settings-preference">
+            <span class="settings-row-copy">
+              <span class="settings-row-label">{t("settings.startAtLogin")}</span>
+              <span class="settings-row-hint">{t("settings.startAtLoginHint")}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={startAtLogin() ?? false}
+              disabled={startAtLogin() === null || savingStartAtLogin()}
+              aria-label={t("settings.startAtLogin")}
+              onChange={(event) => void handleStartAtLoginChange(event.currentTarget.checked)}
+            />
+          </label>
         </div>
       </div>
 

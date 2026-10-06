@@ -1,377 +1,21 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod api;
 mod ble;
 mod catalog;
+#[cfg(desktop)]
+mod desktop;
 mod device;
 mod protocol;
 
-use protocol::{AncMode, BatteryState, EqBand, EqPreset, ListeningCommand, SpatialMode};
-use serde::Serialize;
-use tauri::{AppHandle, Manager};
-use tauri_plugin_updater::UpdaterExt;
-
-// ---------------------------------------------------------------------------
-// BLE commands
-// ---------------------------------------------------------------------------
-
-#[tauri::command]
-async fn ble_check_adapter() -> Result<bool, String> {
-    Ok(ble::is_adapter_available().await)
-}
-
-#[tauri::command]
-async fn ble_start_scan(app: tauri::AppHandle, mock: Option<bool>) -> Result<(), String> {
-    if mock.unwrap_or(false) {
-        ble::start_mock_scan(app).await
-    } else {
-        ble::start_scan(app).await
-    }
-}
-
-#[tauri::command]
-async fn ble_stop_scan(app: tauri::AppHandle) -> Result<(), String> {
-    ble::stop_scan(app).await
-}
-
-#[tauri::command]
-async fn ble_connect(
-    app: tauri::AppHandle,
-    device_id: String,
-    mock: Option<bool>,
-) -> Result<ble::BleDevice, String> {
-    if mock.unwrap_or(false) || device_id.starts_with("mock-") {
-        ble::mock_connect(app, device_id).await
-    } else {
-        ble::connect(app, device_id).await
-    }
-}
-
-#[tauri::command]
-async fn ble_disconnect(app: tauri::AppHandle) -> Result<(), String> {
-    ble::disconnect(app).await
-}
-
-#[tauri::command]
-async fn ble_get_scan_status() -> Result<ble::ScanStatus, String> {
-    Ok(ble::get_scan_status().await)
-}
-
-#[tauri::command]
-async fn ble_get_connection() -> Result<ble::ConnectionState, String> {
-    Ok(ble::get_connection_state().await)
-}
-
-#[tauri::command]
-async fn ble_get_link_health() -> Result<ble::LinkHealth, String> {
-    Ok(ble::get_link_health().await)
-}
-
-// ---------------------------------------------------------------------------
-// Device control
-// ---------------------------------------------------------------------------
-
-#[tauri::command]
-fn list_models() -> Vec<protocol::ModelInfo> {
-    protocol::catalog_json()
-}
-
-#[tauri::command]
-fn list_model_profiles() -> Vec<catalog::ModelProfile> {
-    catalog::all_profiles()
-}
-
-#[tauri::command]
-fn get_model_profile(model_id: String) -> Result<catalog::ModelProfile, String> {
-    catalog::profile_for(&model_id).ok_or_else(|| format!("No profile for model: {model_id}"))
-}
-
-#[tauri::command]
-async fn get_battery() -> Result<BatteryState, String> {
-    Ok(ble::get_battery_state().await)
-}
-
-#[tauri::command]
-async fn query_battery() -> Result<BatteryState, String> {
-    ble::query_battery().await
-}
-
-#[tauri::command]
-async fn set_listening_state(
-    mode: String,
-    transparency_mode: Option<String>,
-    adaptive: Option<bool>,
-    environment: Option<u16>,
-    level: Option<u8>,
-) -> Result<(), String> {
-    let command = match mode.to_lowercase().as_str() {
-        "off" | "normal" => ListeningCommand::Normal,
-        "transparency" | "ambient" => {
-            if transparency_mode.as_deref() == Some("voice") {
-                ListeningCommand::TransparencyVoice
-            } else {
-                ListeningCommand::TransparencyFull
-            }
-        }
-        "anc" | "noiseReduction" | "noisereduction" => {
-            if adaptive.unwrap_or(false) {
-                ListeningCommand::AdaptiveEnvironment(environment.ok_or("Adaptive environment is required")?)
-            } else {
-                ListeningCommand::CustomLevel(level.ok_or("Custom ANC level is required")?)
-            }
-        }
-        _ => return Err(format!("Unknown listening mode: {mode}")),
-    };
-    ble::send_listening(command).await
-}
-
-#[tauri::command]
-async fn set_anc_mode(
-    mode: String,
-    strength: Option<u8>,
-    parameter: Option<u8>,
-) -> Result<(), String> {
-    let anc = match mode.to_lowercase().as_str() {
-        "off" => AncMode::Off,
-        "transparency" | "ambient" => AncMode::Transparency,
-        _ => AncMode::Anc,
-    };
-    let parameter = parameter.unwrap_or_else(|| anc.level_from_percent(strength.unwrap_or(70)));
-    let command = match anc {
-        AncMode::Off => ListeningCommand::Normal,
-        AncMode::Transparency if parameter == 1 => ListeningCommand::TransparencyVoice,
-        AncMode::Transparency => ListeningCommand::TransparencyFull,
-        AncMode::Anc if parameter >= 100 => ListeningCommand::AdaptiveEnvironment(parameter as u16),
-        AncMode::Anc => ListeningCommand::CustomLevel(parameter),
-    };
-    ble::send_listening(command).await
-}
-
-#[tauri::command]
-async fn set_eq_preset(preset: String) -> Result<(), String> {
-    let eq = EqPreset::from_ui(&preset);
-    ble::send_eq(eq).await
-}
-
-#[tauri::command]
-async fn set_eq_index(index: u8) -> Result<(), String> {
-    ble::send_eq_index(index).await
-}
-
-#[tauri::command]
-async fn set_game_mode(enabled: bool) -> Result<(), String> {
-    ble::send_game_mode(enabled).await
-}
-
-#[tauri::command]
-async fn set_spatial_mode(mode: String) -> Result<(), String> {
-    let m = match mode.to_lowercase().as_str() {
-        "music" | "01" => SpatialMode::Music,
-        "cinema" | "movie" | "02" => SpatialMode::Cinema,
-        "game" | "03" => SpatialMode::Game,
-        _ => SpatialMode::Off,
-    };
-    ble::send_spatial(m).await
-}
-
-#[tauri::command]
-async fn set_bass_boost(level: u8) -> Result<(), String> {
-    ble::send_bass_boost(level).await
-}
-
-#[tauri::command]
-async fn set_custom_eq(
-    bands: Vec<EqBand>,
-    dict_sort: Option<u8>,
-    anc: Option<bool>,
-) -> Result<(), String> {
-    ble::send_custom_eq(bands, dict_sort.unwrap_or(101), anc.unwrap_or(false)).await
-}
-
-#[tauri::command]
-async fn set_ldac(enabled: bool) -> Result<(), String> {
-    ble::send_ldac(enabled).await
-}
-
-#[tauri::command]
-async fn set_hearing_protection(enabled: bool, level: Option<u8>) -> Result<(), String> {
-    ble::send_hearing_protection(enabled, level.unwrap_or(1)).await
-}
-
-#[tauri::command]
-async fn find_buds(start: bool) -> Result<(), String> {
-    ble::send_find_buds(start).await
-}
-
-// ---------------------------------------------------------------------------
-// App info + updates
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AppInfo {
-    name: String,
-    version: String,
-    identifier: String,
-    tauri_version: String,
-    os: String,
-    debug: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct UpdateCheckResult {
-    available: bool,
-    current_version: String,
-    version: Option<String>,
-    body: Option<String>,
-    date: Option<String>,
-    error: Option<String>,
-}
-
-#[tauri::command]
-fn get_app_info(app: AppHandle) -> AppInfo {
-    let pkg = app.package_info();
-    AppInfo {
-        name: pkg.name.clone(),
-        version: pkg.version.to_string(),
-        identifier: app.config().identifier.clone(),
-        tauri_version: tauri::VERSION.to_string(),
-        os: std::env::consts::OS.to_string(),
-        debug: cfg!(debug_assertions),
-    }
-}
-
-/// Prefer signed Tauri updater; fall back to GitHub Releases tag compare.
-#[tauri::command]
-async fn check_for_updates(app: AppHandle) -> Result<UpdateCheckResult, String> {
-    let current = app.package_info().version.to_string();
-
-    // 1) Official Tauri updater (signed latest.json from Releases)
-    match app.updater() {
-        Ok(updater) => match updater.check().await {
-            Ok(Some(update)) => {
-                return Ok(UpdateCheckResult {
-                    available: true,
-                    current_version: current,
-                    version: Some(update.version.clone()),
-                    body: update.body.clone(),
-                    date: update.date.map(|d| d.to_string()),
-                    error: None,
-                });
-            }
-            Ok(None) => {
-                return Ok(UpdateCheckResult {
-                    available: false,
-                    current_version: current,
-                    version: None,
-                    body: None,
-                    date: None,
-                    error: None,
-                });
-            }
-            Err(e) => {
-                log::warn!("Updater check failed, trying GitHub API: {e}");
-            }
-        },
-        Err(e) => {
-            log::warn!("Updater unavailable: {e}");
-        }
-    }
-
-    // 2) Fallback: public GitHub Releases latest tag
-    match github_latest_version().await {
-        Ok(remote) => {
-            let available = is_remote_newer(&remote, &current);
-            Ok(UpdateCheckResult {
-                available,
-                current_version: current,
-                version: Some(remote),
-                body: if available {
-                    Some("Tải bản cài từ GitHub Releases (updater ký chưa sẵn sàng).".into())
-                } else {
-                    None
-                },
-                date: None,
-                error: None,
-            })
-        }
-        Err(e) => Ok(UpdateCheckResult {
-            available: false,
-            current_version: current,
-            version: None,
-            body: None,
-            date: None,
-            error: Some(e),
-        }),
-    }
-}
-
-#[tauri::command]
-async fn install_update(app: AppHandle) -> Result<(), String> {
-    let updater = app
-        .updater()
-        .map_err(|e| format!("Updater: {e}"))?;
-    let update = updater
-        .check()
-        .await
-        .map_err(|e| format!("Check update: {e}"))?
-        .ok_or_else(|| {
-            "Không có bản cập nhật ký số. Mở GitHub Releases để tải thủ công.".to_string()
-        })?;
-
-    update
-        .download_and_install(|_chunk, _total| {}, || {})
-        .await
-        .map_err(|e| format!("Install update: {e}"))?;
-
-    app.restart();
-}
-
-async fn github_latest_version() -> Result<String, String> {
-    let client = reqwest::Client::builder()
-        .user_agent("B4S-Desktop")
-        .build()
-        .map_err(|e| e.to_string())?;
-    let url = "https://api.github.com/repos/hoan02/b4s/releases/latest";
-    let resp = client
-        .get(url)
-        .header("Accept", "application/vnd.github+json")
-        .send()
-        .await
-        .map_err(|e| format!("GitHub: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!(
-            "GitHub releases HTTP {} (repo public + có release chưa?)",
-            resp.status()
-        ));
-    }
-    let json: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-    let tag = json
-        .get("tag_name")
-        .and_then(|v| v.as_str())
-        .ok_or("No tag_name in release")?;
-    Ok(tag.trim_start_matches('v').to_string())
-}
-
-fn is_remote_newer(remote: &str, current: &str) -> bool {
-    let parse = |s: &str| -> Vec<u64> {
-        s.trim_start_matches('v')
-            .split(|c: char| !c.is_ascii_digit())
-            .filter_map(|p| p.parse().ok())
-            .collect()
-    };
-    let a = parse(remote);
-    let b = parse(current);
-    for i in 0..a.len().max(b.len()) {
-        let x = a.get(i).copied().unwrap_or(0);
-        let y = b.get(i).copied().unwrap_or(0);
-        if x != y {
-            return x > y;
-        }
-    }
-    false
-}
+use api::{ble::*, desktop::*, device::*, updates::*};
+#[cfg(desktop)]
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use tauri::Manager;
 
 // ---------------------------------------------------------------------------
 // Entry
@@ -379,15 +23,20 @@ fn is_remote_newer(remote: &str, current: &str) -> bool {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let _ = env_logger::Builder::from_env(
-        env_logger::Env::default().default_filter_or("info"),
-    )
-    .try_init();
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .try_init();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        None,
+    ));
+
+    builder
         .invoke_handler(tauri::generate_handler![
             ble_check_adapter,
             ble_start_scan,
@@ -400,19 +49,12 @@ pub fn run() {
             list_models,
             list_model_profiles,
             get_model_profile,
-            get_battery,
+            get_device_snapshot,
             query_battery,
-            set_anc_mode,
-            set_listening_state,
-            set_eq_preset,
-            set_eq_index,
-            set_custom_eq,
-            set_game_mode,
-            set_spatial_mode,
-            set_bass_boost,
-            set_ldac,
-            set_hearing_protection,
-            find_buds,
+            apply_device_command,
+            get_start_at_login,
+            set_start_at_login,
+            set_experimental_mode,
             get_app_info,
             check_for_updates,
             install_update,
@@ -426,11 +68,44 @@ pub fn run() {
                     window.open_devtools();
                 }
             }
+
+            #[cfg(desktop)]
+            {
+                let tray_available = match desktop::install_tray(app) {
+                    Ok(()) => true,
+                    Err(error) => {
+                        log::warn!(
+                            "System tray unavailable; window close will quit cleanly: {error}"
+                        );
+                        false
+                    }
+                };
+
+                if let Some(window) = app.get_webview_window("main") {
+                    let close_window = window.clone();
+                    let app_handle = app.handle().clone();
+                    let close_started = Arc::new(AtomicBool::new(false));
+                    window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            if tray_available {
+                                api.prevent_close();
+                                let _ = close_window.hide();
+                            } else {
+                                api.prevent_close();
+                                if !close_started.swap(true, Ordering::AcqRel) {
+                                    desktop::quit(&app_handle);
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 match ble::init_adapter().await {
                     Ok(()) => log::info!("BLE adapter OK"),
-                    Err(e) => log::warn!("BLE adapter: {e}"),
+                    Err(error) => log::warn!("BLE adapter: {error}"),
                 }
                 let _ = handle;
             });

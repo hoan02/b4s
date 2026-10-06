@@ -1,7 +1,10 @@
 {
   "id": "bass-bp1-pro",
   "displayName": "Baseus Bass BP1 Pro",
-  "aliases": ["bass bp1 pro", "bp1 pro"],
+  "aliases": [
+    "bass bp1 pro",
+    "bp1 pro"
+  ],
   "support": "verified",
   "protocolFamily": "bp1",
   "category": "tws",
@@ -14,33 +17,450 @@
     "bassBoost": true,
     "spatial": true,
     "ldac": false,
-    "hearingProtection": false
+    "hearingProtection": false,
+    "findBuds": true,
+    "gesture": true,
+    "inEar": true,
+    "multipoint": true,
+    "restoreDefaults": true,
+    "adaptiveLr": true
   },
   "noise": {
     "supportsAdaptive": true,
-    "environments": [101, 102, 103, 108],
+    "environments": [
+      101,
+      102,
+      103,
+      108
+    ],
     "maxCustomLevel": 5,
     "supportsTransparencyVoice": true
   },
   "eq": {
-    "bands": [100, 200, 400, 800, 1000, 3000, 6000, 10000],
+    "qValues": [1, 1, 1, 1, 1, 1, 1, 1],
+    "bands": [
+      100,
+      200,
+      400,
+      800,
+      1000,
+      3000,
+      6000,
+      10000
+    ],
     "minGain": -12,
     "maxGain": 12,
     "customSlots": 2,
     "presets": [
-      {"id":"classic","label":"Classic","description":"Cân bằng","dictSort":0,"curve":[0,0,0,0,0,0,0,0]},
-      {"id":"bass","label":"Super Bass","description":"Tăng trầm","dictSort":1,"curve":[4,3,2,1,0,-1,-2,-2]},
-      {"id":"cinema","label":"Cinema","description":"Âm thanh phim","dictSort":2,"curve":[3,1,1,2,1,2,1,-1]},
-      {"id":"hifi","label":"Hi-Fi Live","description":"Sân khấu","dictSort":3,"curve":[0,-2,1,2,1,2,1,-1]},
-      {"id":"voice","label":"Clear Voice","description":"Rõ giọng","dictSort":4,"curve":[2,-2,1,3,3,2,0,-1]},
-      {"id":"dj","label":"DJ","description":"DJ","dictSort":5,"curve":[3,0,3,2,1,2,1,-1]},
-      {"id":"pop","label":"Pop","description":"Nhạc pop","dictSort":6,"curve":[2,-2,3,2,1,2,1,-1]},
-      {"id":"jazz","label":"Jazz","description":"Jazz","dictSort":7,"curve":[3,-1,2,1,2,2,1,-1]},
-      {"id":"classical","label":"Classical","description":"Cổ điển","dictSort":8,"curve":[-2,-3,1,2,1,2,1,-1]},
-      {"id":"clear","label":"Treble Boost","description":"Tăng cao","dictSort":9,"curve":[-2,-2,1,2,3,4,3,1]},
-      {"id":"original","label":"Original","description":"Nguyên bản","dictSort":10,"curve":[0,0,0,0,0,0,0,0]},
-      {"id":"rock","label":"Rock Classic","description":"Rock","dictSort":11,"curve":[3,1,2,3,1,2,1,-1]}
+      {
+        "id": "classic",
+        "label": "Baseus Classic",
+        "description": "",
+        "dictSort": 0,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -5.8,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -9.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 2.0,
+            "gain": -2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 2.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "bass",
+        "label": "Deep Bass",
+        "description": "",
+        "dictSort": 1,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 2.0,
+            "gain": -2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "hifi",
+        "label": "Hi-Fi Live",
+        "description": "",
+        "dictSort": 3,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 100,
+            "qValue": 0.64,
+            "gain": -11.0,
+            "filter": 1
+          },
+          {
+            "frequency": 5500,
+            "qValue": 1.0,
+            "gain": -9.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 2.0,
+            "gain": -2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 8500,
+            "qValue": 6.0,
+            "gain": -10.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "jazz",
+        "label": "Jazz",
+        "description": "",
+        "dictSort": 7,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -3.0,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 0.7,
+            "gain": 2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "classical",
+        "label": "Classical",
+        "description": "",
+        "dictSort": 8,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -3.0,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 3000,
+            "qValue": 0.7,
+            "gain": 1.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "clear",
+        "label": "Treble Boost",
+        "description": "",
+        "dictSort": 9,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -5.8,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 2.0,
+            "gain": -2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 3000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "acoustic",
+        "label": "Acoustic",
+        "description": "",
+        "dictSort": 10,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -5.8,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 1.0,
+            "gain": 2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -6.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      }
     ]
   },
-  "image": "default_ear_pic"
+  "image": "default_ear_pic",
+  "gesture": {
+    "dualButton": true,
+    "layouts": [
+      {
+        "layout": 0,
+        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+      },
+      {
+        "layout": 1,
+        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+      },
+      {
+        "layout": 2,
+        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+      },
+      {
+        "layout": 3,
+        "functions": [1, 0]
+      }
+    ],
+    "provenance": "assets/gesture/gesture_config_function_list.json (2.17.0.1); firmware/capture acceptance not verified, experimental-only"
+  },
+  "inEar": {
+    "provenance": "GestureBleManager.a and EarHeadSetViewModel (BA25/BA26); model/firmware support not verified, experimental-only"
+  },
+  "multipoint": {
+    "provenance": "EarphoneFunctionShowFragmentNewUI each-connect handlers and EarHeadSetViewModel.T (BA57/BA58); second-device/codec behavior not verified, experimental-only"
+  },
+  "restoreDefaults": {
+    "provenance": "EarphoneSettingFragment/EarPhoneSettingV2Activity (BA36 availability, BA37 restore); destructive action not verified on hardware, experimental-only"
+  },
+  "adaptiveLr": {
+    "provenance": "EarPhoneSettingV2Activity n2/o2 and resolved string str_left_and_right_adapter = 'Adaptive L/R Earbuds' (BA3F query/state, BA4A set); effect not verified, experimental-only"
+  },
+  "experimentalFeatures": [
+    "gesture",
+    "inEar",
+    "multipoint",
+    "restoreDefaults",
+    "adaptiveLr"
+  ],
+  "schemaVersion": 2,
+  "connection": {
+    "transport": "bleGatt",
+    "framing": "bareAaBa",
+    "serviceUuid": "53527aa4-29f7-ae11-4e74-997334782568",
+    "writeUuid": "ee684b1a-1e9b-ed3e-ee55-f894667e92ac",
+    "notifyUuid": "654b749c-e37f-ae1f-ebab-40ca133e3690",
+    "handshake": [
+      186,
+      5,
+      0
+    ],
+    "initStateQuery": false,
+    "firmwareVersions": [],
+    "provenance": "docs/protocol/bp1-pro-anc.md; firmware scope not yet captured"
+  }
 }

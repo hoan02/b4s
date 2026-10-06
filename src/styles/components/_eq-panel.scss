@@ -195,11 +195,16 @@
 }
 
 .eq-gain {
+  width: 46px;
+  padding: 2px 4px;
+  border: 0.5px solid var(--border);
+  border-radius: $radius-sm;
+  background: var(--bg-fill-2);
+  color: var(--text-2);
   font-size: 10px;
   font-weight: $fw-semibold;
-  color: var(--text-2);
+  text-align: center;
   font-variant-numeric: tabular-nums;
-  min-height: 14px;
 }
 
 // Vertical range (WebView2 / Chromium)

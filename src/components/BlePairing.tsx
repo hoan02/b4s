@@ -9,6 +9,7 @@ import {
   rssiToBars,
   checkAdapter,
   getScanStatus,
+  type ScanStatus,
 } from "../lib/ble";
 import { findRememberedDevice, readRememberedDevice } from "../lib/reconnect";
 import { resolveDeviceThumb } from "../lib/deviceImages";
@@ -37,6 +38,9 @@ const BlePairing: Component<Props> = (props) => {
   let unsubs: Array<() => void> = [];
   let checkingAdapter = false;
   let disposed = false;
+  let latestScanGeneration = -1;
+  let latestScanRevision = -1;
+  let latestConnectingSession = -1;
   let adapterPoll: number | undefined;
   let handleFocus: (() => void) | undefined;
   let handleVisibility: (() => void) | undefined;
@@ -73,9 +77,7 @@ const BlePairing: Component<Props> = (props) => {
 
     void (async () => {
       const scanUnsub = await onScanStatus((status) => {
-        setScanning(status.scanning);
-        setDevices(status.devices);
-        if (status.error) setError(status.error);
+        acceptScanStatus(status);
       });
       if (disposed) scanUnsub();
       else {
@@ -90,11 +92,25 @@ const BlePairing: Component<Props> = (props) => {
     });
 
     void (async () => {
-      const connectingUnsub = await onConnecting((id) => setConnectingId(id));
+      const connectingUnsub = await onConnecting((state) => {
+        if (state.sessionId < latestConnectingSession) return;
+        latestConnectingSession = state.sessionId;
+        setConnectingId(state.deviceId);
+      });
       if (disposed) connectingUnsub();
       else unsubs.push(connectingUnsub);
     })();
   });
+
+  const acceptScanStatus = (status: ScanStatus) => {
+    if (status.generation < latestScanGeneration ||
+      (status.generation === latestScanGeneration && status.revision < latestScanRevision)) return;
+    latestScanGeneration = status.generation;
+    latestScanRevision = status.revision;
+    setScanning(status.scanning);
+    setDevices(status.devices);
+    if (status.error) setError(status.error);
+  };
 
   onCleanup(() => {
     disposed = true;
@@ -187,13 +203,21 @@ const BlePairing: Component<Props> = (props) => {
     }
   };
 
+  const advertisesControl = (device: BleDevice): boolean => {
+    const serviceUuid = device.deviceProfile.connection?.serviceUuid;
+    return !!serviceUuid &&
+      device.advertisedServices.some((uuid) => uuid.toLowerCase() === serviceUuid.toLowerCase());
+  };
+
   const matched = () => {
-    const list = devices().filter((d) => d.isBaseus);
+    const list = devices().filter((d) => d.isBaseus && d.headphoneCandidate !== false);
     return [...list].sort((a, b) => {
       const rank = (s?: string | null) =>
         s === "verified" ? 0 : s === "experimental" ? 1 : 2;
       const r = rank(a.support) - rank(b.support);
-      return r !== 0 ? r : b.rssi - a.rssi;
+      if (r !== 0) return r;
+      const control = Number(advertisesControl(b)) - Number(advertisesControl(a));
+      return control !== 0 ? control : b.rssi - a.rssi;
     });
   };
   const others = () => devices().filter((d) => !d.isBaseus);
@@ -270,6 +294,7 @@ const BlePairing: Component<Props> = (props) => {
                 {(device) => (
                   <DeviceRow
                     device={device}
+                    control={advertisesControl(device)}
                     connecting={connectingId() === device.id}
                     onConnect={() => handleConnect(device)}
                   />
@@ -293,7 +318,8 @@ const BlePairing: Component<Props> = (props) => {
             <Show
               when={
                 !scanning() &&
-                devices().length === 0 &&
+                matched().length === 0 &&
+                others().length === 0 &&
                 !error() &&
                 adapterOk() !== false
               }
@@ -304,7 +330,7 @@ const BlePairing: Component<Props> = (props) => {
               </div>
             </Show>
 
-            <Show when={scanning() && devices().length === 0}>
+            <Show when={scanning() && matched().length === 0 && others().length === 0}>
               <div class="ble-empty scanning">
                 <div class="ble-scan-status" role="status" aria-live="polite">
                   <span class="scan-bars" aria-hidden="true"><i /><i /><i /></span>
@@ -335,6 +361,7 @@ const BlePairing: Component<Props> = (props) => {
 
 const DeviceRow: Component<{
   device: BleDevice;
+  control?: boolean;
   connecting: boolean;
   onConnect: () => void;
 }> = (props) => {
@@ -366,8 +393,12 @@ const DeviceRow: Component<{
           <Show when={props.device.support === "experimental"}>
             <span class="tag">{t("pair.experimental")}</span>
           </Show>
+          <Show when={props.control}>
+            <span class="tag ok">{t("pair.control")}</span>
+          </Show>
         </div>
         <div class="device-meta">
+          <span class="entry-address">{props.device.address}</span>
           <span class="rssi">
             <SignalBars level={bars()} />
             {props.device.rssi}

@@ -117,3 +117,52 @@ test("scan startup errors still release the listener and scan", async () => {
   assert.equal(scan.counts().stops, 1);
   assert.equal(scan.counts().unsubscribes, 1);
 });
+
+function keyedStorage(initial) {
+  const map = new Map(Object.entries(initial));
+  return {
+    getItem: (key) => (map.has(key) ? map.get(key) : null),
+    setItem: (key, value) => { map.set(key, value); },
+    removeItem: (key) => { map.delete(key); },
+    snapshot: () => Object.fromEntries(map),
+  };
+}
+
+test("remembered device migrates the legacy record once into a versioned envelope", () => {
+  const storage = keyedStorage({ "b4s.last-device": JSON.stringify(saved) });
+  globalThis.localStorage = storage;
+  assert.equal(readRememberedDevice().id, "old-id");
+  const after = storage.snapshot();
+  assert.equal(after["b4s.last-device"], undefined);
+  assert.equal(JSON.parse(after["b4s.last-device.v2"]).version, 2);
+  assert.equal(JSON.parse(after["b4s.last-device.v2"]).device.id, "old-id");
+});
+
+test("a corrupt current record never revives or deletes a stale legacy record", () => {
+  const storage = keyedStorage({
+    "b4s.last-device.v2": "{not json",
+    "b4s.last-device": JSON.stringify(saved),
+  });
+  globalThis.localStorage = storage;
+  assert.equal(readRememberedDevice(), null);
+  const after = storage.snapshot();
+  assert.equal(after["b4s.last-device.v2"], "{not json");
+  assert.ok(after["b4s.last-device"]);
+});
+
+test("malformed legacy data is discarded instead of retained", () => {
+  const storage = keyedStorage({ "b4s.last-device": '{"id":3}' });
+  globalThis.localStorage = storage;
+  assert.equal(readRememberedDevice(), null);
+  assert.equal(storage.snapshot()["b4s.last-device"], undefined);
+});
+
+test("rememberDevice writes a versioned envelope and clears the legacy key", () => {
+  const storage = keyedStorage({ "b4s.last-device": JSON.stringify(saved) });
+  globalThis.localStorage = storage;
+  rememberDevice(device);
+  const after = storage.snapshot();
+  assert.equal(after["b4s.last-device"], undefined);
+  assert.equal(JSON.parse(after["b4s.last-device.v2"]).device.id, "new-id");
+  assert.equal(JSON.parse(after["b4s.last-device.v2"]).version, 2);
+});

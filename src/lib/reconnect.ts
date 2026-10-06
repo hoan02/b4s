@@ -1,6 +1,8 @@
 import type { BleDevice, ScanStatus } from "./ble";
 
-const KEY = "b4s.last-device";
+const KEY = "b4s.last-device.v2";
+const LEGACY_KEY = "b4s.last-device";
+const STORAGE_VERSION = 2 as const;
 
 export interface RememberedDevice {
   id: string;
@@ -10,26 +12,83 @@ export interface RememberedDevice {
   serial?: string | null;
 }
 
+interface RememberedDeviceEnvelope {
+  version: typeof STORAGE_VERSION;
+  device: RememberedDevice;
+}
+
 const addressKey = (address: string) => address.replace(/[:-]/g, "").toLowerCase();
 const usableAddress = (address: string) => /^[0-9a-f]{12}$/.test(addressKey(address)) && addressKey(address) !== "000000000000";
 
+function decodeRememberedDevice(value: unknown): RememberedDevice | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== "string" || !candidate.id || candidate.id.startsWith("mock-")) return null;
+  if (typeof candidate.address !== "string" || typeof candidate.name !== "string") return null;
+  if (candidate.modelId != null && typeof candidate.modelId !== "string") return null;
+  if (candidate.serial != null && typeof candidate.serial !== "string") return null;
+  return {
+    id: candidate.id,
+    address: candidate.address,
+    name: candidate.name,
+    modelId: candidate.modelId as string | null | undefined,
+    serial: candidate.serial as string | null | undefined,
+  };
+}
+
+function decodeCurrentDevice(raw: string): RememberedDevice | null {
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (typeof value === "object" && value !== null && (value as Record<string, unknown>).version === STORAGE_VERSION) {
+      return decodeRememberedDevice((value as Record<string, unknown>).device);
+    }
+  } catch {
+    // Invalid persisted values are recovered to "no remembered device".
+  }
+  return null;
+}
+
 export function rememberDevice(device: BleDevice): void {
   if (device.id.startsWith("mock-") || !["verified", "experimental"].includes(device.support ?? "")) return;
-  const saved: RememberedDevice = {
-    id: device.id, address: device.address, name: device.modelName || device.name,
-    modelId: device.modelId, serial: device.serial,
+  const envelope: RememberedDeviceEnvelope = {
+    version: STORAGE_VERSION,
+    device: {
+      id: device.id, address: device.address, name: device.modelName || device.name,
+      modelId: device.modelId, serial: device.serial,
+    },
   };
-  try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch { /* Storage is optional. */ }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(envelope));
+    localStorage.removeItem(LEGACY_KEY);
+  } catch { /* Storage is optional. */ }
 }
 
 export function readRememberedDevice(): RememberedDevice | null {
   try {
-    const value = JSON.parse(localStorage.getItem(KEY) ?? "null");
-    if (!value || typeof value.id !== "string" || !value.id || value.id.startsWith("mock-") ||
-      typeof value.address !== "string" || typeof value.name !== "string" ||
-      (value.modelId != null && typeof value.modelId !== "string") ||
-      (value.serial != null && typeof value.serial !== "string")) return null;
-    return value;
+    const current = localStorage.getItem(KEY);
+    if (current !== null) return decodeCurrentDevice(current);
+
+    // The legacy key is read only when the current key is absent, then removed
+    // after a one-time migration. A corrupt current value never revives it.
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy === null) return null;
+    let legacyDevice: RememberedDevice | null = null;
+    try {
+      legacyDevice = decodeRememberedDevice(JSON.parse(legacy));
+    } catch {
+      legacyDevice = null;
+    }
+    if (!legacyDevice) {
+      try { localStorage.removeItem(LEGACY_KEY); } catch { /* Recovery is best effort. */ }
+      return null;
+    }
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ version: STORAGE_VERSION, device: legacyDevice }));
+      localStorage.removeItem(LEGACY_KEY);
+    } catch {
+      // Keep the migrated in-memory value if storage is temporarily read-only.
+    }
+    return legacyDevice;
   } catch { return null; }
 }
 
@@ -68,8 +127,14 @@ export async function findRememberedDevice(
   signal.addEventListener("abort", cancel, { once: true });
   let unsubscribe: (() => void) | undefined;
   let started = false;
+  let generation = -1;
+  let revision = -1;
   const inspect = (status: ScanStatus) => {
     if (settled || signal.aborted) return;
+    if (status.generation < generation ||
+      (status.generation === generation && status.revision < revision)) return;
+    generation = status.generation;
+    revision = status.revision;
     const match = status.devices.find((device) => matchesRememberedDevice(device, saved));
     if (match) finish(match);
     else if (status.error || (started && !status.scanning)) finish(null);

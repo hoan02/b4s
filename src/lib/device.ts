@@ -2,8 +2,7 @@
  * Device control + live state — listening features
  */
 
-import { invoke, listen, type UnlistenFn } from "./tauri";
-import type { BatteryData } from "../components/Battery";
+import { invoke } from "./tauri";
 
 export type AncMode = "off" | "anc" | "transparency";
 export type TransparencyMode = "full" | "voice";
@@ -11,40 +10,48 @@ export type NoiseEnvironment = 101 | 102 | 103 | 108;
 export type SpatialMode = "off" | "music" | "cinema" | "game";
 export type EqPresetId = string;
 
-export interface DeviceBattery {
-  left: number;
-  right: number;
-  case: number;
-  leftCharging: boolean;
-  rightCharging: boolean;
-  caseCharging: boolean;
+type DeviceCommand =
+  | { kind: "setListeningState"; mode: AncMode; transparencyMode: TransparencyMode; adaptive: boolean; environment: NoiseEnvironment; level: number }
+  | { kind: "setEqPreset"; preset: EqPresetId }
+  | { kind: "setEqIndex"; index: number }
+  | { kind: "setCustomEq"; bands: EqBandPayload[]; dictSort: number; anc: boolean }
+  | { kind: "setGameMode"; enabled: boolean }
+  | { kind: "setSpatialMode"; mode: SpatialMode }
+  | { kind: "setBassBoost"; level: number }
+  | { kind: "setLdac"; enabled: boolean }
+  | { kind: "setHearingProtection"; enabled: boolean; level: number }
+  | { kind: "findBuds"; start: boolean }
+  | { kind: "setInEar"; enabled: boolean }
+  | { kind: "setMultipoint"; enabled: boolean }
+  | { kind: "restoreDefaults" }
+  | { kind: "setAdaptiveLr"; enabled: boolean }
+  | { kind: "setGesture"; layout: number; left: number | null; right: number | null };
+
+export interface DeviceCommandResponse {
+  contractVersion: 1;
+  sessionId: number;
+  snapshotRevision: number;
+  disposition: "deviceStateObserved" | "transportAccepted" | "simulated";
 }
 
-export function toBatteryData(b: DeviceBattery): BatteryData {
-  return {
-    left: b.left,
-    right: b.right,
-    case: b.case,
-    leftCharging: b.leftCharging,
-    rightCharging: b.rightCharging,
-    caseCharging: b.caseCharging,
-  };
+async function applyDeviceCommand(command: DeviceCommand): Promise<DeviceCommandResponse> {
+  const response = await invoke<unknown>("apply_device_command", {
+    request: { contractVersion: 1, command },
+  });
+  if (response === null || typeof response !== "object" || Array.isArray(response)) {
+    throw new Error("Invalid device command response");
+  }
+  const value = response as Record<string, unknown>;
+  if (value.contractVersion !== 1 || !Number.isSafeInteger(value.sessionId) ||
+    !Number.isSafeInteger(value.snapshotRevision) ||
+    !["deviceStateObserved", "transportAccepted", "simulated"].includes(value.disposition as string)) {
+    throw new Error("Invalid device command response");
+  }
+  return value as unknown as DeviceCommandResponse;
 }
 
-export async function fetchBattery(): Promise<DeviceBattery> {
-  return invoke<DeviceBattery>("get_battery");
-}
-
-export async function queryBattery(): Promise<DeviceBattery> {
-  return invoke<DeviceBattery>("query_battery");
-}
-
-export async function setAncMode(
-  mode: AncMode,
-  strength = 70,
-  parameter?: number
-): Promise<void> {
-  await invoke("set_anc_mode", { mode, strength, parameter });
+export async function queryBattery(): Promise<void> {
+  await invoke("query_battery");
 }
 
 export interface ListeningStateRequest {
@@ -55,8 +62,8 @@ export interface ListeningStateRequest {
   level: number;
 }
 
-export async function setListeningState(state: ListeningStateRequest): Promise<void> {
-  await invoke("set_listening_state", state as unknown as Record<string, unknown>);
+export async function setListeningState(state: ListeningStateRequest): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setListeningState", ...state });
 }
 
 export interface NoiseProfile {
@@ -75,22 +82,12 @@ export function profileNoise(profile?: {
   };
 }
 
-const THREE_LEVEL_MODELS = new Set(["eh10-nc-lite", "bh1-nc-lite"]);
-
-export function noiseProfile(modelId?: string | null, hasAnc = true): NoiseProfile {
-  if (!hasAnc) return { adaptive: false, maxLevel: 3 };
-  return {
-    adaptive: true,
-    maxLevel: THREE_LEVEL_MODELS.has(modelId ?? "") ? 3 : 5,
-  };
+export async function setEqPreset(preset: EqPresetId | string): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setEqPreset", preset });
 }
 
-export async function setEqPreset(preset: EqPresetId | string): Promise<void> {
-  await invoke("set_eq_preset", { preset });
-}
-
-export async function setEqIndex(index: number): Promise<void> {
-  await invoke("set_eq_index", { index });
+export async function setEqIndex(index: number): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setEqIndex", index });
 }
 
 export interface EqBandPayload {
@@ -102,85 +99,59 @@ export interface EqBandPayload {
 
 export async function setCustomEq(
   bands: EqBandPayload[],
-  dictSort = 101,
-  anc = false
-): Promise<void> {
-  await invoke("set_custom_eq", { bands, dictSort, anc });
+  dictSort: number,
+  anc: boolean
+): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setCustomEq", bands, dictSort, anc });
 }
 
-export async function setGameMode(enabled: boolean): Promise<void> {
-  await invoke("set_game_mode", { enabled });
+export async function setGameMode(enabled: boolean): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setGameMode", enabled });
 }
 
-export async function setSpatialMode(mode: SpatialMode): Promise<void> {
-  await invoke("set_spatial_mode", { mode });
+export async function setSpatialMode(mode: SpatialMode): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setSpatialMode", mode });
 }
 
-export async function setBassBoost(level: number): Promise<void> {
-  await invoke("set_bass_boost", { level });
+export async function setBassBoost(level: number): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setBassBoost", level });
 }
 
-export async function setLdac(enabled: boolean): Promise<void> {
-  await invoke("set_ldac", { enabled });
+export async function setLdac(enabled: boolean): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setLdac", enabled });
 }
 
 export async function setHearingProtection(
   enabled: boolean,
-  level = 1
-): Promise<void> {
-  await invoke("set_hearing_protection", { enabled, level });
+  level: number
+): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setHearingProtection", enabled, level });
 }
 
-export async function findBuds(start = true): Promise<void> {
-  await invoke("find_buds", { start });
+export async function findBuds(start = true): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "findBuds", start });
 }
 
-export function onBattery(cb: (b: DeviceBattery) => void): Promise<UnlistenFn> {
-  return listen<DeviceBattery>("device://battery", (e) => cb(e.payload));
+export async function setInEar(enabled: boolean): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setInEar", enabled });
 }
 
-export function onAnc(cb: (mode: AncMode) => void): Promise<UnlistenFn> {
-  return listen<string>("device://anc", (e) => {
-    // Strict parse — do NOT default unknown → "anc" (that snapped UI to Giảm ồn)
-    const m = String(e.payload ?? "")
-      .toLowerCase()
-      .replace(/[^a-z]/g, "");
-    if (m === "off" || m === "normal") cb("off");
-    else if (m === "transparency" || m === "ambient" || m === "transp")
-      cb("transparency");
-    else if (m === "anc" || m === "noisereduction" || m === "noisereduce")
-      cb("anc");
-    // else: ignore garbage / partial payloads
-  });
+export async function setMultipoint(enabled: boolean): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setMultipoint", enabled });
 }
 
-export function onEq(cb: (preset: string) => void): Promise<UnlistenFn> {
-  return listen<string>("device://eq", (e) => cb(String(e.payload)));
+export async function restoreDefaults(): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "restoreDefaults" });
 }
 
-export function onGameMode(cb: (on: boolean) => void): Promise<UnlistenFn> {
-  return listen<boolean>("device://game", (e) => cb(!!e.payload));
+export async function setAdaptiveLr(enabled: boolean): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setAdaptiveLr", enabled });
 }
 
-export function onBassBoost(cb: (level: number) => void): Promise<UnlistenFn> {
-  return listen<number>("device://bass-boost", (e) => cb(Number(e.payload) || 0));
-}
-
-export function onLdac(cb: (enabled: boolean) => void): Promise<UnlistenFn> {
-  return listen<boolean>("device://ldac", (e) => cb(!!e.payload));
-}
-
-export function onHearingProtection(
-  cb: (state: { enabled: boolean; level: number }) => void
-): Promise<UnlistenFn> {
-  return listen<{ enabled: boolean; level: number }>(
-    "device://hearing-protection",
-    (e) => cb(e.payload)
-  );
-}
-
-export function onRawNotify(
-  cb: (raw: { hex?: string; cmd?: number }) => void
-): Promise<UnlistenFn> {
-  return listen("ble://raw", (e) => cb(e.payload as { hex?: string; cmd?: number }));
+export async function setGesture(
+  layout: number,
+  left: number | null,
+  right: number | null
+): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setGesture", layout, left, right });
 }

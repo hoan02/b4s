@@ -19,11 +19,30 @@ export interface UpdateCheckResult {
   version?: string | null;
   body?: string | null;
   date?: string | null;
-  error?: string | null;
+  error?: ApiErrorPayload | null;
+}
+
+export interface ApiErrorPayload {
+  contractVersion: number;
+  code: string;
+  message: string;
+  retryable: boolean;
 }
 
 export async function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("get_app_info");
+}
+
+export async function getStartAtLogin(): Promise<boolean> {
+  return invoke<boolean>("get_start_at_login");
+}
+
+export async function setStartAtLogin(enabled: boolean): Promise<void> {
+  await invoke("set_start_at_login", { enabled });
+}
+
+export async function setExperimentalMode(enabled: boolean): Promise<void> {
+  await invoke("set_experimental_mode", { enabled });
 }
 
 export async function checkForUpdates(): Promise<UpdateCheckResult> {

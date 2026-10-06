@@ -1,19 +1,29 @@
-# Model discovery registry
+# Model and protocol support
 
-The registry in `src-tauri/src/protocol/models.rs` contains BLE name patterns
-used to identify device models. It is primarily a discovery catalog: an entry
-does not by itself mean the device has tested or enabled listening controls.
+Runtime identities are resolved through exact names and aliases in reviewed
+profiles plus the passive public catalog. The catalog is not a registry of
+protocol guesses. A public product without an explicit control profile remains
+scan-only with the `unknown` protocol family.
 
-## Verified hardware targets
+## Reviewed control profile
 
-- Baseus Bass BP1 Pro
-- Baseus Bass BP1 Ultra
+| Model | Profile | Family | Transport | Evidence boundary |
+|---|---|---|---|---|
+| Baseus Bass BP1 Pro | `bass-bp1-pro` | BP1 | BLE GATT, bare AA/BA | Reviewed UUID/framing and protocol behavior; firmware scope and current hardware acceptance remain tracked in the roadmap |
 
-Both use the BP1 protocol family, with model-specific framing and firmware
-behavior. Consult the [BP1 packet reference](bp1-pro-anc.md) and the runtime
-profile before changing commands.
+BP1 Ultra is recognizable but scan-only. Android source lists 789C wrapping
+for this model, but the actual device firmware, transport path and Windows
+connection have not been captured. Do not send a profile-independent query or
+select an alternate GATT entry for it.
 
-## Example product groups in the registry
+## Public catalog groups
+
+The public snapshot contains product metadata used for scan presentation and
+identity matching. Earbuds, over-ear, neckband and open-ear products may be
+recognized; products classified as speakers are excluded from headphone
+pairing. Recognition does not grant controls.
+
+Examples of names in the public catalog include:
 
 | Group | Examples |
 |---|---|
@@ -25,17 +35,18 @@ profile before changing commands.
 | Inspire | XP1, XH1, XC1 |
 | Headsets and neckbands | H1 / H2, Max, P1, U2 |
 
-These are registry examples, not a compatibility promise. Product names are
-used to match BLE advertisements; aliases and support levels can change as
-evidence is added.
+These examples are not a compatibility promise. Product identity is matched
+against explicit canonical names and aliases. No nearby edition inherits
+another profile by substring or family resemblance.
 
 ## Support levels
 
 | Level | Meaning |
 |---|---|
-| `verified` | Hardware behavior has been verified for the model. |
-| `experimental` | A best-effort protocol mapping exists and needs more testing. |
+| `verified` | Evidence supports the declared model and feature scope. |
+| `experimental` | A profile exists, with remaining firmware/hardware evidence. |
 | `scanOnly` | The app recognizes the name but does not enable control. |
 
-See [how to add a model](../model-catalog.md) for profile and evidence guidance.
-Product images are not bundled per model; the app uses a generic fallback image.
+See [how to add a model](../model-catalog.md) for profile and evidence
+guidance. Images may use a generic presentation asset; image fallback never
+affects identity or protocol routing.

@@ -7,38 +7,6 @@
 
 use super::crc_table::CRC_TABLE;
 
-/// Models that need 789C+CRC wrap (DeviceManager.N0 == true in app 2.14.1).
-pub fn needs_v2_wrap(model_id: Option<&str>, model_name: Option<&str>, ble_name: Option<&str>) -> bool {
-    let blob = format!(
-        "{} {} {}",
-        model_id.unwrap_or(""),
-        model_name.unwrap_or(""),
-        ble_name.unwrap_or("")
-    )
-    .to_lowercase();
-    // Explicit Ultra / NC / M4s / Inspire family that use N0 framing
-    [
-        "bp1 ultra",
-        "ep10 ultra",
-        "bp1 nc",
-        "ep10 nc",
-        "m4s",
-        "inspire",
-        "bc1 lite",
-        "bc2",
-        "bf1 lite",
-        "wm01s",
-        "wm02s",
-        "as01 air",
-        "mc2 nc",
-        "mc2",
-        "mp1",
-        "ms1",
-    ]
-    .iter()
-    .any(|k| blob.contains(k))
-}
-
 /// Custom CRC16 from HeadPhoneCrcUtil (app 2.14.1).
 pub fn crc16(data: &[u8]) -> u16 {
     let mut i2: u32 = 65535;
@@ -54,16 +22,42 @@ pub fn crc16(data: &[u8]) -> u16 {
 fn opcode_type(opcode: u8) -> u8 {
     match opcode {
         // type 03 — set / action
-        0x10 | 0x22 | 0x24 | 0x26 | 0x2B | 0x2D | 0x2E | 0x34 | 0x37 | 0x3A | 0x3C
-        | 0x4A | 0x4C | 0x4F | 0x50 | 0x52 | 0x54 | 0x56 | 0x58 | 0x8D | 0x8F | 0x92
-        | 0x94 | 0x97 | 0x9B | 0xA2 | 0xA4 | 0xFE | 0x31 => 0x03,
+        0x10 | 0x1A | 0x22 | 0x24 | 0x26 | 0x2B | 0x2D | 0x2E | 0x31 | 0x34 | 0x37 | 0x39
+        | 0x3C | 0x3D | 0x43 | 0x45 | 0x47 | 0x4A | 0x4C | 0x4F | 0x50 | 0x52 | 0x54 | 0x56
+        | 0x58 | 0x5C | 0x5E | 0x5F | 0x60 | 0x63 | 0x6B | 0x6D | 0x72 | 0x75 | 0x79 | 0x7B
+        | 0x7D | 0x7F | 0x8D | 0x8F | 0x92 | 0x94 | 0x97 | 0x9B | 0xA2 | 0xA4 | 0xFE => 0x03,
         // type 01 — query / state (fall-through group in app)
-        0x01 | 0x02 | 0x12 | 0x19 | 0x1A | 0x1C | 0x21 | 0x23 | 0x25 | 0x27 | 0x2A
-        | 0x2C | 0x2F | 0x30 | 0x33 | 0x35 | 0x36 | 0x38 | 0x40 | 0x4B | 0x4E | 0x51
-        | 0x53 | 0x55 | 0x57 | 0x59 | 0x5A | 0x5B | 0x80 | 0x8A | 0x8B | 0x8C | 0x8E
-        | 0x91 | 0x93 | 0x96 | 0x9A | 0xA1 | 0xA3 => 0x01,
+        0x01 | 0x02 | 0x12 | 0x19 | 0x1C | 0x21 | 0x23 | 0x25 | 0x27 | 0x2A | 0x2C | 0x2F
+        | 0x30 | 0x33 | 0x35 | 0x36 | 0x38 | 0x3A | 0x3B | 0x3E | 0x3F | 0x40 | 0x42 | 0x44
+        | 0x46 | 0x48 | 0x49 | 0x4B | 0x4E | 0x51 | 0x53 | 0x55 | 0x57 | 0x59 | 0x5A | 0x5B
+        | 0x5D | 0x6A | 0x6C | 0x70 | 0x71 | 0x74 | 0x78 | 0x7A | 0x7C | 0x7E | 0x80 | 0x8A
+        | 0x8B | 0x8C | 0x8E | 0x91 | 0x93 | 0x96 | 0x9A | 0xA1 | 0xA3 => 0x01,
         // type 00 — simple body
         _ => 0x00,
+    }
+}
+
+#[test]
+fn captured_ultra_query_and_set_frames_match_apk_types_and_crc() {
+    for (command, captured) in [
+        (
+            vec![0xBA, 0x42],
+            vec![0x78, 0x9C, 0, 10, 2, 1, 1, 0x42, 0x58, 0x53],
+        ),
+        (
+            vec![0xBA, 0x74],
+            vec![0x78, 0x9C, 0, 10, 2, 1, 1, 0x74, 0x4E, 0xD3],
+        ),
+        (
+            vec![0xBA, 0x75, 0],
+            vec![0x78, 0x9C, 0, 11, 2, 3, 2, 0x75, 0, 0x64, 0xFE],
+        ),
+        (
+            vec![0xBA, 0x54, 1, 3],
+            vec![0x78, 0x9C, 0, 12, 2, 3, 3, 0x54, 1, 3, 0x27, 0x83],
+        ),
+    ] {
+        assert_eq!(wrap_ba_command(&command).unwrap(), captured);
     }
 }
 
@@ -110,6 +104,7 @@ pub fn wrap_ba_command(bare: &[u8]) -> Option<Vec<u8>> {
 ///
 /// Keep the wrapped BA02 exchange intact. Supplemental queries use the
 /// connection's model-specific framing through the normal write helper.
+#[cfg(test)]
 pub fn battery_query_frame() -> Vec<u8> {
     let bare = vec![0xBA, 0x02];
     wrap_ba_command(&bare).expect("BA02 always produces a BP1 Ultra frame")
@@ -137,6 +132,9 @@ pub fn unwrap_notify(data: &[u8]) -> Vec<Vec<u8>> {
     if data.len() >= 6 && data[0] == 0x78 && data[1] == 0x9C {
         let mut i = 0usize;
         while i + 6 <= data.len() {
+            if data[i..i + 2] != [0x78, 0x9C] {
+                break;
+            }
             let total = u16::from_be_bytes([data[i + 2], data[i + 3]]) as usize;
             if total < 6 || i + total > data.len() {
                 break;
@@ -146,41 +144,13 @@ pub fn unwrap_notify(data: &[u8]) -> Vec<Vec<u8>> {
             let crc_rx = u16::from_be_bytes([pkt[total - 2], pkt[total - 1]]);
             if crc16(body) == crc_rx && total > 7 {
                 extract_789c_inner(pkt, &mut out);
-            } else if total > 7 {
-                // CRC mismatch — still try to salvage AA02/AA27 / length-prefix parse
-                log::debug!(
-                    "789C CRC mismatch (rx={crc_rx:04X} calc={:04X}), salvage parse",
-                    crc16(body)
-                );
-                extract_789c_inner(pkt, &mut out);
             }
             i += total;
         }
     }
 
-    // Scan for full official battery frames only (partial AA02 is mode-ACK noise)
-    // BleUtils.d: AA02 LL 00 RR 01  (exactly 6 bytes)
-    let mut i = 0usize;
-    while i + 5 < data.len() {
-        if data[i] == 0xAA
-            && data[i + 1] == 0x02
-            && data[i + 3] == 0x00
-            && data[i + 5] == 0x01
-        {
-            push_unique_aa(&mut out, data[i..i + 6].to_vec());
-            i += 6;
-        } else if data[i] == 0xAA && data[i + 1] == 0x27 {
-            let end = (i + 4).min(data.len());
-            push_unique_aa(&mut out, data[i..end].to_vec());
-            i = end;
-        } else {
-            i += 1;
-        }
-    }
+    // Never decode unvalidated bytes from framed input.
 
-    if out.is_empty() && !data.is_empty() {
-        out.push(data.to_vec());
-    }
     out
 }
 
@@ -258,7 +228,10 @@ fn push_unique_aa(out: &mut Vec<Vec<u8>>, frame: Vec<u8>) {
         return;
     }
     // Prefer longer frame when same opcode prefix (avoid truncated AA02)
-    if let Some(existing) = out.iter_mut().find(|f| f.len() >= 2 && f[1] == frame[1] && f[0] == 0xAA) {
+    if let Some(existing) = out
+        .iter_mut()
+        .find(|f| f.len() >= 2 && f[1] == frame[1] && f[0] == 0xAA)
+    {
         if frame.len() > existing.len() {
             *existing = frame;
         }
@@ -276,7 +249,10 @@ mod tests {
         let w = wrap_ba_command(&[0xBA, 0x34, 0x01, 0x68]).unwrap();
         assert_eq!(w[0], 0x78);
         assert_eq!(w[1], 0x9C);
-        assert_eq!(&w[0..10], &[0x78, 0x9C, 0x00, 0x0C, 0x02, 0x03, 0x03, 0x34, 0x01, 0x68]);
+        assert_eq!(
+            &w[0..10],
+            &[0x78, 0x9C, 0x00, 0x0C, 0x02, 0x03, 0x03, 0x34, 0x01, 0x68]
+        );
         assert_eq!(w.len(), 12);
         assert_eq!(&w[10..], &[0xD6, 0xC2]);
     }
@@ -284,13 +260,31 @@ mod tests {
     #[test]
     fn wrap_handshake() {
         let w = wrap_ba_command(&[0xBA, 0x05, 0x00]).unwrap();
-        assert_eq!(w, vec![0x78, 0x9C, 0x00, 0x09, 0x02, 0x05, 0x00, 0x97, 0x5F]);
+        assert_eq!(
+            w,
+            vec![0x78, 0x9C, 0x00, 0x09, 0x02, 0x05, 0x00, 0x97, 0x5F]
+        );
     }
 
     #[test]
-    fn wrap_eq() {
+    fn rejects_corrupt_and_truncated_frames_with_embedded_battery() {
+        let mut body = vec![0x78, 0x9C, 0, 13, 2, 0xAA, 2, 64, 0, 64, 1];
+        let crc = crc16(&body);
+        body.extend_from_slice(&crc.to_be_bytes());
+        assert!(!unwrap_notify(&body).is_empty());
+        body[12] ^= 1;
+        assert!(unwrap_notify(&body).is_empty());
+        assert!(unwrap_notify(&body[..11]).is_empty());
+        assert!(unwrap_notify(&[0, 0xAA, 2, 64, 0, 64, 1]).is_empty());
+    }
+
+    #[test]
+    fn wrap_spatial_matches_apk_2_17() {
         let w = wrap_ba_command(&[0xBA, 0x43, 0x00]).unwrap();
-        assert_eq!(w, vec![0x78, 0x9C, 0x00, 0x09, 0x02, 0x43, 0x00, 0xF7, 0x6D]);
+        assert_eq!(
+            w,
+            vec![0x78, 0x9C, 0x00, 0x0B, 0x02, 0x03, 0x02, 0x43, 0x00, 0xC4, 0xE9]
+        );
     }
 
     #[test]
@@ -317,7 +311,10 @@ mod tests {
         let wrapped = wrap_ba_command(&bare).unwrap();
         assert_eq!(wrapped[4..8], [0x02, 0x01, 0x01, 0x27]);
         let crc_pos = wrapped.len() - 2;
-        assert_eq!(crc16(&wrapped[..crc_pos]), u16::from_be_bytes([wrapped[crc_pos], wrapped[crc_pos + 1]]));
+        assert_eq!(
+            crc16(&wrapped[..crc_pos]),
+            u16::from_be_bytes([wrapped[crc_pos], wrapped[crc_pos + 1]])
+        );
     }
 
     #[test]
@@ -346,7 +343,9 @@ mod tests {
 
         let frames = unwrap_notify(&body);
         assert!(
-            frames.iter().any(|f| f == &vec![0xAA, 0x02, 0x64, 0x00, 0x64, 0x01]),
+            frames
+                .iter()
+                .any(|f| f == &vec![0xAA, 0x02, 0x64, 0x00, 0x64, 0x01]),
             "expected AA0264006401, got {:02X?}",
             frames
         );

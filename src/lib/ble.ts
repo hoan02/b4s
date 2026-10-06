@@ -17,25 +17,40 @@ export interface BleDevice {
   rssi: number;
   isBaseus: boolean;
   connected: boolean;
-  modelId?: string | null;
-  modelName?: string | null;
-  deviceProfile?: DeviceProfile;
+  headphoneCandidate: boolean;
+  modelId: string | null;
+  modelName: string | null;
+  deviceProfile: DeviceProfile;
   /** verified | experimental | scanOnly */
-  support?: string | null;
+  support: string | null;
   /** Dual-entry / pairing tip from backend */
-  hint?: string | null;
-  imageUrl?: string | null;
-  imageProvenance?: string;
-  colorVariants?: string[];
-  serial?: string | null;
-  advertisedServices?: string[];
+  hint: string | null;
+  imageUrl: string | null;
+  imageProvenance: string;
+  colorVariants: string[];
+  serial: string | null;
+  advertisedServices: string[];
 }
 
 export interface DeviceProfile {
+  capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean; gesture: boolean; inEar: boolean; multipoint: boolean; restoreDefaults: boolean; adaptiveLr: boolean };
+  experimentalFeatures: string[];
+  connection: {
+    transport: "bleGatt" | "unresolved";
+    framing: "bareAaBa" | "headphone789c" | "unresolved";
+    serviceUuid: string | null;
+    writeUuid: string | null;
+    notifyUuid: string | null;
+    handshake: number[];
+    initStateQuery: boolean;
+    firmwareVersions: string[];
+    provenance: string;
+  } | null;
+
   modelId?: string | null;
   modelName?: string | null;
   firmware?: string | null;
-  protocol: "bp1Pro" | "baseusAaBaExperimental" | "unknown" | string;
+  protocol: "bp1Pro" | "bp1Ultra" | "unknown";
   verified: boolean;
   noise: {
     supportsAdaptive: boolean;
@@ -99,11 +114,20 @@ export interface ModelProfile {
   };
   eq: {
     bands: number[];
+    qValues: number[];
     minGain: number;
     maxGain: number;
     customSlots: number;
     presets: Array<{ id: string; label: string; description: string; dictSort: number; curve: number[] }>;
   } | null;
+  gesture: {
+    dualButton: boolean;
+    layouts: Array<{ layout: number; functions: number[] }>;
+    provenance: string;
+  } | null;
+  inEar: { provenance: string } | null;
+  hearing: { thresholds: number[]; preserveThresholdSentinel: boolean; provenance: string } | null;
+  experimentalFeatures: string[];
   image: string | null;
 }
 
@@ -115,6 +139,9 @@ export async function listModelProfiles(): Promise<ModelProfile[]> {
 export type LinkLevel = "live" | "waiting" | "dead" | "demo" | "offline";
 
 export interface LinkHealth {
+  contractVersion: 2;
+  sessionId: number;
+  revision: number;
   connected: boolean;
   mock: boolean;
   peripheralConnected: boolean;
@@ -129,11 +156,12 @@ export interface LinkHealth {
   lastTxHex: string | null;
   writeChar: string | null;
   notifyChar: string | null;
-  level: LinkLevel | string;
+  level: LinkLevel;
   message: string;
 }
 
 export interface ConnectionState {
+  contractVersion: 2;
   connected: boolean;
   device: BleDevice | null;
   error: string | null;
@@ -141,9 +169,130 @@ export interface ConnectionState {
 }
 
 export interface ScanStatus {
+  contractVersion: 2;
+  generation: number;
+  revision: number;
   scanning: boolean;
   devices: BleDevice[];
   error: string | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNullable(value: unknown, guard: (item: unknown) => boolean): boolean {
+  return value === null || guard(value);
+}
+
+function isCounter(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
+function isLinkHealth(value: unknown): value is LinkHealth {
+  if (!isRecord(value)) return false;
+  return value.contractVersion === 2 && isCounter(value.sessionId) && isCounter(value.revision) &&
+    ["connected", "mock", "peripheralConnected", "hasWriteUuid", "hasNotifyUuid", "handshakeOk"]
+      .every((key) => typeof value[key] === "boolean") &&
+    ["notifyCount", "txCount"].every((key) => isCounter(value[key])) &&
+    ["lastNotifyMs", "lastTxMs", "lastRxHex", "lastTxHex", "writeChar", "notifyChar"]
+      .every((key) => isNullable(value[key], (item) =>
+        key.endsWith("Ms") ? isCounter(item) : typeof item === "string")) &&
+    ["live", "waiting", "dead", "demo", "offline"].includes(value.level as string) &&
+    typeof value.message === "string";
+}
+
+function isBleDevice(value: unknown): value is BleDevice {
+  if (!isRecord(value)) return false;
+  return ["id", "name", "address"].every((key) => typeof value[key] === "string") &&
+    typeof value.rssi === "number" &&
+    typeof value.isBaseus === "boolean" &&
+    typeof value.connected === "boolean" &&
+    typeof value.headphoneCandidate === "boolean" &&
+    ["modelId", "modelName", "support", "hint", "imageUrl", "serial"].every((key) =>
+      isNullable(value[key], (item) => typeof item === "string")) &&
+    typeof value.imageProvenance === "string" &&
+    Array.isArray(value.colorVariants) && value.colorVariants.every((item) => typeof item === "string") &&
+    Array.isArray(value.advertisedServices) && value.advertisedServices.every((item) => typeof item === "string") &&
+    isDeviceProfile(value.deviceProfile);
+}
+
+function isDeviceProfile(value: unknown): value is DeviceProfile {
+  if (!isRecord(value) || !isRecord(value.capabilities) || !isRecord(value.noise)) return false;
+  const capabilities = value.capabilities;
+  const noise = value.noise;
+  const connection = value.connection;
+  const validConnection = connection === null || (isRecord(connection) &&
+    ["bleGatt", "unresolved"].includes(connection.transport as string) &&
+    ["bareAaBa", "headphone789c", "unresolved"].includes(connection.framing as string) &&
+    ["serviceUuid", "writeUuid", "notifyUuid"].every((key) =>
+      isNullable(connection[key], (item) => typeof item === "string")) &&
+    Array.isArray(connection.handshake) &&
+    connection.handshake.every((item) => Number.isInteger(item) && item >= 0 && item <= 255) &&
+    typeof connection.initStateQuery === "boolean" &&
+    Array.isArray(connection.firmwareVersions) &&
+    connection.firmwareVersions.every((item) => typeof item === "string") &&
+    typeof connection.provenance === "string");
+  return ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac", "hearingProtection", "findBuds", "gesture", "inEar", "multipoint", "restoreDefaults", "adaptiveLr"]
+      .every((key) => typeof capabilities[key] === "boolean") &&
+    Array.isArray(value.experimentalFeatures) &&
+    value.experimentalFeatures.every((item) => typeof item === "string") &&
+    isNullable(value.modelId, (item) => typeof item === "string") &&
+    isNullable(value.modelName, (item) => typeof item === "string") &&
+    isNullable(value.firmware, (item) => typeof item === "string") &&
+    ["bp1Pro", "bp1Ultra", "unknown"].includes(value.protocol as string) &&
+    typeof value.verified === "boolean" &&
+    typeof noise.supportsAdaptive === "boolean" &&
+    Array.isArray(noise.environments) && noise.environments.every((item) => Number.isInteger(item)) &&
+    typeof noise.maxCustomLevel === "number" &&
+    typeof noise.supportsTransparencyVoice === "boolean" && validConnection;
+}
+
+function isConnectionState(value: unknown): value is ConnectionState {
+  return isRecord(value) && value.contractVersion === 2 &&
+    typeof value.connected === "boolean" &&
+    isNullable(value.device, isBleDevice) &&
+    isNullable(value.error, (item) => typeof item === "string") &&
+    isLinkHealth(value.link);
+}
+
+function isScanStatus(value: unknown): value is ScanStatus {
+  return isRecord(value) && value.contractVersion === 2 &&
+    isCounter(value.generation) && isCounter(value.revision) &&
+    typeof value.scanning === "boolean" &&
+    Array.isArray(value.devices) && value.devices.every(isBleDevice) &&
+    isNullable(value.error, (item) => typeof item === "string");
+}
+
+function decodeContract<T>(
+  payload: unknown,
+  contractName: string,
+  version: number,
+  guard: (value: unknown) => value is T
+): T {
+  if (
+    !isRecord(payload) || payload.contractVersion !== version
+  ) {
+    throw new Error(`Unsupported ${contractName} contract version`);
+  }
+  if (!guard(payload)) throw new Error(`Invalid ${contractName} payload`);
+  return payload as T;
+}
+
+function listenContract<T>(
+  eventName: string,
+  contractName: string,
+  version: number,
+  guard: (value: unknown) => value is T,
+  cb: (payload: T) => void
+): Promise<UnlistenFn> {
+  return listen<unknown>(eventName, (event) => {
+    try {
+      cb(decodeContract(event.payload, contractName, version, guard));
+    } catch (error) {
+      console.error(`[BLE] rejected ${contractName} event`, error);
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -177,15 +326,15 @@ export async function disconnect(): Promise<void> {
 }
 
 export async function getScanStatus(): Promise<ScanStatus> {
-  return invoke<ScanStatus>("ble_get_scan_status");
+  return decodeContract(await invoke<unknown>("ble_get_scan_status"), "scan status", 2, isScanStatus);
 }
 
 export async function getConnection(): Promise<ConnectionState> {
-  return invoke<ConnectionState>("ble_get_connection");
+  return decodeContract(await invoke<unknown>("ble_get_connection"), "connection state", 2, isConnectionState);
 }
 
 export async function getLinkHealth(): Promise<LinkHealth> {
-  return invoke<LinkHealth>("ble_get_link_health");
+  return decodeContract(await invoke<unknown>("ble_get_link_health"), "link health", 2, isLinkHealth);
 }
 
 // ---------------------------------------------------------------------------
@@ -193,31 +342,33 @@ export async function getLinkHealth(): Promise<LinkHealth> {
 // ---------------------------------------------------------------------------
 
 export function onScanStatus(cb: (status: ScanStatus) => void): Promise<UnlistenFn> {
-  return listen<ScanStatus>("ble://scan-status", (e) => cb(e.payload));
-}
-
-export function onDevice(cb: (device: BleDevice) => void): Promise<UnlistenFn> {
-  return listen<BleDevice>("ble://device", (e) => cb(e.payload));
+  return listenContract("ble://scan-status", "scan status", 2, isScanStatus, cb);
 }
 
 export function onConnection(cb: (state: ConnectionState) => void): Promise<UnlistenFn> {
-  return listen<ConnectionState>("ble://connection", (e) => cb(e.payload));
+  return listenContract("ble://connection", "connection state", 2, isConnectionState, cb);
 }
 
 export function onLinkHealth(cb: (link: LinkHealth) => void): Promise<UnlistenFn> {
-  return listen<LinkHealth>("ble://link", (e) => cb(e.payload));
+  return listenContract("ble://link", "link health", 2, isLinkHealth, cb);
 }
 
-export function onConnected(cb: (device: BleDevice) => void): Promise<UnlistenFn> {
-  return listen<BleDevice>("ble://connected", (e) => cb(e.payload));
+
+export interface ConnectingState {
+  contractVersion: 2;
+  deviceId: string;
+  sessionId: number;
 }
 
-export function onDisconnected(cb: (id: string) => void): Promise<UnlistenFn> {
-  return listen<string>("ble://disconnected", (e) => cb(e.payload));
-}
-
-export function onConnecting(cb: (id: string) => void): Promise<UnlistenFn> {
-  return listen<string>("ble://connecting", (e) => cb(e.payload));
+export function onConnecting(cb: (state: ConnectingState) => void): Promise<UnlistenFn> {
+  return listenContract<{ contractVersion: 2; deviceId: string; sessionId: number }>(
+    "ble://connecting",
+    "connecting state",
+    2,
+    (value): value is { contractVersion: 2; deviceId: string; sessionId: number } =>
+      isRecord(value) && value.contractVersion === 2 && typeof value.deviceId === "string" && isCounter(value.sessionId),
+    cb
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -241,6 +392,9 @@ export function rssiLabel(rssi: number): string {
 
 export function emptyLink(): LinkHealth {
   return {
+    contractVersion: 2,
+    sessionId: 0,
+    revision: 0,
     connected: false,
     mock: false,
     peripheralConnected: false,

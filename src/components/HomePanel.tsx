@@ -1,5 +1,5 @@
 /**
- * Home — noise tiles; spatial + SoundFit on root; find/battery as action chips
+ * Home — model-supported noise, spatial and feature controls
  */
 import { Component, Show } from "solid-js";
 import type { BatteryData } from "./Battery";
@@ -7,6 +7,7 @@ import type { AncMode, NoiseEnvironment, SpatialMode, TransparencyMode } from ".
 import type { LinkHealth } from "../lib/ble";
 import { resolveDeviceImage } from "../lib/deviceImages";
 import { t } from "../lib/i18n";
+import OperationStatus from "./OperationStatus";
 import {
   IconNormal,
   IconAmbient,
@@ -30,23 +31,49 @@ interface Props {
   imageUrl?: string | null;
   battery: BatteryData;
   link: LinkHealth;
-  ancMode: AncMode;
-  ancStrength: number;
-  transparencyMode: TransparencyMode;
-  adaptiveNoise: boolean;
-  noiseEnvironment: NoiseEnvironment;
-  noiseLevel: number;
+  ancMode: AncMode | null;
+  ancPending?: boolean;
+  ancError?: string | null;
+  transparencyMode: TransparencyMode | null;
+  adaptiveNoise: boolean | null;
+  noiseEnvironment: NoiseEnvironment | null;
+  noiseLevel: number | null;
+  listeningSupported: boolean;
   noiseMaxLevel: number;
   noiseSupported: boolean;
   adaptiveSupported: boolean;
   transparencyVoiceSupported: boolean;
-  gameMode: boolean;
+  gameSupported: boolean;
+  eqSupported: boolean;
+  findSupported: boolean;
+  spatialSupported: boolean;
+  moreSupported: boolean;
+  gestureSupported: boolean;
+  inEarSupported: boolean;
+  inEarOn: boolean | null;
+  inEarPending?: boolean;
+  inEarError?: string | null;
+  multipointSupported: boolean;
+  multipointOn: boolean | null;
+  multipointPending?: boolean;
+  multipointError?: string | null;
+  restoreSupported: boolean;
+  restorePending?: boolean;
+  restoreError?: string | null;
+  adaptiveLrSupported: boolean;
+  adaptiveLrOn: boolean | null;
+  adaptiveLrPending?: boolean;
+  adaptiveLrError?: string | null;
+  gameMode: boolean | null;
+  gamePending?: boolean;
+  gameError?: string | null;
   findActive: boolean;
-  spatialOn: boolean;
-  spatialMode: SpatialMode;
+  spatialPending?: boolean;
+  spatialError?: string | null;
+  spatialOn: boolean | null;
+  spatialMode: SpatialMode | null;
   eqLabel: string;
   onAncMode: (m: AncMode) => void;
-  onAncStrength: (v: number) => void;
   onTransparencyMode: (m: TransparencyMode) => void;
   onAdaptiveNoise: (on: boolean) => void;
   onNoiseEnvironment: (v: NoiseEnvironment) => void;
@@ -57,31 +84,36 @@ interface Props {
   onOpenSettings: () => void;
   onDisconnect: () => void;
   onOpenEq: () => void;
+  onOpenGestures: () => void;
+  onInEar: (enabled: boolean) => void;
+  onMultipoint: (enabled: boolean) => void;
+  onAdaptiveLr: (enabled: boolean) => void;
+  onRestore: () => void;
   onSpatialOn: (on: boolean) => void;
   onSpatialMode: (m: SpatialMode) => void;
-  onSoundFit: () => void;
 }
 
 const AdaptiveEnvironmentCards = (props: {
-  selected: NoiseEnvironment;
+  selected: NoiseEnvironment | null;
+  disabled?: boolean;
   onSelect: (value: NoiseEnvironment) => void;
 }) => (
   <div class="noise-environments noise-environments-card">
-    <button type="button" class={props.selected === 102 ? "active" : ""} onClick={() => props.onSelect(102)}><IconOffice size={24} /><span><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></span></button>
-    <button type="button" class={props.selected === 103 ? "active" : ""} onClick={() => props.onSelect(103)}><IconOutdoor size={24} /><span><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></span></button>
-    <button type="button" class={props.selected === 101 ? "active" : ""} onClick={() => props.onSelect(101)}><IconTransit size={24} /><span><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></span></button>
-    <button type="button" class={props.selected === 108 ? "active" : ""} onClick={() => props.onSelect(108)}><IconFlight size={24} /><span><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></span></button>
+    <button type="button" disabled={props.disabled} class={props.selected === 102 ? "active" : ""} aria-pressed={props.selected === 102} onClick={() => props.onSelect(102)}><IconOffice size={24} /><span><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></span></button>
+    <button type="button" disabled={props.disabled} class={props.selected === 103 ? "active" : ""} aria-pressed={props.selected === 103} onClick={() => props.onSelect(103)}><IconOutdoor size={24} /><span><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></span></button>
+    <button type="button" disabled={props.disabled} class={props.selected === 101 ? "active" : ""} aria-pressed={props.selected === 101} onClick={() => props.onSelect(101)}><IconTransit size={24} /><span><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></span></button>
+    <button type="button" disabled={props.disabled} class={props.selected === 108 ? "active" : ""} aria-pressed={props.selected === 108} onClick={() => props.onSelect(108)}><IconFlight size={24} /><span><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></span></button>
   </div>
 );
 
-function pctClass(p: number) {
-  if (p <= 0) return "unk";
+function pctClass(p: number | null) {
+  if (p === null) return "unk";
   if (p <= 20) return "low";
   if (p <= 50) return "mid";
   return "ok";
 }
-function fmt(p: number) {
-  return p <= 0 ? "—" : `${Math.min(100, p)}%`;
+function fmt(p: number | null) {
+  return p === null ? "—" : `${Math.min(100, p)}%`;
 }
 
 const HomePanel: Component<Props> = (props) => {
@@ -97,8 +129,10 @@ const HomePanel: Component<Props> = (props) => {
         return t("home.demo");
       case "dead":
         return t("home.linkLost");
+      case "offline":
+        return t("device.offline");
       default:
-        return t("home.connected");
+        return t("control.unknown");
     }
   };
 
@@ -114,7 +148,7 @@ const HomePanel: Component<Props> = (props) => {
             <h1 class="home-sticky-name" title={props.name}>
               {props.name}
             </h1>
-            <div class="home-sticky-status">
+            <div class="home-sticky-status" role="status" aria-live="polite">
               <span class={`dot ${statusDot()}`} />
               <span>{statusText()}</span>
             </div>
@@ -154,12 +188,15 @@ const HomePanel: Component<Props> = (props) => {
       </div>
 
       {/* Noise — only square tiles */}
+      <Show when={props.listeningSupported}>
       <div>
         <p class="home-section-label">{t("home.noise")}</p>
-        <div class="noise-tiles">
+        <div class="noise-tiles" aria-busy={props.ancPending}>
           <button
             type="button"
+            disabled={!props.listeningSupported || props.ancPending}
             class={`noise-tile ${props.ancMode === "off" ? "active" : ""}`}
+            aria-pressed={props.ancMode === "off"}
             onClick={() => props.onAncMode("off")}
           >
             <IconNormal size={28} />
@@ -167,7 +204,9 @@ const HomePanel: Component<Props> = (props) => {
           </button>
           <button
             type="button"
+            disabled={!props.listeningSupported || props.ancPending}
             class={`noise-tile ${props.ancMode === "transparency" ? "active" : ""}`}
+            aria-pressed={props.ancMode === "transparency"}
             onClick={() => props.onAncMode("transparency")}
           >
             <IconAmbient size={28} />
@@ -176,61 +215,45 @@ const HomePanel: Component<Props> = (props) => {
           <button
             type="button"
             class={`noise-tile ${props.ancMode === "anc" ? "active" : ""}`}
-            disabled={!props.noiseSupported}
+            disabled={!props.listeningSupported || !props.noiseSupported || props.ancPending}
+            aria-pressed={props.ancMode === "anc"}
             onClick={() => props.onAncMode("anc")}
           >
             <IconAnc size={28} />
             <span>{t("home.anc")}</span>
           </button>
         </div>
+        <OperationStatus pending={props.ancPending} error={props.ancError} />
+        <Show when={props.ancMode === null && !props.ancPending}>
+          <span role="status">{t("control.unknown")}</span>
+        </Show>
         <Show when={props.ancMode === "transparency"}>
-          <div class="noise-options" aria-label={t("home.transparencyOptions")}>
-            <button type="button" class={props.transparencyMode === "full" ? "active" : ""} onClick={() => props.onTransparencyMode("full")}><span>{t("home.fullTransparency")}</span><small>{t("home.default")}</small></button>
-            <button type="button" class={props.transparencyMode === "voice" ? "active" : ""} onClick={() => props.onTransparencyMode("voice")}><span>{t("home.voiceMode")}</span><small>{t("home.prioritizeVoice")}</small></button>
+          <div class="noise-options" role="group" aria-label={t("home.transparencyOptions")}>
+            <button type="button" disabled={props.ancPending} class={props.transparencyMode === "full" ? "active" : ""} aria-pressed={props.transparencyMode === "full"} onClick={() => props.onTransparencyMode("full")}><span>{t("home.fullTransparency")}</span><small>{t("home.default")}</small></button>
+            <button type="button" disabled={props.ancPending} class={props.transparencyMode === "voice" ? "active" : ""} aria-pressed={props.transparencyMode === "voice"} onClick={() => props.onTransparencyMode("voice")}><span>{t("home.voiceMode")}</span><small>{t("home.prioritizeVoice")}</small></button>
           </div>
+          <Show when={props.transparencyMode === null}><span role="status">{t("control.unknown")}</span></Show>
         </Show>
         <Show when={props.ancMode === "anc"}>
-          <Show when={props.adaptiveNoise}>
-          <div class="noise-environments noise-environments-new">
-            <button type="button" class={props.noiseEnvironment === 102 ? "active" : ""} onClick={() => props.onNoiseEnvironment(102)}><IconOffice size={28} /><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></button>
-            <button type="button" class={props.noiseEnvironment === 103 ? "active" : ""} onClick={() => props.onNoiseEnvironment(103)}><IconOutdoor size={28} /><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></button>
-            <button type="button" class={props.noiseEnvironment === 101 ? "active" : ""} onClick={() => props.onNoiseEnvironment(101)}><IconTransit size={28} /><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></button>
-            <button type="button" class={props.noiseEnvironment === 108 ? "active" : ""} onClick={() => props.onNoiseEnvironment(108)}><IconFlight size={28} /><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></button>
-          </div>
-          </Show>
           <div class="noise-options noise-reduction-panel">
-            <Show when={props.adaptiveNoise}>
-              <AdaptiveEnvironmentCards selected={props.noiseEnvironment} onSelect={props.onNoiseEnvironment} />
+            <Show when={props.adaptiveNoise !== null} fallback={<span role="status">{t("control.unknown")}</span>}>
+              <div class="noise-adaptive-row"><div><strong>{t("home.adaptive")}</strong><small>{t("home.autoEnvironment")}</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported || props.ancPending} checked={props.adaptiveNoise === true} onChange={(e) => props.onAdaptiveNoise((e.currentTarget as HTMLInputElement).checked)} /><span class="slider" /></label></div>
             </Show>
-            <div class="noise-adaptive-row"><div><strong>{t("home.adaptive")}</strong><small>{t("home.autoEnvironment")}</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported} checked={props.adaptiveNoise} onChange={(e) => props.onAdaptiveNoise((e.currentTarget as HTMLInputElement).checked)} /><span class="slider" /></label></div>
-            <Show when={props.adaptiveNoise} fallback={<div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel}/{props.noiseMaxLevel}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>}>
-              <div class="noise-environments">{[[102, t("home.indoor"), t("home.homeOffice")], [103, t("home.outdoor"), t("home.streetPark")], [101, t("home.commuting"), t("home.subwayBus")], [108, t("home.inTransit"), t("home.planeTrain")]].map(([id, title, detail]) => <button type="button" class={props.noiseEnvironment === id ? "active" : ""} onClick={() => props.onNoiseEnvironment(id as NoiseEnvironment)}><span>{title}</span><small>{detail}</small></button>)}</div>
+            <Show when={props.adaptiveNoise === false}>
+              <div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel === null ? t("control.unknown") : `${props.noiseLevel}/${props.noiseMaxLevel}`}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" disabled={props.ancPending} class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>
             </Show>
-          </div>
-        </Show>
-        <Show when={false}>
-          <div class="home-anc-level">
-            <div class="row">
-              <span>{t("home.level")}</span>
-              <strong>{props.ancStrength}%</strong>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={props.ancStrength}
-              onInput={(e) =>
-                props.onAncStrength(
-                  Number((e.currentTarget as HTMLInputElement).value)
-                )
-              }
-            />
+            <Show when={props.adaptiveNoise === true && props.noiseEnvironment === null}><span role="status">{t("control.unknown")}</span></Show>
+            <Show when={props.adaptiveNoise === true}>
+              <AdaptiveEnvironmentCards selected={props.noiseEnvironment} disabled={props.ancPending} onSelect={props.onNoiseEnvironment} />
+            </Show>
           </div>
         </Show>
       </div>
 
+      </Show>
+
       {/* Spatial on home root */}
+      <Show when={props.spatialSupported}>
       <div class="home-feature-card">
         <div class="list-row">
           <span class="list-ico">
@@ -238,12 +261,19 @@ const HomePanel: Component<Props> = (props) => {
           </span>
           <div class="list-text">
             <span class="list-title">{t("home.spatial")}</span>
-            <span class="list-sub">{t("listen.spatialHint")}</span>
+            <span class="list-sub">
+              {props.spatialOn === null || props.spatialMode === null
+                ? t("control.unknown")
+                : t("listen.spatialHint")}
+            </span>
           </div>
           <label class="toggle sm">
             <input
               type="checkbox"
-              checked={props.spatialOn}
+              disabled={props.spatialPending || (props.spatialOn !== true && props.spatialMode === null)}
+              aria-label={t("home.spatial")}
+              aria-checked={props.spatialOn === null ? "mixed" : props.spatialOn}
+              checked={props.spatialOn === true}
               onChange={(e) =>
                 props.onSpatialOn((e.currentTarget as HTMLInputElement).checked)
               }
@@ -251,41 +281,52 @@ const HomePanel: Component<Props> = (props) => {
             <span class="slider" />
           </label>
         </div>
-        <Show when={props.spatialOn}>
-          <div class="home-seg">
-            <button
-              type="button"
-              class={props.spatialMode === "music" ? "active" : ""}
-              onClick={() => props.onSpatialMode("music")}
-            >
-              {t("listen.music")}
-            </button>
-            <button
-              type="button"
-              class={props.spatialMode === "cinema" ? "active" : ""}
-              onClick={() => props.onSpatialMode("cinema")}
-            >
-              {t("listen.cinema")}
-            </button>
-          </div>
-        </Show>
+        <OperationStatus pending={props.spatialPending} error={props.spatialError} />
+        <div class="home-seg">
+          <button
+            type="button"
+            disabled={props.spatialPending}
+            class={props.spatialMode === "music" ? "active" : ""}
+            aria-pressed={props.spatialMode === "music"}
+            onClick={() => props.onSpatialMode("music")}
+          >
+            {t("listen.music")}
+          </button>
+          <button
+            type="button"
+            disabled={props.spatialPending}
+            class={props.spatialMode === "cinema" ? "active" : ""}
+            aria-pressed={props.spatialMode === "cinema"}
+            onClick={() => props.onSpatialMode("cinema")}
+          >
+            {t("listen.cinema")}
+          </button>
+        </div>
       </div>
+
+      </Show>
 
       {/* Main list */}
       <div class="home-list">
         <div class="home-list-card">
+          <Show when={props.gameSupported}>
           <div class="list-row">
             <span class="list-ico">
               <IconGame size={22} />
             </span>
             <div class="list-text">
               <span class="list-title">{t("home.gameMode")}</span>
-              <span class="list-sub">{t("home.lowLatency")}</span>
+              <span class="list-sub">{props.gameMode === null ? t("control.unknown") : t("home.lowLatency")}</span>
+              <OperationStatus pending={props.gamePending} error={props.gameError} />
             </div>
             <label class="toggle sm">
               <input
                 type="checkbox"
-                checked={props.gameMode}
+                aria-checked={props.gameMode === null ? "mixed" : props.gameMode}
+                checked={props.gameMode === true}
+                disabled={props.gamePending}
+                aria-busy={props.gamePending}
+                aria-label={t("home.gameMode")}
                 onChange={(e) =>
                   props.onGameMode((e.currentTarget as HTMLInputElement).checked)
                 }
@@ -294,6 +335,9 @@ const HomePanel: Component<Props> = (props) => {
             </label>
           </div>
 
+          </Show>
+
+          <Show when={props.eqSupported}>
           <button type="button" class="list-row action" onClick={() => props.onOpenEq()}>
             <span class="list-ico">
               <IconEq size={22} />
@@ -304,20 +348,64 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          </Show>
 
-          <button
-            type="button"
-            class="list-row action"
-            onClick={() => props.onSoundFit()}
-          >
-            <span class="list-ico list-ico-text">SF</span>
+          <Show when={props.inEarSupported}>
+          <div class="list-row">
+            <span class="list-ico list-ico-text">IE</span>
             <div class="list-text">
-              <span class="list-title">SoundFit</span>
-              <span class="list-sub">{t("home.hearingPersonalization")}</span>
+              <span class="list-title">{t("gesture.inEar")}</span>
+              <span class="list-sub">{props.inEarOn === null ? t("control.unknown") : t("gesture.inEarHint")}</span>
+              <OperationStatus pending={props.inEarPending} error={props.inEarError} />
+            </div>
+            <label class="toggle sm">
+              <input
+                type="checkbox"
+                disabled={props.inEarPending}
+                aria-checked={props.inEarOn === null ? "mixed" : props.inEarOn}
+                checked={props.inEarOn === true}
+                aria-label={t("gesture.inEar")}
+                onChange={(e) => props.onInEar((e.currentTarget as HTMLInputElement).checked)}
+              />
+              <span class="slider" />
+            </label>
+          </div>
+          </Show>
+
+          <Show when={props.gestureSupported}>
+          <button type="button" class="list-row action" onClick={() => props.onOpenGestures()}>
+            <span class="list-ico list-ico-text">G</span>
+            <div class="list-text">
+              <span class="list-title">{t("gesture.title")}</span>
+              <span class="list-sub">{t("gesture.entryHint")}</span>
             </div>
             <span class="list-chev">›</span>
           </button>
+          </Show>
 
+          <Show when={props.multipointSupported}>
+          <div class="list-row">
+            <span class="list-ico list-ico-text">MP</span>
+            <div class="list-text">
+              <span class="list-title">{t("multipoint.title")}</span>
+              <span class="list-sub">{props.multipointOn === null ? t("control.unknown") : t("multipoint.hint")}</span>
+              <OperationStatus pending={props.multipointPending} error={props.multipointError} />
+            </div>
+            <label class="toggle sm">
+              <input
+                type="checkbox"
+                disabled={props.multipointPending}
+                aria-checked={props.multipointOn === null ? "mixed" : props.multipointOn}
+                checked={props.multipointOn === true}
+                aria-label={t("multipoint.title")}
+                onChange={(e) => props.onMultipoint((e.currentTarget as HTMLInputElement).checked)}
+              />
+              <span class="slider" />
+            </label>
+          </div>
+          </Show>
+
+          <Show when={props.moreSupported}>
           <button type="button" class="list-row action" onClick={() => props.onOpenMore()}>
             <span class="list-ico">
               <IconMore size={22} />
@@ -328,9 +416,11 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          </Show>
         </div>
 
         <div class="home-list-card">
+          <Show when={props.findSupported}>
           <button type="button" class={`list-row action find-row ${props.findActive ? "active" : ""}`} onClick={() => props.onFindBuds()} aria-pressed={props.findActive}>
             <span class="list-ico"><IconFind size={22} /></span>
             <div class="list-text">
@@ -339,6 +429,7 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          </Show>
           <button
             type="button"
             class="list-row action"
@@ -352,6 +443,44 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          <Show when={props.adaptiveLrSupported}>
+          <div class="list-row">
+            <span class="list-ico list-ico-text">AL</span>
+            <div class="list-text">
+              <span class="list-title">{t("adaptiveLr.title")}</span>
+              <span class="list-sub">{props.adaptiveLrOn === null ? t("control.unknown") : t("adaptiveLr.hint")}</span>
+              <OperationStatus pending={props.adaptiveLrPending} error={props.adaptiveLrError} />
+            </div>
+            <label class="toggle sm">
+              <input
+                type="checkbox"
+                disabled={props.adaptiveLrPending}
+                aria-checked={props.adaptiveLrOn === null ? "mixed" : props.adaptiveLrOn}
+                checked={props.adaptiveLrOn === true}
+                aria-label={t("adaptiveLr.title")}
+                onChange={(e) => props.onAdaptiveLr((e.currentTarget as HTMLInputElement).checked)}
+              />
+              <span class="slider" />
+            </label>
+          </div>
+          </Show>
+          <Show when={props.restoreSupported}>
+          <button
+            type="button"
+            class="list-row action danger"
+            disabled={props.restorePending}
+            onClick={() => props.onRestore()}
+          >
+            <span class="list-ico list-ico-text">R</span>
+            <div class="list-text">
+              <span class="list-title">{t("restore.title")}</span>
+              <span class="list-sub">{t("restore.hint")}</span>
+              <OperationStatus pending={props.restorePending} error={props.restoreError} />
+            </div>
+            <span class="list-chev">›</span>
+          </button>
+          </Show>
+
           <button
             type="button"
             class="list-row action danger"

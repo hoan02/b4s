@@ -1,19 +1,14 @@
-# Reference packet table — Bass BP1 Pro / Ultra family
+# BP1 Pro protocol reference
 
-> Reference packet table for the verified BP1 Pro and BP1 Ultra hardware targets.
-> Commands and framing remain model-specific; other Baseus models require their
-> own hardware evidence before these packets can be assumed to work.
+This reference applies only to the reviewed BP1 Pro profile. BP1 Ultra has a
+separate experimental BLE/789C battery profile in [bp1-ultra-ble.md](bp1-ultra-ble.md). Other Baseus
+models require their own evidence and profile.
 
-Sources: live BLE captures + official app analysis (elaxptr/baseus-desktop + APK 2.14.1).
+Sources: reviewed BLE packet notes and official app analysis (APK 2.14.1 and
+2.17.0.1). Firmware scope is not captured; see the
+[implementation tracker](../headphone-desktop-progress.md).
 
-## Device notes
-
-| App product name | Wire notes |
-|------------------|------------|
-| Bass BP1 Pro | Often bare `BA`/`AA` on BLE |
-| Bass BP1 Ultra | Official app often wraps with **789C+CRC**; may prefer Classic BT in app |
-
-## GATT (BP1-family custom service)
+## Reviewed BP1 Pro GATT service
 
 | Role | UUID |
 |------|------|
@@ -21,52 +16,53 @@ Sources: live BLE captures + official app analysis (elaxptr/baseus-desktop + APK
 | Write | `ee684b1a-1e9b-ed3e-ee55-f894667e92ac` |
 | Notify | `654b749c-e37f-ae1f-ebab-40ca133e3690` |
 
-## Frame format (bare)
+## Frame format
 
-```
+```text
 Notify (device → app):  AA <cmd> <payload...>
 Write  (app → device):  BA <cmd> <payload...>
 ```
 
-Ultra / N0 models: logical BA command wrapped as `789C | len | … | CRC` (see `protocol/wrap_v2.rs`).
+The BP1 Pro profile declares bare AA/BA framing. Wrapped `789C` frames found
+in other model paths do not apply unless a reviewed profile explicitly declares
+that framing.
 
-## Commands (logical BA)
+## Source packet notes
 
-| Action | Bytes |
-|--------|-------|
-| Handshake | `BA 05 00` (fallback `BA 05 01`) |
-| Battery query | `BA 02` |
-| ANC Off | `BA 34 00 FF` |
-| ANC On | `BA 34 01 <level>` |
-| Transparency | `BA 34 02 FF` |
-| EQ / spatial payload | `BA 43 <byte>` |
-| EQ query | `BA 42` |
-| Case battery query | `BA 27` |
-| Game ON/OFF | `BA 24 01` / `BA 24 00` |
-| Game query | `BA 23` |
-| Find both buds | `BA 10 02 01` |
-| Find L / R | `BA 10 00 01` / `BA 10 01 01` |
+| Action | Bytes | Evidence boundary |
+|--------|-------|-------------------|
+| Handshake | `BA 05 00` | Exact profile handshake; no alternate value is attempted |
+| Battery query | `BA 02` | Reviewed startup/query command |
+| ANC Off | `BA 34 00 FF` | Source packet form; device state comes from notification |
+| ANC On | `BA 34 01 <level>` | Model constraints are profile-scoped |
+| Transparency | `BA 34 02 <mode>` | Mode must be explicit and supported |
+| EQ / spatial | `BA 43 <value>` | Shared opcode; state decoder and capability decide interpretation |
+| EQ query | `BA 42` | Query/readback path |
+| Case battery query | `BA 27` | Query is implemented; physical hardware confirmation remains open |
+| Game ON/OFF | `BA 24 01` / `BA 24 00` | Must be confirmed by state query |
+| Game query | `BA 23` | Query/readback path |
+| Find both buds | `BA 10 02 01` | Explicit start/stop action |
+| Hearing protection state | `BA 93` | Requires a reviewed model threshold schema; not enabled for BP1 Pro |
+| Hearing protection set | `BA 94 <enabled> <level>` | ACK is not device state |
 
-## Notifications (logical AA)
+## Notification notes
 
-| Event | Bytes |
-|-------|-------|
-| Battery L/R | `AA 02 <L%> 00 <R%> 01` |
-| Case battery | `AA 27 <case%> <charging>` |
-| ANC ack | `AA 34 …` (firmware-dependent) |
-| EQ ack | `AA 43 <preset>` |
-| Game state | `AA 23 <00\|01>` |
-| Identity | `AA 12 …` |
+| Event | Bytes | Interpretation |
+|-------|-------|----------------|
+| Battery L/R | `AA 02 <L%> 00 <R%> 01` | Nullable readings; zero is valid |
+| Case battery | `AA 27 <case%> <charging>` | First payload byte is percentage |
+| ANC | `AA 34 <mode> <parameter>` | B4S accepts the exact two-byte state payload and confirms a command only when both mode and parameter match; one-byte ACK and unknown layouts do not update state |
+| EQ query/state | `AA 42 …` / `AA 43 …` | A write ACK alone does not confirm requested state |
+| Game state | `AA 23 <00|01>` | State query observation |
+| Hearing protection | `AA 93 <enabled> <level>` | The only accepted confirmed-state opcode; `AA 94` is ACK/error only |
 
-## Implementation (B4S)
+## Implementation boundary
 
-Battery polling retains the canonical wrapped `BA02` query and adds a separate
-`BA27` query for the BP1 protocol family. The case query uses the connection's
-normal framing: bare for BP1 Pro, `789C` wrapped when required by the model.
-This query is present in the official app 2.14.1 (`EarFunctionShowPresenter.d`);
-the response is `AA27` with the percentage as its first payload byte. The added
-query has protocol tests but still needs confirmation on physical hardware.
+B4S uses only UUIDs and framing declared by the selected profile. It does not
+retry another handshake value, probe alternate characteristics, or switch to a
+wrapped decoder after a bare-frame error. Unknown, malformed, ACK-only or
+out-of-session observations do not update confirmed feature state.
 
-- Rust: `src-tauri/src/protocol/`  
-- BLE: `src-tauri/src/ble.rs`  
-- Multi-model overview: [overview.md](./overview.md)  
+The packet notes and offline tests do not replace hardware acceptance for every
+feature/firmware. Capture identity and per-feature verification remain explicit
+gates in the [tracker](../headphone-desktop-progress.md).

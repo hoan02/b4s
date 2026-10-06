@@ -3,6 +3,23 @@
 
 .more-panel {
   width: 100%;
+
+  .setting-row-stacked {
+    flex-direction: column;
+    align-items: stretch;
+    .level-pills {
+      flex-wrap: wrap;
+      button { min-width: 42px; flex: 1; }
+    }
+  }
+
+  select {
+    background: var(--bg-fill-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: $radius-sm;
+    padding: 8px;
+  }
 }
 
 .more-group {

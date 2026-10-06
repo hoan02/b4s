@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 2,
+  "id": "bass-bp1-ultra",
+  "displayName": "Baseus Bass BP1 Ultra",
+  "aliases": [
+    "bass bp1 ultra",
+    "bp1 ultra"
+  ],
+  "support": "experimental",
+  "protocolFamily": "bp1Ultra",
+  "category": "tws",
+  "group": "Bass BP1 / EP10",
+  "capabilities": {
+    "anc": true,
+    "gameMode": true,
+    "spatial": true,
+    "bassBoost": true,
+    "ldac": true,
+    "hearingProtection": true,
+    "gesture": true
+  },
+  "noise": {
+    "supportsAdaptive": true,
+    "environments": [
+      101,
+      102,
+      103,
+      108
+    ],
+    "maxCustomLevel": 5,
+    "supportsTransparencyVoice": false
+  },
+  "eq": null,
+  "image": null,
+  "connection": {
+    "transport": "bleGatt",
+    "framing": "headphone789c",
+    "serviceUuid": "53527aa4-29f7-ae11-4e74-997334782568",
+    "writeUuid": "ee684b1a-1e9b-ed3e-ee55-f894667e92ac",
+    "notifyUuid": "654b749c-e37f-ae1f-ebab-40ca133e3690",
+    "handshake": [],
+    "initStateQuery": false,
+    "firmwareVersions": [],
+    "provenance": "docs/protocol/bp1-ultra-ble.md; Windows hardware verified GATT, 789C notifications and battery queries on 2026-10-06; firmware scope unknown"
+  },
+  "hearing": {
+    "thresholds": [
+      75,
+      80,
+      85,
+      90,
+      95,
+      100
+    ],
+    "preserveThresholdSentinel": true,
+    "provenance": "EarSoundSettingViewModel.A/U; AA93 and BA940050 confirmed on Windows hardware; docs/protocol/bp1-ultra-ble.md"
+  },
+  "gesture": {
+    "dualButton": true,
+    "layouts": [
+      {
+        "layout": 0,
+        "functions": [
+          11,
+          12,
+          1,
+          6,
+          2,
+          3,
+          4,
+          0
+        ]
+      },
+      {
+        "layout": 1,
+        "functions": [
+          11,
+          12,
+          1,
+          6,
+          2,
+          3,
+          4,
+          0
+        ]
+      },
+      {
+        "layout": 2,
+        "functions": [
+          11,
+          12,
+          1,
+          6,
+          2,
+          3,
+          4,
+          0
+        ]
+      },
+      {
+        "layout": 3,
+        "functions": [
+          1,
+          0
+        ]
+      }
+    ],
+    "provenance": "APK assets/gesture/*_v2.json exact BP1 Ultra entries; BA21 layouts 0..3 and BA22 readback verified; child actions require a separate payload and are excluded; docs/protocol/bp1-ultra-ble.md"
+  }
+}

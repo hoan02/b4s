@@ -1,24 +1,28 @@
 /**
  * Full EQ screen — presets (like official list) + custom multi-band
- * Presets → BA43 + index. Custom curve stored in UI (apply best-effort).
+ * Preset identities and preview data come from the selected model catalog.
  */
 import { Component, For, Show, createSignal, createEffect } from "solid-js";
 import type { EqPresetId } from "../lib/device";
 import {
-  EQ_BANDS,
-  EQ_PRESETS,
+  type EqPresetMeta,
   type CustomEqPreset,
-  clampBand,
-  curveForPreset,
-  defaultCustomBands,
   loadCustomEqPresets,
   saveCustomEqPresets,
 } from "../lib/eq";
 import { IconBack } from "./Icons";
 import { t } from "../lib/i18n";
+import OperationStatus from "./OperationStatus";
 
 interface Props {
+  presets: EqPresetMeta[];
+  frequencies: number[];
+  minGain: number;
+  maxGain: number;
+  customSupported: boolean;
   eqActive: EqPresetId;
+  pending?: boolean;
+  error?: string | null;
   customBands: number[];
   customActive: boolean;
   storageKey: string;
@@ -34,20 +38,24 @@ const EqPanel: Component<Props> = (props) => {
     props.customActive ? "custom" : "preset"
   );
   const [localBands, setLocalBands] = createSignal(
-    props.customBands.length === EQ_BANDS.length
+    props.customBands.length === props.frequencies.length
       ? props.customBands.slice()
-      : defaultCustomBands()
+      : props.frequencies.map(() => 0)
   );
   const [customPresets, setCustomPresets] = createSignal<CustomEqPreset[]>(
-    loadCustomEqPresets(props.storageKey)
+    loadCustomEqPresets(props.storageKey, props.frequencies.length, props.minGain, props.maxGain)
   );
   const [customName, setCustomName] = createSignal("");
   const [customError, setCustomError] = createSignal("");
 
   createEffect(() => {
-    if (props.customBands.length === EQ_BANDS.length) {
-      setLocalBands(props.customBands.slice());
-    }
+    setLocalBands(props.customBands.length === props.frequencies.length
+      ? props.customBands.slice() : props.frequencies.map(() => 0));
+  });
+  createEffect(() => {
+    setCustomPresets(loadCustomEqPresets(props.storageKey, props.frequencies.length, props.minGain, props.maxGain));
+    setCustomName("");
+    setCustomError("");
   });
 
   const selectCustom = (preset: CustomEqPreset) => {
@@ -72,25 +80,34 @@ const EqPanel: Component<Props> = (props) => {
       return;
     }
     const next = [...customPresets(), { id: `custom-${Date.now()}`, label, bands: localBands().slice() }];
-    setCustomPresets(next);
-    saveCustomEqPresets(props.storageKey, next);
-    setCustomError("");
+    try {
+      saveCustomEqPresets(props.storageKey, next);
+      setCustomPresets(next);
+      setCustomError("");
+    } catch {
+      setCustomError(t("eq.storageError"));
+    }
   };
 
   const deleteCustom = (id: string) => {
     const next = customPresets().filter((p) => p.id !== id);
-    setCustomPresets(next);
-    saveCustomEqPresets(props.storageKey, next);
+    try {
+      saveCustomEqPresets(props.storageKey, next);
+      setCustomPresets(next);
+      setCustomError("");
+    } catch {
+      setCustomError(t("eq.storageError"));
+    }
   };
 
   const previewCurve = () =>
     tab() === "custom"
       ? localBands()
-      : curveForPreset(props.eqActive);
+      : props.presets.find((preset) => preset.id === props.eqActive)?.curve ?? [];
 
   const setBand = (i: number, v: number) => {
     const next = localBands().slice();
-    next[i] = clampBand(v);
+    next[i] = Math.max(props.minGain, Math.min(props.maxGain, Math.round(v)));
     if (props.onCustomBands(next)) {
       setLocalBands(next);
     }
@@ -107,6 +124,7 @@ const EqPanel: Component<Props> = (props) => {
       </div>
 
       {/* Live curve preview */}
+      <Show when={previewCurve().length > 0}>
       <div class="eq-preview-card">
         <div class="eq-preview-bars" aria-hidden="true">
           <For each={previewCurve()}>
@@ -116,7 +134,7 @@ const EqPanel: Component<Props> = (props) => {
                   <div
                     class="eq-preview-fill"
                     style={{
-                      height: `${((g + 6) / 12) * 100}%`,
+                      height: `${((g - props.minGain) / (props.maxGain - props.minGain)) * 100}%`,
                     }}
                   />
                 </div>
@@ -125,23 +143,26 @@ const EqPanel: Component<Props> = (props) => {
           </For>
         </div>
         <div class="eq-preview-labels">
-          <For each={[...EQ_BANDS]}>
-            {(b) => <span>{b.label}</span>}
+          <For each={props.frequencies}>
+            {(frequency) => <span>{frequency}</span>}
           </For>
         </div>
         <p class="eq-preview-hint">
           {tab() === "custom"
-            ? t("eq.customBands")
-            : (t(`eqPreset.${props.eqActive}`) || EQ_PRESETS.find((p) => p.id === props.eqActive)?.label) ??
+            ? t("eq.customBands", { count: props.frequencies.length })
+            : props.presets.find((p) => p.id === props.eqActive)?.label ??
               t("eq.preset")}
         </p>
       </div>
+
+      </Show>
 
       {/* Tabs: preset | custom */}
       <div class="eq-tabs">
         <button
           type="button"
           class={tab() === "preset" ? "active" : ""}
+          aria-pressed={tab() === "preset"}
           onClick={() => setTab("preset")}
         >
           {t("eq.preset")}
@@ -149,6 +170,8 @@ const EqPanel: Component<Props> = (props) => {
         <button
           type="button"
           class={tab() === "custom" ? "active" : ""}
+          disabled={!props.customSupported}
+          aria-pressed={tab() === "custom"}
           onClick={() => setTab("custom")}
         >
           {t("eq.customize")}
@@ -157,14 +180,17 @@ const EqPanel: Component<Props> = (props) => {
 
       <Show when={tab() === "preset"}>
         <p class="more-label">{t("eq.choosePreset")}</p>
-        <div class="eq-preset-grid">
-          <For each={EQ_PRESETS}>
+        <OperationStatus pending={props.pending} error={props.error} />
+        <div class="eq-preset-grid" aria-busy={props.pending}>
+          <For each={props.presets}>
             {(p) => (
               <button
                 type="button"
+                disabled={props.pending}
                 class={`eq-preset-card ${
                   !props.customActive && props.eqActive === p.id ? "active" : ""
                 }`}
+                aria-pressed={!props.customActive && props.eqActive === p.id}
                 onClick={() => {
                   setTab("preset");
                   props.onEq(p.id);
@@ -181,8 +207,8 @@ const EqPanel: Component<Props> = (props) => {
                     )}
                   </For>
                 </div>
-                          <span class="eq-preset-name">{t(`eqPreset.${p.id}`) || p.label}</span>
-                          <span class="eq-preset-sub">{t(`eqPresetSub.${p.id}`) || p.sub}</span>
+                          <span class="eq-preset-name">{p.label}</span>
+                          <span class="eq-preset-sub">{p.sub}</span>
               </button>
             )}
           </For>
@@ -190,7 +216,7 @@ const EqPanel: Component<Props> = (props) => {
         <p class="eq-footnote">{t("eq.presetFootnote")}</p>
       </Show>
 
-      <Show when={tab() === "custom"}>
+      <Show when={tab() === "custom" && props.customSupported}>
         <p class="more-label">{t("eq.customize")}</p>
         <Show when={customPresets().length > 0}>
           <div class="eq-saved-list">
@@ -213,24 +239,34 @@ const EqPanel: Component<Props> = (props) => {
           />
           <button type="button" class="eq-btn ghost" onClick={saveCustom}>{t("eq.save")}</button>
         </div>
-        <Show when={customError()}><p class="eq-inline-error">{customError()}</p></Show>
+        <Show when={customError()}><p class="eq-inline-error" role="alert">{customError()}</p></Show>
         <div class="eq-custom-card">
           <div class="eq-sliders">
-            <For each={[...EQ_BANDS]}>
-              {(b, i) => (
+            <For each={props.frequencies}>
+              {(frequency, i) => (
                 <div class="eq-slider-col">
-                  <span class="eq-gain">
-                    {localBands()[i()] > 0 ? "+" : ""}
-                    {localBands()[i()]}
-                  </span>
+                  <input
+                    type="number"
+                    class="eq-gain"
+                    inputmode="numeric"
+                    min={props.minGain}
+                    max={props.maxGain}
+                    step={1}
+                    value={localBands()[i()]}
+                    aria-label={`${frequency} Hz`}
+                    onChange={(e) => {
+                      const raw = Number((e.currentTarget as HTMLInputElement).value);
+                      setBand(i(), Number.isFinite(raw) ? raw : localBands()[i()]);
+                    }}
+                  />
                   <input
                     type="range"
-                    min={-12}
-                    max={12}
+                    min={props.minGain}
+                    max={props.maxGain}
                     step={1}
                     value={localBands()[i()]}
                     class="eq-vslider"
-                    aria-label={`${b.label} ${b.unit}`}
+                    aria-label={`${frequency} Hz`}
                     onInput={(e) =>
                       setBand(
                         i(),
@@ -238,8 +274,8 @@ const EqPanel: Component<Props> = (props) => {
                       )
                     }
                   />
-                  <span class="eq-freq">{b.label}</span>
-                  <span class="eq-unit">{b.unit}</span>
+                  <span class="eq-freq">{frequency}</span>
+                  <span class="eq-unit">Hz</span>
                 </div>
               )}
             </For>
@@ -248,6 +284,7 @@ const EqPanel: Component<Props> = (props) => {
             <button
               type="button"
               class="eq-btn ghost"
+              disabled={props.pending}
               onClick={() => {
                 props.onResetCustom();
               }}
@@ -257,6 +294,7 @@ const EqPanel: Component<Props> = (props) => {
             <button
               type="button"
               class="eq-btn primary"
+              disabled={props.pending}
               onClick={() => props.onApplyCustom(localBands(), customName().trim() || t("eq.customize"))}
             >
               {t("eq.apply")}

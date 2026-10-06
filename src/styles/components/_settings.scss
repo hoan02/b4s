@@ -106,6 +106,29 @@
   }
 }
 
+.settings-preference {
+  cursor: pointer;
+
+  .settings-row-copy {
+    display: grid;
+    flex: 1;
+    gap: 4px;
+  }
+
+  .settings-row-hint {
+    color: var(--text-2);
+    font-size: $fs-sm;
+    line-height: 1.4;
+  }
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+}
+
 .settings-language-page {
   animation: settings-language-enter $transition-base;
 

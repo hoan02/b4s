@@ -19,7 +19,13 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 const STORAGE_KEY = "b4s.locale";
 const normalizeLocale = (value: string | null): Locale =>
   LOCALES.find((locale) => locale === value) ?? "en";
-const initialLocale = normalizeLocale(localStorage.getItem(STORAGE_KEY));
+const initialLocale = normalizeLocale((() => {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+})());
 
 export const i18nReady = i18next.init({
   lng: initialLocale,
@@ -43,7 +49,11 @@ i18next.on("languageChanged", (language) => {
   setCurrentLocale(locale);
   document.documentElement.lang = locale;
   document.documentElement.dir = "ltr";
-  localStorage.setItem(STORAGE_KEY, locale);
+  try {
+    localStorage.setItem(STORAGE_KEY, locale);
+  } catch {
+    // Language changes still work for this session when storage is unavailable.
+  }
 });
 
 document.documentElement.lang = initialLocale;
@@ -56,7 +66,16 @@ export const t = (key: string, options?: Record<string, unknown>): string => {
 };
 
 export function formatError(error: unknown): string {
-  const details = error instanceof Error ? error.message : String(error);
+  const payload = typeof error === "object" && error !== null ? error as Record<string, unknown> : null;
+  const isVersionedApiError = payload?.contractVersion === 1 &&
+    typeof payload.code === "string" &&
+    typeof payload.retryable === "boolean" &&
+    typeof payload.message === "string";
+  const details = error instanceof Error
+    ? error.message
+    : isVersionedApiError
+      ? payload.message
+      : String(error);
   return `${t("error.operationFailed")}: ${details}`;
 }
 

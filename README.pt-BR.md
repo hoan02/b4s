@@ -13,10 +13,12 @@ As capturas mostram a interface em vietnamita.
 
 ## Compatibilidade
 
-Baseus Bass BP1 Pro e BP1 Ultra são os dispositivos de hardware verificados para
-a família de protocolo BP1. Outros modelos do catálogo podem ser experimentais ou
-apenas reconhecidos. Identificar o nome do dispositivo não significa que os
-controles foram verificados.
+BP1 Pro tem um perfil de modelo revisado. O BP1 Ultra oferece conexão BLE/789C
+e bateria, ANC, modo de jogo, áudio espacial, Bass Boost, LDAC, proteção
+auditiva e gestos experimentais. EQ/SoundFit ainda não estão disponíveis.
+Outros modelos do catálogo podem ser experimentais ou apenas reconhecidos.
+Identificar o nome do dispositivo não significa que os controles foram
+verificados.
 
 | Nível | Significado |
 |---|---|
@@ -29,8 +31,14 @@ Consulte o [catálogo de modelos](docs/model-catalog.md) e as [notas do protocol
 ## Recursos e desenvolvimento
 
 Quando compatível, o B4S mostra a bateria e controla ANC, transparência, EQ,
-áudio espacial, modo jogo e localização dos fones. Os recursos variam conforme o
-modelo e o firmware.
+áudio espacial, modo jogo e localização dos fones. Em **Settings**, você pode
+ativar a reconexão automática para buscar uma vez os últimos fones compatíveis
+ao iniciar; ela vem desativada. A busca dura até 12 segundos. Também é possível
+iniciar o B4S ao entrar no computador. Fechar a janela oculta o B4S na bandeja
+quando disponível; escolha **Quit B4S** no menu da bandeja para sair. Os recursos
+variam conforme o modelo e o firmware.
+
+Se não conseguir buscar ou conectar, consulte o [guia de solução de problemas do desktop](docs/desktop-troubleshooting.md).
 
 Requisitos: Node.js 20, Rust stable, dependências do Tauri para sua plataforma e
 fones Bluetooth para testar o dispositivo:

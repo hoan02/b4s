@@ -1,9 +1,9 @@
 import { Component, For, Show } from "solid-js";
 
 export interface BatteryData {
-  left: number;
-  right: number;
-  case: number;
+  left: number | null;
+  right: number | null;
+  case: number | null;
   leftCharging?: boolean;
   rightCharging?: boolean;
   caseCharging?: boolean;
@@ -14,7 +14,8 @@ interface Props {
   compact?: boolean;
 }
 
-function getLevelClass(percent: number, charging?: boolean): string {
+function getLevelClass(percent: number | null, charging?: boolean): string {
+  if (percent === null) return "unknown";
   if (charging) return "charging";
   if (percent > 50) return "high";
   if (percent > 20) return "medium";
@@ -23,7 +24,7 @@ function getLevelClass(percent: number, charging?: boolean): string {
 
 const BatteryItem: Component<{
   label: string;
-  percent: number;
+  percent: number | null;
   charging?: boolean;
 }> = (props) => {
   const levelClass = () => getLevelClass(props.percent, props.charging);
@@ -34,13 +35,13 @@ const BatteryItem: Component<{
       <div class="battery-visual">
         <div
           class={`battery-level ${levelClass()}`}
-          style={{ width: `${Math.min(100, Math.max(0, props.percent))}%` }}
+          style={{ width: `${Math.min(100, Math.max(0, props.percent ?? 0))}%` }}
         />
         <Show when={props.charging}>
           <span class="battery-charging-icon">⚡</span>
         </Show>
       </div>
-      <span class="battery-value">{props.percent}%</span>
+      <span class="battery-value">{props.percent === null ? "—" : `${props.percent}%`}</span>
     </div>
   );
 };
@@ -66,7 +67,7 @@ const Battery: Component<Props> = (props) => {
                 <div class="battery-compact-item">
                   <span class={`dot ${getLevelClass(item.percent, item.charging)}`} />
                   <span>{item.label}</span>
-                  <strong>{item.percent}%</strong>
+                  <strong>{item.percent === null ? "—" : `${item.percent}%`}</strong>
                 </div>
               </>
             )}

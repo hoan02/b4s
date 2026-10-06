@@ -13,11 +13,12 @@ Screenshots show the Vietnamese interface.
 
 ## Device support
 
-Baseus Bass BP1 Pro and BP1 Ultra are the verified hardware targets for the
-shared BP1 protocol family. Other catalog entries may be experimental or
-recognition-only. A name match does not mean that control has been verified;
-check the support level shown by the app and the model catalog before relying on
-a feature.
+BP1 Pro has a reviewed model profile. BP1 Ultra supports experimental BLE/789C
+connection, battery reporting, ANC, game mode, spatial audio, Bass Boost, LDAC,
+hearing protection and gestures. EQ/SoundFit remain unavailable. Other catalog entries may
+be experimental or recognition-only. A name match does not mean that control
+has been verified; check the support level shown by the app and the model
+catalog before relying on a feature.
 
 | Level | Meaning |
 |---|---|
@@ -30,15 +31,18 @@ See [the model catalog](docs/model-catalog.md) and [protocol notes](docs/protoco
 ## Features
 
 - Scan for and connect to Bluetooth LE earbuds.
-- Automatically reconnect to the last supported earbuds on startup. Select them
-  manually once; future launches search for the same device for up to 12 seconds
-  before falling back to manual selection. The earbuds must expose their BLE
-  control service; a Windows audio connection alone does not guarantee this.
+- Optionally reconnect to the last supported earbuds once at startup. Turn on
+  **Reconnect automatically** in Settings; it is off by default. B4S searches
+  for up to 12 seconds before falling back to manual selection. The earbuds
+  must expose their BLE control service; a Windows audio connection alone does
+  not guarantee this.
 - Show left, right and case battery levels when the device reports them.
 - Control noise cancellation, transparency and supported listening modes.
 - Adjust EQ presets and custom EQ where the model profile allows it.
 - Use spatial audio, game mode and find-earbuds controls on supported models.
 - Choose a light or dark theme and check for app updates.
+- Optionally start at sign-in. Closing the window hides B4S to the system tray
+  when the tray is available; use **Quit B4S** in the tray menu to exit.
 
 Controls vary by model and firmware. B4S avoids sending unsupported commands
 when the profile does not provide the required capability.
@@ -69,6 +73,7 @@ to improve an existing locale or contribute another one.
 - [Adding a model or protocol family](docs/model-catalog.md)
 - [Protocol overview](docs/protocol/overview.md)
 - [Release and auto-update](docs/release.md)
+- [Desktop troubleshooting and diagnostics](docs/desktop-troubleshooting.md)
 
 ## Disclaimer and safe use
 

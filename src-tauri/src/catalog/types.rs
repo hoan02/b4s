@@ -1,6 +1,35 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ControlTransport {
+    BleGatt,
+    Unresolved,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WireFraming {
+    BareAaBa,
+    Headphone789c,
+    Unresolved,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ConnectionProfile {
+    pub transport: ControlTransport,
+    pub framing: WireFraming,
+    pub service_uuid: Option<String>,
+    pub write_uuid: Option<String>,
+    pub notify_uuid: Option<String>,
+    pub handshake: Vec<u8>,
+    pub init_state_query: bool,
+    pub firmware_versions: Vec<String>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Capabilities {
     #[serde(default)]
@@ -19,6 +48,18 @@ pub struct Capabilities {
     pub ldac: bool,
     #[serde(default)]
     pub hearing_protection: bool,
+    #[serde(default)]
+    pub find_buds: bool,
+    #[serde(default)]
+    pub gesture: bool,
+    #[serde(default)]
+    pub in_ear: bool,
+    #[serde(default)]
+    pub multipoint: bool,
+    #[serde(default)]
+    pub restore_defaults: bool,
+    #[serde(default)]
+    pub adaptive_lr: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -29,12 +70,16 @@ pub struct EqPresetProfile {
     pub description: String,
     pub dict_sort: u8,
     pub curve: Vec<f32>,
+    #[serde(default)]
+    pub filters: Vec<crate::protocol::EqBand>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct EqProfile {
     pub bands: Vec<u16>,
+    #[serde(default)]
+    pub q_values: Vec<f32>,
     pub min_gain: f32,
     pub max_gain: f32,
     pub custom_slots: u8,
@@ -52,7 +97,61 @@ pub struct NoiseProfile {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct HearingProfile {
+    pub thresholds: Vec<u8>,
+    pub preserve_threshold_sentinel: bool,
+    pub provenance: String,
+}
+
+/// One gesture click layout and the function IDs the reviewed model accepts.
+/// `layout` is the wire layout byte (0 double, 1 triple, 2 long, 3 single,
+/// 4 single-press, 5 penta); `functions` are the allowed wire function IDs.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GestureLayoutProfile {
+    pub layout: u8,
+    pub functions: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GestureProfile {
+    /// True when the model exposes both left and right button mappings.
+    pub dual_button: bool,
+    pub layouts: Vec<GestureLayoutProfile>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct InEarProfile {
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MultipointProfile {
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RestoreDefaultsProfile {
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AdaptiveLrProfile {
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ModelProfile {
+    pub schema_version: u8,
+    #[serde(default)]
+    pub connection: Option<ConnectionProfile>,
     pub id: String,
     pub display_name: String,
     pub aliases: Vec<String>,
@@ -63,5 +162,21 @@ pub struct ModelProfile {
     pub capabilities: Capabilities,
     pub noise: NoiseProfile,
     pub eq: Option<EqProfile>,
+    #[serde(default)]
+    pub hearing: Option<HearingProfile>,
+    #[serde(default)]
+    pub gesture: Option<GestureProfile>,
+    #[serde(default)]
+    pub in_ear: Option<InEarProfile>,
+    #[serde(default)]
+    pub multipoint: Option<MultipointProfile>,
+    #[serde(default)]
+    pub restore_defaults: Option<RestoreDefaultsProfile>,
+    #[serde(default)]
+    pub adaptive_lr: Option<AdaptiveLrProfile>,
+    /// Capability keys that are implemented from source/replay evidence but
+    /// only eligible while the user opts into Experimental mode.
+    #[serde(default)]
+    pub experimental_features: Vec<String>,
     pub image: Option<String>,
 }

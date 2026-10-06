@@ -13,11 +13,12 @@ trên Windows, macOS và Linux. Ứng dụng được xây dựng bằng SolidJS
 
 ## Hỗ trợ thiết bị
 
-Baseus Bass BP1 Pro và BP1 Ultra là các thiết bị phần cứng đã xác minh cho họ
-giao thức BP1. Các model khác trong catalog có thể chỉ ở mức thử nghiệm hoặc chỉ
-nhận diện. Nhận diện được tên thiết bị không đồng nghĩa với việc chức năng điều
-khiển đã được xác minh. Hãy xem mức hỗ trợ trong ứng dụng và catalog model trước
-khi sử dụng.
+BP1 Pro có profile model đã được rà soát. BP1 Ultra hỗ trợ kết nối BLE/789C và
+hiển thị pin, ANC, chế độ game, âm thanh không gian, Bass Boost, LDAC, bảo vệ
+thính giác và thao tác chạm ở mức thử nghiệm. EQ/SoundFit chưa khả dụng. Các model khác
+trong catalog có thể ở mức thử nghiệm hoặc chỉ nhận diện. Nhận diện được tên
+thiết bị không đồng nghĩa với việc điều khiển đã được xác minh. Hãy xem mức hỗ
+trợ trong ứng dụng và catalog model trước khi sử dụng.
 
 | Mức hỗ trợ | Ý nghĩa |
 |---|---|
@@ -30,14 +31,22 @@ Xem [catalog model](docs/model-catalog.md) và [ghi chú giao thức](docs/proto
 ## Chức năng
 
 - Quét và kết nối tai nghe Bluetooth LE.
+- Có thể bật **Tự động kết nối lại** trong Settings để tìm tai nghe được hỗ trợ
+  gần nhất một lần khi mở ứng dụng; mặc định tắt. B4S quét tối đa 12 giây rồi
+  chuyển sang chọn thủ công. Tai nghe cần có dịch vụ điều khiển BLE; kết nối âm
+  thanh Windows không đảm bảo điều đó.
 - Hiển thị pin trái, phải và hộp sạc khi thiết bị gửi dữ liệu.
 - Điều khiển chống ồn, xuyên âm và các chế độ nghe được hỗ trợ.
 - Chỉnh EQ preset và EQ tùy chỉnh khi profile model cho phép.
 - Dùng âm thanh không gian, chế độ game và tìm tai nghe trên model tương thích.
 - Chọn giao diện sáng/tối và kiểm tra cập nhật ứng dụng.
+- Có thể bật khởi động cùng lúc đăng nhập. Đóng cửa sổ sẽ ẩn B4S vào khay hệ
+  thống khi khay khả dụng; chọn **Quit B4S** trong menu khay để thoát.
 
 Chức năng thay đổi theo model và firmware. B4S tránh gửi lệnh chưa được hỗ trợ
 khi profile không khai báo capability tương ứng.
+
+Nếu không thể quét hoặc kết nối, xem [hướng dẫn xử lý sự cố desktop](docs/desktop-troubleshooting.md).
 
 ## Phát triển
 

@@ -144,11 +144,15 @@ mod tests {
     #[test]
     fn keeps_model_catalog_fields_for_product_presentation() {
         let model: ModelInfo = identify_model("Baseus Bass BP1 Pro").unwrap();
-        assert_eq!(model.image_provenance, "fallback");
+        assert_eq!(model.image_provenance, "reviewed-profile");
         assert!(model.capabilities.bass_boost);
         assert_eq!(
-            model.transport.service_uuid.as_deref(),
-            Some(BASEUS_SERVICE_UUID)
+            model
+                .transport
+                .service_uuid
+                .as_deref()
+                .map(str::to_ascii_lowercase),
+            Some(BASEUS_SERVICE_UUID.to_ascii_lowercase())
         );
     }
 }

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "B4S scrubbed transport trace",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "captureId", "identity", "initialState", "redaction", "events"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "captureId": { "type": "string", "pattern": "^[A-Z][0-9]{2}(-[a-z0-9-]+)?$" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "firmware", "platform", "transport", "appVersion"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "firmware": { "type": "string", "minLength": 1 },
+        "platform": { "type": "string", "minLength": 1 },
+        "transport": { "enum": ["ble-gatt", "classic-spp", "vendor", "unknown"] },
+        "appVersion": { "type": "string", "minLength": 1 },
+        "adapter": { "type": "string", "minLength": 1 },
+        "androidVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "initialState": { "type": "string", "minLength": 1 },
+    "redaction": { "const": "reviewed-no-personal-data" },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["atMs", "kind"],
+        "properties": {
+          "atMs": { "type": "integer", "minimum": 0 },
+          "kind": { "enum": ["tx", "rx", "action", "disconnect", "timeout"] },
+          "hex": { "type": "string", "pattern": "^([0-9A-F]{2})+$", "maxLength": 8192 },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "allOf": [
+          { "if": { "properties": { "kind": { "enum": ["tx", "rx"] } } }, "then": { "required": ["hex"] } },
+          { "if": { "properties": { "kind": { "const": "action" } } }, "then": { "required": ["note"] } }
+        ]
+      }
+    }
+  }
+}

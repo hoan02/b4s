@@ -3,30 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
-// GATT UUIDs — BP1 Pro ANC (confirmed via nRF Connect)
-// ---------------------------------------------------------------------------
-
-pub mod uuids {
-    use uuid::Uuid;
-
-    /// BP1 Pro / Ultra custom control service
-    pub fn write() -> Uuid {
-        Uuid::parse_str("ee684b1a-1e9b-ed3e-ee55-f894667e92ac").unwrap()
-    }
-    pub fn notify() -> Uuid {
-        Uuid::parse_str("654b749c-e37f-ae1f-ebab-40ca133e3690").unwrap()
-    }
-
-    /// Bluetrum CCSDK fallback
-    pub fn ccsdk_write() -> Uuid {
-        Uuid::parse_str("02f00000-0000-0000-0000-00000000ff01").unwrap()
-    }
-    pub fn ccsdk_notify() -> Uuid {
-        Uuid::parse_str("02f00000-0000-0000-0000-00000000ff02").unwrap()
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Battery / Case
 // ---------------------------------------------------------------------------
 
@@ -105,6 +81,7 @@ pub enum EqPreset {
 }
 
 impl EqPreset {
+    #[allow(dead_code)]
     pub fn from_byte(b: u8) -> Option<Self> {
         match b {
             0 => Some(Self::Balanced),
@@ -127,9 +104,10 @@ impl EqPreset {
     }
 
     /// Map UI id / label → preset (Baseus app-style names).
-    pub fn from_ui(s: &str) -> Self {
+    #[allow(dead_code)]
+    pub fn from_ui(s: &str) -> Result<Self, String> {
         let k = s.to_lowercase().replace([' ', '-', '_'], "");
-        match k.as_str() {
+        Ok(match k.as_str() {
             "bass" | "bassboost" | "powerfulbass" | "powerful" => Self::BassBoost,
             "voice" => Self::Voice,
             "clear" | "cleartreble" | "treble" => Self::Clear,
@@ -140,9 +118,9 @@ impl EqPreset {
             "acoustic" => Self::Acoustic,
             "bassreduce" | "reducebass" | "lessbass" => Self::BassReduce,
             "treblereduce" | "reducetreble" | "lesstreble" => Self::TrebleReduce,
-            // classic / baseusclassic / balanced
-            _ => Self::Balanced,
-        }
+            "classic" | "baseusclassic" | "balanced" => Self::Balanced,
+            _ => return Err(format!("Unknown EQ preset: {s}")),
+        })
     }
 }
 
@@ -178,12 +156,24 @@ pub struct EqBand {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Command {
-    SetAnc { mode: AncMode, level: u8 },
-    SetNoise { mode: AncMode, parameter: u8 },
+    SetAnc {
+        mode: AncMode,
+        level: u8,
+    },
+    SetNoise {
+        mode: AncMode,
+        parameter: u8,
+    },
     SetEq(EqPreset),
     SetEqIndex(u8),
-    SetCustomEq { dict_sort: u8, anc: bool, bands: Vec<EqBand> },
+    SetCustomEq {
+        dict_sort: u8,
+        anc: bool,
+        bands: Vec<EqBand>,
+    },
     QueryEq,
+    QueryAnc,
+    QueryGameMode,
     /// Official app: BA02 → battery report AA02
     QueryBattery,
     /// Official app: BA27 separately requests charging-case battery (AA27).
@@ -191,13 +181,32 @@ pub enum Command {
     SetGameMode(bool),
     /// Spatial on → BA43 + mode; off → BA43 00 (common mode)
     SetSpatial(SpatialMode),
+    QuerySpatial,
     /// Bass boost electronic: 0–3 (best-effort BA opcode)
     SetBassBoost(u8),
+    QueryBassBoost,
     SetLdac(bool),
-    SetHearingProtection { enabled: bool, level: u8 },
+    SetHearingProtection {
+        enabled: bool,
+        level: u8,
+    },
     QueryLdac,
     QueryHearingProtection,
     FindBuds(bool),
+    QueryInEar,
+    SetInEar(bool),
+    QueryMultipoint,
+    SetMultipoint(bool),
+    QueryRestoreSupport,
+    RestoreDefaults,
+    QueryAdaptiveLr,
+    SetAdaptiveLr(bool),
+    QueryGesture(u8),
+    SetGesture {
+        layout: u8,
+        left: Option<u8>,
+        right: Option<u8>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -208,14 +217,36 @@ pub enum Command {
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 pub enum DeviceEvent {
     Battery(BatteryState),
-    Anc(AncMode),
+    Anc {
+        mode: AncMode,
+        parameter: u8,
+    },
     Eq(EqPreset),
+    EqIndex(u8),
     GameMode(bool),
     BassBoost(u8),
+    SpatialEnabled(bool),
+    SpatialMode(SpatialMode),
     Ldac(bool),
-    HearingProtection { enabled: bool, level: u8 },
+    HearingProtection {
+        enabled: bool,
+        level: u8,
+    },
+    GestureConfig {
+        layout: u8,
+        left: u8,
+        right: u8,
+    },
+    InEar(bool),
+    Multipoint(bool),
+    RestoreAvailable(bool),
+    RestoreResult(u8),
+    AdaptiveLr(bool),
     /// Raw / unknown — forwarded for debug
-    Unknown { cmd: u8, payload: Vec<u8> },
+    Unknown {
+        cmd: u8,
+        payload: Vec<u8>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -230,4 +261,19 @@ pub enum DecodeError {
     UnknownOpcode(u8),
     #[error("payload too short for opcode 0x{opcode:02X}: need {need}, got {got}")]
     PayloadTooShort { opcode: u8, need: usize, got: usize },
+}
+
+#[cfg(test)]
+mod intent_tests {
+    use super::EqPreset;
+
+    #[test]
+    fn invalid_eq_does_not_become_balanced() {
+        assert!(EqPreset::from_ui("not-a-preset").is_err());
+        assert_eq!(EqPreset::from_ui("balanced").unwrap(), EqPreset::Balanced);
+        assert_eq!(
+            EqPreset::from_ui("powerful bass").unwrap(),
+            EqPreset::BassBoost
+        );
+    }
 }

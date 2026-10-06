@@ -1,0 +1,178 @@
+//! Backend authorization for feature intent. Public catalog metadata and
+//! marketing aliases cannot supply runtime capabilities.
+
+use crate::{catalog::ControlTransport, protocol::DeviceProfile};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static EXPERIMENTAL_MODE: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn set_experimental_mode(enabled: bool) {
+    EXPERIMENTAL_MODE.store(enabled, Ordering::Relaxed);
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Feature {
+    Listening,
+    Eq,
+    CustomEq,
+    Game,
+    Bass,
+    Spatial,
+    Ldac,
+    Hearing,
+    Find,
+    Gesture,
+    InEar,
+    Multipoint,
+    RestoreDefaults,
+    AdaptiveLr,
+}
+
+impl Feature {
+    /// Capability key used by the reviewed profile's `experimentalFeatures`.
+    pub fn key(self) -> &'static str {
+        match self {
+            Feature::Gesture => "gesture",
+            Feature::InEar => "inEar",
+            Feature::Multipoint => "multipoint",
+            Feature::RestoreDefaults => "restoreDefaults",
+            Feature::AdaptiveLr => "adaptiveLr",
+            _ => "",
+        }
+    }
+}
+
+pub fn authorize_control(profile: &DeviceProfile) -> Result<(), String> {
+    let connection = profile
+        .connection
+        .as_ref()
+        .ok_or("No reviewed transport profile")?;
+    if connection.transport != ControlTransport::BleGatt {
+        return Err("Control transport has not been verified for this model".into());
+    }
+    let experimental_profile = profile
+        .model_id
+        .as_deref()
+        .and_then(crate::catalog::profile_for)
+        .is_some_and(|reviewed| reviewed.support == "experimental");
+    if !profile.verified && !(EXPERIMENTAL_MODE.load(Ordering::Relaxed) && experimental_profile) {
+        return Err(
+            "Experimental control is disabled; model evidence must be reviewed first".into(),
+        );
+    }
+    if !connection.firmware_versions.is_empty()
+        && !profile
+            .firmware
+            .as_ref()
+            .is_some_and(|version| connection.firmware_versions.contains(version))
+    {
+        return Err("Firmware does not match the reviewed profile".into());
+    }
+    Ok(())
+}
+
+pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String> {
+    authorize_control(profile)?;
+    let capability = &profile.capabilities;
+    let enabled = match feature {
+        Feature::Listening => capability.anc,
+        Feature::Eq => capability.eq,
+        Feature::CustomEq => capability.eq && capability.custom_eq,
+        Feature::Game => capability.game_mode,
+        Feature::Bass => capability.bass_boost,
+        Feature::Spatial => capability.spatial,
+        Feature::Ldac => capability.ldac,
+        Feature::Hearing => capability.hearing_protection,
+        Feature::Find => capability.find_buds,
+        Feature::Gesture => capability.gesture,
+        Feature::InEar => capability.in_ear,
+        Feature::Multipoint => capability.multipoint,
+        Feature::RestoreDefaults => capability.restore_defaults,
+        Feature::AdaptiveLr => capability.adaptive_lr,
+    };
+    if enabled {
+        let key = feature.key();
+        if !key.is_empty()
+            && profile
+                .experimental_features
+                .iter()
+                .any(|feature| feature == key)
+            && !EXPERIMENTAL_MODE.load(Ordering::Relaxed)
+        {
+            return Err(format!(
+                "{feature:?} is implemented from source/replay evidence and requires Experimental mode"
+            ));
+        }
+        Ok(())
+    } else {
+        Err(format!(
+            "{feature:?} is not supported by this reviewed profile"
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::profile_for;
+
+    #[test]
+    fn metadata_and_unsupported_feature_cannot_authorize_packets() {
+        let pro = profile_for(Some("bass-bp1-pro"), None, None);
+        assert!(authorize(&pro, Feature::Eq).is_ok());
+        assert!(authorize(&pro, Feature::Ldac).is_err());
+        assert!(authorize(&pro, Feature::Hearing).is_err());
+        let ultra = profile_for(Some("bass-bp1-ultra"), None, None);
+        assert!(authorize(&ultra, Feature::Eq).is_err());
+        let legacy = profile_for(Some("eh10-nc-lite"), None, None);
+        assert!(authorize(&legacy, Feature::Listening).is_err());
+    }
+
+    #[test]
+    fn explicit_firmware_scope_rejects_unknown_and_different_versions() {
+        let mut pro = profile_for(Some("bass-bp1-pro"), None, None);
+        pro.connection.as_mut().unwrap().firmware_versions = vec!["test-firmware".into()];
+        assert!(authorize(&pro, Feature::Eq).is_err());
+        pro.firmware = Some("other".into());
+        assert!(authorize(&pro, Feature::Eq).is_err());
+        pro.firmware = Some("test-firmware".into());
+        assert!(authorize(&pro, Feature::Eq).is_ok());
+    }
+
+    #[test]
+    fn experimental_switch_only_authorizes_reviewed_profiles() {
+        let pro = profile_for(Some("bass-bp1-pro"), None, None);
+        assert!(pro.verified);
+        let ultra = profile_for(Some("bass-bp1-ultra"), None, None);
+        let passive_model = crate::protocol::identify_model("Baseus Bowie MA10").unwrap();
+        let passive = profile_for(Some(&passive_model.id), None, None);
+        let unknown = profile_for(None, None, None);
+        assert!(!ultra.verified);
+        set_experimental_mode(true);
+        assert!(authorize_control(&pro).is_ok());
+        assert!(authorize_control(&ultra).is_ok());
+        assert!(authorize_control(&passive).is_err());
+        assert!(authorize_control(&unknown).is_err());
+        assert!(authorize(&ultra, Feature::Listening).is_ok());
+        assert!(authorize(&ultra, Feature::Eq).is_err());
+        set_experimental_mode(false);
+        assert!(authorize_control(&ultra).is_err());
+    }
+
+    #[test]
+    fn per_feature_experimental_gate_requires_both_capability_and_mode() {
+        let mut pro = profile_for(Some("bass-bp1-pro"), None, None);
+        // Capability is disabled in the reviewed profile.
+        assert!(authorize(&pro, Feature::Gesture).is_err());
+        pro.capabilities.gesture = true;
+        pro.experimental_features = vec!["gesture".into()];
+        // Enabled capability still needs the user's Experimental opt-in.
+        assert!(authorize(&pro, Feature::Gesture).is_err());
+        set_experimental_mode(true);
+        assert!(authorize(&pro, Feature::Gesture).is_ok());
+        // A non-experimental feature is unaffected by the gate.
+        assert!(authorize(&pro, Feature::Eq).is_ok());
+        set_experimental_mode(false);
+        assert!(authorize(&pro, Feature::Gesture).is_err());
+    }
+}

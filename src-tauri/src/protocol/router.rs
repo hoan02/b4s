@@ -8,9 +8,8 @@ pub fn decode_frame(
     last_anc: Option<AncMode>,
 ) -> Result<super::DeviceEvent, super::DecodeError> {
     match family {
-        ProtocolFamily::Bp1Pro | ProtocolFamily::BaseusAaBaExperimental => {
-            Bp1ProAnc::decode_frame(frame, last_anc)
-        }
+        ProtocolFamily::Bp1Pro => Bp1ProAnc::decode_frame(frame, last_anc),
+        ProtocolFamily::Bp1Ultra => super::families::bp1_ultra::Bp1Ultra::decode_frame(frame),
         ProtocolFamily::Unknown => Ok(super::DeviceEvent::Unknown {
             cmd: frame.cmd,
             payload: frame.payload.clone(),
@@ -45,59 +44,257 @@ pub enum FeatureCommand {
         level: u8,
     },
     FindBuds(bool),
+    SetGesture {
+        layout: u8,
+        left: Option<u8>,
+        right: Option<u8>,
+    },
+    SetInEar(bool),
+    SetMultipoint(bool),
+    RestoreDefaults,
+    SetAdaptiveLr(bool),
 }
 
 pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Result<Vec<u8>, String> {
     if profile.protocol == ProtocolFamily::Unknown {
         return Err("No protocol is verified for this model".into());
     }
+    use crate::device::capability::{authorize, Feature};
+    let feature = match &command {
+        FeatureCommand::SetEq(_) | FeatureCommand::SetEqIndex(_) => Feature::Eq,
+        FeatureCommand::SetCustomEq { .. } => Feature::CustomEq,
+        FeatureCommand::SetGameMode(_) => Feature::Game,
+        FeatureCommand::SetSpatial(_) => Feature::Spatial,
+        FeatureCommand::SetBassBoost(_) => Feature::Bass,
+        FeatureCommand::SetLdac(_) => Feature::Ldac,
+        FeatureCommand::SetHearingProtection { .. } => Feature::Hearing,
+        FeatureCommand::FindBuds(_) => Feature::Find,
+        FeatureCommand::SetGesture { .. } => Feature::Gesture,
+        FeatureCommand::SetInEar(_) => Feature::InEar,
+        FeatureCommand::SetMultipoint(_) => Feature::Multipoint,
+        FeatureCommand::RestoreDefaults => Feature::RestoreDefaults,
+        FeatureCommand::SetAdaptiveLr(_) => Feature::AdaptiveLr,
+    };
+    authorize(profile, feature)?;
+    if let FeatureCommand::SetCustomEq {
+        bands,
+        dict_sort,
+        anc,
+    } = &command
+    {
+        if profile.protocol != ProtocolFamily::Bp1Pro || *dict_sort != 101 || *anc {
+            return Err("Custom EQ slot/ANC selector is not reviewed for this model".into());
+        }
+        let eq = profile
+            .model_id
+            .as_deref()
+            .and_then(crate::catalog::profile_for)
+            .and_then(|profile| profile.eq)
+            .ok_or("No reviewed custom EQ schema")?;
+        if bands.len() != eq.bands.len()
+            || bands
+                .iter()
+                .zip(&eq.bands)
+                .enumerate()
+                .any(|(index, (band, frequency))| {
+                    band.frequency != *frequency
+                        || band.q_value != eq.q_values.get(index).copied().unwrap_or(1.0)
+                        || band.filter != 1
+                        || !band.q_value.is_finite()
+                        || band.q_value <= 0.0
+                        || !band.gain.is_finite()
+                        || band.gain < eq.min_gain
+                        || band.gain > eq.max_gain
+                })
+        {
+            return Err("Custom EQ values do not match the reviewed model schema".into());
+        }
+    }
+    // Reject values outside the protocol's reviewed range instead of silently
+    // clamping intent into a different command.
+    match &command {
+        FeatureCommand::SetBassBoost(level)
+            if *level
+                > if profile.protocol == ProtocolFamily::Bp1Ultra {
+                    5
+                } else {
+                    1
+                } =>
+        {
+            return Err("Bass level is outside the current protocol range".into());
+        }
+        FeatureCommand::SetHearingProtection { level, .. } => {
+            let hearing = profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.hearing)
+                .ok_or("No reviewed hearing threshold schema")?;
+            if !hearing.thresholds.contains(level)
+                && !(*level == 0xFF && hearing.preserve_threshold_sentinel)
+            {
+                return Err("Hearing threshold is outside the reviewed model schema".into());
+            }
+        }
+        FeatureCommand::SetGesture {
+            layout,
+            left,
+            right,
+        } => {
+            let gesture = profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.gesture)
+                .ok_or("No reviewed gesture schema")?;
+            let entry = gesture
+                .layouts
+                .iter()
+                .find(|entry| entry.layout == *layout)
+                .ok_or("Gesture layout is not reviewed for this model")?;
+            for function in [left, right].into_iter().flatten() {
+                if !entry.functions.contains(function) {
+                    return Err("Gesture function is not allowed for this layout".into());
+                }
+            }
+        }
+        FeatureCommand::SetInEar(_) => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.in_ear)
+                .ok_or("No reviewed in-ear schema")?;
+        }
+        FeatureCommand::SetMultipoint(_) => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.multipoint)
+                .ok_or("No reviewed multipoint schema")?;
+        }
+        FeatureCommand::RestoreDefaults => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.restore_defaults)
+                .ok_or("No reviewed restore-defaults schema")?;
+        }
+        FeatureCommand::SetAdaptiveLr(_) => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.adaptive_lr)
+                .ok_or("No reviewed adaptiveLr schema")?;
+        }
+        _ => {}
+    }
 
     match (profile.protocol, command) {
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetEq(preset)) => {
-            Ok(Bp1ProAnc::cmd_set_eq(preset))
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetEq(preset)) => {
+            encode_profile_eq(profile, preset.to_byte())
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetEqIndex(index)) => {
-            Ok(encode_command(Command::SetEqIndex(index)))
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetEqIndex(index)) => {
+            encode_profile_eq(profile, index)
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetGameMode(on)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetGameMode(on)) => {
             Ok(Bp1ProAnc::cmd_set_game_mode(on))
         }
-        (ProtocolFamily::Bp1Pro, FeatureCommand::FindBuds(start)) => {
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::FindBuds(start)) => {
             Ok(Bp1ProAnc::cmd_find_buds(start))
         }
         (
-            ProtocolFamily::Bp1Pro,
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
             FeatureCommand::SetCustomEq {
                 dict_sort,
                 anc,
                 bands,
             },
         ) => Ok(Bp1ProAnc::cmd_set_custom_eq(dict_sort, anc, &bands)),
-        (_, FeatureCommand::SetEq(preset)) => Ok(encode_command(Command::SetEq(preset))),
-        (_, FeatureCommand::SetEqIndex(index)) => Ok(encode_command(Command::SetEqIndex(index))),
-        (_, FeatureCommand::SetGameMode(on)) => Ok(encode_command(Command::SetGameMode(on))),
-        (_, FeatureCommand::SetSpatial(mode)) => Ok(encode_command(Command::SetSpatial(mode))),
-        (_, FeatureCommand::SetBassBoost(level)) => {
-            Ok(encode_command(Command::SetBassBoost(level)))
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetSpatial(mode)) => {
+            Ok(encode_command(Command::SetSpatial(mode)))
         }
-        (_, FeatureCommand::SetLdac(enabled)) => Ok(encode_command(Command::SetLdac(enabled))),
-        (_, FeatureCommand::SetHearingProtection { enabled, level }) => {
-            Ok(encode_command(Command::SetHearingProtection {
-                enabled,
-                level,
-            }))
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetBassBoost(level),
+        ) => {
+            if profile.protocol == ProtocolFamily::Bp1Ultra {
+                Ok(vec![
+                    0xBA,
+                    0x54,
+                    u8::from(level != 0),
+                    if level == 0 { 0xFF } else { level },
+                ])
+            } else {
+                Ok(encode_command(Command::SetBassBoost(level)))
+            }
         }
-        (_, FeatureCommand::FindBuds(start)) => Ok(encode_command(Command::FindBuds(start))),
-        (_, FeatureCommand::SetCustomEq { .. }) => {
-            Err("Custom EQ protocol is not verified for this model".into())
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetLdac(enabled)) => {
+            Ok(encode_command(Command::SetLdac(enabled)))
         }
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetHearingProtection { enabled, level },
+        ) => Ok(encode_command(Command::SetHearingProtection {
+            enabled,
+            level,
+        })),
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetGesture {
+                layout,
+                left,
+                right,
+            },
+        ) => Ok(encode_command(Command::SetGesture {
+            layout,
+            left,
+            right,
+        })),
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetInEar(enabled)) => {
+            Ok(encode_command(Command::SetInEar(enabled)))
+        }
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetMultipoint(enabled),
+        ) => Ok(encode_command(Command::SetMultipoint(enabled))),
+        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::RestoreDefaults) => {
+            Ok(encode_command(Command::RestoreDefaults))
+        }
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetAdaptiveLr(enabled),
+        ) => Ok(encode_command(Command::SetAdaptiveLr(enabled))),
+        (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
+}
+
+fn encode_profile_eq(profile: &DeviceProfile, index: u8) -> Result<Vec<u8>, String> {
+    let eq = profile
+        .model_id
+        .as_deref()
+        .and_then(crate::catalog::profile_for)
+        .and_then(|profile| profile.eq)
+        .ok_or("No model EQ schema")?;
+    let preset = eq
+        .presets
+        .iter()
+        .find(|preset| preset.dict_sort == index)
+        .ok_or("Preset index is absent from the model schema")?;
+    if preset.filters.is_empty() {
+        return Err("Preset has no source-traced filter payload".into());
+    }
+    Ok(Bp1ProAnc::cmd_set_eq_filters(index, &preset.filters))
 }
 
 pub fn encode_listening(
     profile: &DeviceProfile,
     command: ListeningCommand,
 ) -> Result<Vec<u8>, String> {
+    crate::device::capability::authorize(profile, crate::device::capability::Feature::Listening)?;
     let (mode, parameter) = match command {
         ListeningCommand::Normal => (AncMode::Off, 0xFF),
         ListeningCommand::TransparencyFull => (AncMode::Transparency, 0xFF),
@@ -132,9 +329,8 @@ pub fn encode_listening(
     };
 
     match profile.protocol {
-        ProtocolFamily::Bp1Pro => Ok(Bp1ProAnc::cmd_set_noise(mode, parameter)),
-        ProtocolFamily::BaseusAaBaExperimental => {
-            Ok(encode_command(Command::SetNoise { mode, parameter }))
+        ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra => {
+            Ok(Bp1ProAnc::cmd_set_noise(mode, parameter))
         }
         ProtocolFamily::Unknown => Err("No protocol is verified for this model".into()),
     }
@@ -144,6 +340,88 @@ pub fn encode_listening(
 mod tests {
     use super::*;
     use crate::protocol::profile_for;
+
+    #[test]
+    fn ultra_encodes_only_reviewed_controls_with_its_own_limits() {
+        crate::device::capability::set_experimental_mode(true);
+        let profile = profile_for(Some("bass-bp1-ultra"), None, None);
+        assert_eq!(
+            encode_listening(&profile, ListeningCommand::Normal).unwrap(),
+            vec![0xBA, 0x34, 0, 255]
+        );
+        assert_eq!(
+            encode_listening(&profile, ListeningCommand::CustomLevel(5)).unwrap(),
+            vec![0xBA, 0x34, 1, 5]
+        );
+        assert!(encode_listening(&profile, ListeningCommand::CustomLevel(6)).is_err());
+        assert!(encode_listening(&profile, ListeningCommand::TransparencyVoice).is_err());
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetBassBoost(3)).unwrap(),
+            vec![0xBA, 0x54, 1, 3]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetBassBoost(0)).unwrap(),
+            vec![0xBA, 0x54, 0, 255]
+        );
+        assert!(encode_feature(&profile, FeatureCommand::SetBassBoost(6)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetEqIndex(0)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::FindBuds(true)).is_err());
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetHearingProtection {
+                enabled: true,
+                level: 81
+            }
+        )
+        .is_err());
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetGesture {
+                layout: 3,
+                left: Some(18),
+                right: None
+            }
+        )
+        .is_err());
+        crate::device::capability::set_experimental_mode(false);
+        assert!(encode_feature(&profile, FeatureCommand::SetGameMode(true)).is_err());
+    }
+
+    #[test]
+    fn custom_eq_rejects_wrong_layout_and_nonfinite_values_before_encoding() {
+        let profile = profile_for(Some("bass-bp1-pro"), None, None);
+        let bands: Vec<_> = crate::catalog::profile_for("bass-bp1-pro")
+            .unwrap()
+            .eq
+            .unwrap()
+            .bands
+            .into_iter()
+            .map(|frequency| EqBand {
+                frequency,
+                q_value: 1.0,
+                gain: 0.0,
+                filter: 1,
+            })
+            .collect();
+        for invalid in 0..3 {
+            let mut changed = bands.clone();
+            match invalid {
+                0 => changed[0].frequency = 1,
+                1 => changed[0].gain = f32::NAN,
+                _ => changed[0].q_value = 0.0,
+            }
+            assert!(encode_feature(
+                &profile,
+                FeatureCommand::SetCustomEq {
+                    dict_sort: 101,
+                    anc: false,
+                    bands: changed,
+                }
+            )
+            .is_err());
+        }
+    }
 
     #[test]
     fn notification_routing_preserves_bp1_and_keeps_unknown_raw() {
@@ -187,8 +465,8 @@ mod tests {
     fn bp1_profile_routes_common_feature_commands() {
         let profile = profile_for(Some("bass-bp1-pro"), None, None);
         assert_eq!(
-            encode_feature(&profile, FeatureCommand::SetBassBoost(2)).unwrap(),
-            vec![0xBA, 0x54, 0x01, 0x02]
+            encode_feature(&profile, FeatureCommand::SetBassBoost(1)).unwrap(),
+            vec![0xBA, 0x54, 0x01]
         );
         assert_eq!(
             encode_feature(&profile, FeatureCommand::FindBuds(true)).unwrap(),
@@ -209,15 +487,19 @@ mod tests {
     #[test]
     fn bp1_custom_eq_uses_ba31_and_eight_band_payload() {
         let profile = profile_for(Some("bass-bp1-pro"), None, None);
-        let bands = vec![
-            EqBand {
-                frequency: 100,
+        let bands = crate::catalog::profile_for("bass-bp1-pro")
+            .unwrap()
+            .eq
+            .unwrap()
+            .bands
+            .into_iter()
+            .map(|frequency| EqBand {
+                frequency,
                 q_value: 1.0,
                 gain: 0.0,
-                filter: 1
-            };
-            8
-        ];
+                filter: 1,
+            })
+            .collect();
         let packet = encode_feature(
             &profile,
             FeatureCommand::SetCustomEq {
@@ -227,7 +509,117 @@ mod tests {
             },
         )
         .unwrap();
-        assert_eq!(&packet[..4], &[0xBA, 0x31, 0x65, 0x00]);
-        assert_eq!(packet.len(), 4 + (8 * 8));
+        assert_eq!(&packet[..5], &[0xBA, 0x31, 0x65, 100, 0]);
+        assert_eq!(packet.len(), 3 + (8 * 8));
+    }
+    #[test]
+    fn bp1_custom_rejects_unreviewed_slot_selector_and_filter() {
+        let profile = profile_for(Some("bass-bp1-pro"), None, None);
+        let bands: Vec<_> = crate::catalog::profile_for("bass-bp1-pro")
+            .unwrap()
+            .eq
+            .unwrap()
+            .bands
+            .into_iter()
+            .map(|frequency| EqBand {
+                frequency,
+                q_value: 1.0,
+                gain: 0.0,
+                filter: 1,
+            })
+            .collect();
+        for (dict_sort, anc) in [(100, false), (102, false), (101, true)] {
+            assert!(encode_feature(
+                &profile,
+                FeatureCommand::SetCustomEq {
+                    dict_sort,
+                    anc,
+                    bands: bands.clone(),
+                }
+            )
+            .is_err());
+        }
+        let mut invalid = bands;
+        invalid[0].filter = 2;
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetCustomEq {
+                dict_sort: 101,
+                anc: false,
+                bands: invalid,
+            }
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn gesture_and_in_ear_require_capability_reviewed_schema_and_allowed_functions() {
+        let mut profile = profile_for(Some("bass-bp1-pro"), None, None);
+        // The reviewed profile enables the capabilities but marks them
+        // experimental-only, so a user without the opt-in cannot dispatch.
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetGesture {
+                layout: 0,
+                left: Some(1),
+                right: Some(1),
+            }
+        )
+        .is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetMultipoint(true)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::RestoreDefaults).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetAdaptiveLr(true)).is_err());
+
+        // Isolate the schema/allowlist behaviour from the Experimental gate.
+        profile.experimental_features.clear();
+        assert_eq!(
+            encode_feature(
+                &profile,
+                FeatureCommand::SetGesture {
+                    layout: 0,
+                    left: Some(1),
+                    right: Some(6),
+                }
+            )
+            .unwrap(),
+            vec![0xBA, 0x22, 0x00, 0x01, 0x06]
+        );
+        // Layout 4 (single press) is not in the reviewed BP1 Pro schema.
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetGesture {
+                layout: 4,
+                left: Some(1),
+                right: None,
+            }
+        )
+        .is_err());
+        // Single click (layout 3) only allows play/pause and none.
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetGesture {
+                layout: 3,
+                left: Some(2),
+                right: None,
+            }
+        )
+        .is_err());
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetInEar(true)).unwrap(),
+            vec![0xBA, 0x26, 0x01]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetMultipoint(true)).unwrap(),
+            vec![0xBA, 0x58, 0x01]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::RestoreDefaults).unwrap(),
+            vec![0xBA, 0x37]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetAdaptiveLr(true)).unwrap(),
+            vec![0xBA, 0x4A, 0x01]
+        );
     }
 }

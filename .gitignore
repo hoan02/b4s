@@ -1,5 +1,7 @@
 # ===== Dependencies =====
 node_modules/
+__pycache__/
+*.pyc
 .pnpm-store/
 .yarn/
 .pnp.*
@@ -85,3 +87,6 @@ test-results/
 *.old
 
 tools
+
+# Private hardware manifests and original Bluetooth captures
+.local-captures/
