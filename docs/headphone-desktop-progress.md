@@ -419,5 +419,5 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 ## Increment 51 — versioned link and lifecycle DTOs
 
 - Scan status, connection state, and link health now expose `contractVersion: 1` from both command responses and their matching events. Link health uses a closed `LinkLevel` enum with the five supported values; arbitrary strings are rejected at the Rust boundary and no longer admitted by the frontend type.
-- Added serialization coverage for the versioned link contract and enum values. `cargo check`, TypeScript typecheck, and `git diff --check` passed; repository-wide `cargo fmt --check` still reports existing formatting differences outside this slice, so only the edited Rust file was formatted.
+- Frontend command and event adapters validate version 1 before delivering these states. Added serialization coverage for the versioned link contract and enum values. `cargo check`, TypeScript typecheck, and `git diff --check` passed; repository-wide `cargo fmt --check` still reports existing formatting differences outside this slice, so only the edited Rust file was formatted.
 - No local test suite was run; CI will exercise the serialization test. This advances P4.3 but does not close it: event sequence/session envelopes, typed error semantics, and remaining command DTO migration are open.

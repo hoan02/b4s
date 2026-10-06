@@ -163,6 +163,31 @@ export interface ScanStatus {
   error: string | null;
 }
 
+function decodeContractV1<T>(payload: unknown, contractName: string): T {
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    (payload as { contractVersion?: unknown }).contractVersion !== 1
+  ) {
+    throw new Error(`Unsupported ${contractName} contract version`);
+  }
+  return payload as T;
+}
+
+function listenContractV1<T>(
+  eventName: string,
+  contractName: string,
+  cb: (payload: T) => void
+): Promise<UnlistenFn> {
+  return listen<unknown>(eventName, (event) => {
+    try {
+      cb(decodeContractV1<T>(event.payload, contractName));
+    } catch (error) {
+      console.error(`[BLE] rejected ${contractName} event`, error);
+    }
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Commands
 // ---------------------------------------------------------------------------
@@ -194,15 +219,15 @@ export async function disconnect(): Promise<void> {
 }
 
 export async function getScanStatus(): Promise<ScanStatus> {
-  return invoke<ScanStatus>("ble_get_scan_status");
+  return decodeContractV1<ScanStatus>(await invoke<unknown>("ble_get_scan_status"), "scan status");
 }
 
 export async function getConnection(): Promise<ConnectionState> {
-  return invoke<ConnectionState>("ble_get_connection");
+  return decodeContractV1<ConnectionState>(await invoke<unknown>("ble_get_connection"), "connection state");
 }
 
 export async function getLinkHealth(): Promise<LinkHealth> {
-  return invoke<LinkHealth>("ble_get_link_health");
+  return decodeContractV1<LinkHealth>(await invoke<unknown>("ble_get_link_health"), "link health");
 }
 
 // ---------------------------------------------------------------------------
@@ -210,15 +235,15 @@ export async function getLinkHealth(): Promise<LinkHealth> {
 // ---------------------------------------------------------------------------
 
 export function onScanStatus(cb: (status: ScanStatus) => void): Promise<UnlistenFn> {
-  return listen<ScanStatus>("ble://scan-status", (e) => cb(e.payload));
+  return listenContractV1("ble://scan-status", "scan status", cb);
 }
 
 export function onConnection(cb: (state: ConnectionState) => void): Promise<UnlistenFn> {
-  return listen<ConnectionState>("ble://connection", (e) => cb(e.payload));
+  return listenContractV1("ble://connection", "connection state", cb);
 }
 
 export function onLinkHealth(cb: (link: LinkHealth) => void): Promise<UnlistenFn> {
-  return listen<LinkHealth>("ble://link", (e) => cb(e.payload));
+  return listenContractV1("ble://link", "link health", cb);
 }
 
 
