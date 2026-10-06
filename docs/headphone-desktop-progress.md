@@ -47,7 +47,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
 | P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | In progress — tray lifecycle, bounded Quit cleanup, and opt-in startup/reconnect preferences; installer/signing and Windows acceptance remain external |
-| P8.3 | README/model matrix/diagnostics guide | In progress — generated matrix covers all current public candidates and speaker exclusions; BP1 Pro feature evidence/limit matrix is added; per-feature hardware evidence and acceptance report remain open |
+| P8.3 | README/model matrix/diagnostics guide | In progress — generated matrix covers all current public candidates and speaker exclusions; BP1 Pro feature evidence/limit matrix is added; CI now regenerates the matrix and fails on drift, and runs the public-catalog parser tests; per-feature hardware evidence and acceptance report remain open |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | Open |
 
 ## Delivery sequence
@@ -760,3 +760,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - The remembered device now persists as a versioned v2 envelope under a new key. Validation is shared by write and read paths, and the legacy bare record is consulted only while the current key is absent, then copied once and removed. A corrupt current record returns no remembered device and never revives or deletes the stale legacy record.
 - Extended the reconnect suite from 10 to 14 cases: legacy migration, corrupt-current isolation, malformed-legacy discard and the versioned write path. `npx tsc --noEmit` and `npm run test:reconnect` passed. Device-scoped preference/export completeness remains open under P4.4.
+
+## Increment 117 — run offline Python checks in CI
+
+- CI now executes the public-catalog parser unit tests, which previously ran only on demand, and verifies the generated `docs/model-support-matrix.md` is current by regenerating it and failing on any diff. The generator writes with explicit LF endings, so the guard is stable across Windows and Ubuntu.
+- Ran both locally: 7 catalog parser tests pass and regeneration produced no diff. This is the first CI coverage for the catalog snapshot/merge path and the generated support documentation; per-feature hardware reports remain open under P8.3.

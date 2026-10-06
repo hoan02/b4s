@@ -72,6 +72,14 @@ jobs:
       - name: Bounded reconnect scan tests
         run: npm run test:reconnect
 
+      - name: Public catalog parser tests
+        run: python scripts/test-sync-baseus-catalog.py
+
+      - name: Verify generated support matrix is current
+        run: |
+          python scripts/generate-headphone-support-matrix.py
+          git diff --exit-code docs/model-support-matrix.md
+
       - name: Cargo check
         working-directory: src-tauri
         run: cargo check
