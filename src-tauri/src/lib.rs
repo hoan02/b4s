@@ -49,6 +49,7 @@ pub fn run() {
             apply_device_command,
             get_start_at_login,
             set_start_at_login,
+            set_experimental_mode,
             get_app_info,
             check_for_updates,
             install_update,

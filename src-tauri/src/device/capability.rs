@@ -2,6 +2,13 @@
 //! marketing aliases cannot supply runtime capabilities.
 
 use crate::{catalog::ControlTransport, protocol::DeviceProfile};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static EXPERIMENTAL_MODE: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn set_experimental_mode(enabled: bool) {
+    EXPERIMENTAL_MODE.store(enabled, Ordering::Relaxed);
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum Feature {
@@ -24,7 +31,12 @@ pub fn authorize_control(profile: &DeviceProfile) -> Result<(), String> {
     if connection.transport != ControlTransport::BleGatt {
         return Err("Control transport has not been verified for this model".into());
     }
-    if !profile.verified {
+    let experimental_profile = profile
+        .model_id
+        .as_deref()
+        .and_then(crate::catalog::profile_for)
+        .is_some_and(|reviewed| reviewed.support == "experimental");
+    if !profile.verified && !(EXPERIMENTAL_MODE.load(Ordering::Relaxed) && experimental_profile) {
         return Err(
             "Experimental control is disabled; model evidence must be reviewed first".into(),
         );
@@ -89,5 +101,18 @@ mod tests {
         assert!(authorize(&pro, Feature::Eq).is_err());
         pro.firmware = Some("test-firmware".into());
         assert!(authorize(&pro, Feature::Eq).is_ok());
+    }
+
+    #[test]
+    fn experimental_switch_never_authorizes_scan_only_or_unreviewed_profiles() {
+        let pro = profile_for(Some("bass-bp1-pro"), None, None);
+        assert!(pro.verified);
+        let ultra = profile_for(Some("bass-bp1-ultra"), None, None);
+        assert!(!ultra.verified);
+        set_experimental_mode(true);
+        assert!(authorize_control(&pro).is_ok());
+        assert!(authorize_control(&ultra).is_err());
+        set_experimental_mode(false);
+        assert!(authorize_control(&ultra).is_err());
     }
 }

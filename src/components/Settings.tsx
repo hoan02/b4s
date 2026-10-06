@@ -30,6 +30,9 @@ interface Props {
   onSelectTheme: (mode: ThemeMode) => void;
   autoReconnect: boolean;
   onAutoReconnectChange: (enabled: boolean) => void;
+  experimentalMode: boolean;
+  experimentalModeDisabled: boolean;
+  onExperimentalModeChange: (enabled: boolean) => void;
   onNotify?: (msg: string, kind?: ToastKind, title?: string) => void;
   activeSubpage: "language" | "appearance" | null;
   onNavigate: (page: "language" | "appearance" | null) => void;
@@ -156,6 +159,19 @@ const Settings: Component<Props> = (props) => {
               checked={props.autoReconnect}
               aria-label={t("settings.autoReconnect")}
               onChange={(event) => props.onAutoReconnectChange(event.currentTarget.checked)}
+            />
+          </label>
+          <label class="settings-row settings-preference">
+            <span class="settings-row-copy">
+              <span class="settings-row-label">{t("settings.experimentalMode")}</span>
+              <span class="settings-row-hint">{t("settings.experimentalModeHint")}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={props.experimentalMode}
+              disabled={props.experimentalModeDisabled}
+              aria-label={t("settings.experimentalMode")}
+              onChange={(event) => props.onExperimentalModeChange(event.currentTarget.checked)}
             />
           </label>
           <label class="settings-row settings-preference">

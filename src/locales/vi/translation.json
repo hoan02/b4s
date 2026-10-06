@@ -5,6 +5,8 @@
   "settings.general": "Chung",
   "settings.autoReconnect": "Tự động kết nối lại",
   "settings.autoReconnectHint": "Khi bật, B4S quét một lần lúc mở ứng dụng để tìm tai nghe được hỗ trợ gần nhất. Mặc định tắt.",
+  "settings.experimentalMode": "Chế độ thử nghiệm",
+  "settings.experimentalModeHint": "Chỉ bật điều khiển cho hồ sơ Thử nghiệm đã được đánh giá. Thiết bị chỉ hỗ trợ quét vẫn không khả dụng. Mặc định tắt.",
   "settings.startAtLogin": "Khởi động B4S khi đăng nhập",
   "settings.startAtLoginHint": "Mở B4S khi bạn đăng nhập vào máy tính. Mặc định tắt.",
   "settings.preferenceSaveFailed": "Không thể lưu tùy chọn này.",

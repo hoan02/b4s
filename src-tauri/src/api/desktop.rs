@@ -1,6 +1,11 @@
 use tauri::AppHandle;
 
 #[tauri::command]
+pub(crate) fn set_experimental_mode(enabled: bool) {
+    crate::device::capability::set_experimental_mode(enabled);
+}
+
+#[tauri::command]
 pub(crate) fn get_start_at_login(app: AppHandle) -> Result<bool, String> {
     #[cfg(desktop)]
     {

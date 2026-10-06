@@ -3,6 +3,8 @@
   "settings.general": "Geral",
   "settings.autoReconnect": "Reconectar automaticamente",
   "settings.autoReconnectHint": "Quando ativado, o B4S procura uma vez ao iniciar os fones compatíveis usados por último. Desativado por padrão.",
+  "settings.experimentalMode": "Modo experimental",
+  "settings.experimentalModeHint": "Permite controles apenas para perfis experimentais revisados. Dispositivos somente de varredura continuam indisponíveis. Desativado por padrão.",
   "settings.startAtLogin": "Iniciar o B4S ao entrar",
   "settings.startAtLoginHint": "Abrir o B4S quando você entrar neste computador. Desativado por padrão.",
   "settings.preferenceSaveFailed": "Não foi possível salvar esta preferência.",

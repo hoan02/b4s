@@ -34,6 +34,10 @@ export async function setStartAtLogin(enabled: boolean): Promise<void> {
   await invoke("set_start_at_login", { enabled });
 }
 
+export async function setExperimentalMode(enabled: boolean): Promise<void> {
+  await invoke("set_experimental_mode", { enabled });
+}
+
 export async function checkForUpdates(): Promise<UpdateCheckResult> {
   return invoke<UpdateCheckResult>("check_for_updates");
 }

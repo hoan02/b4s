@@ -26,9 +26,9 @@ import {
   listModelProfiles,
 } from "./lib/ble";
 import { queryBattery } from "./lib/device";
-import { readDesktopPreferences, writeAutoReconnect } from "./lib/desktopPreferences";
+import { readDesktopPreferences, writeAutoReconnect, writeExperimentalMode } from "./lib/desktopPreferences";
 import { migrateModelIdsOnce } from "./lib/modelIdMigration";
-import { getAppInfo } from "./lib/app";
+import { getAppInfo, setExperimentalMode } from "./lib/app";
 import {
   applyTheme,
   getStoredTheme,
@@ -53,6 +53,9 @@ const App: Component = () => {
   const [autoReconnectEnabled, setAutoReconnectEnabled] = createSignal(savedDesktopPreferences.autoReconnect);
   const [autoReconnectThisLaunch, setAutoReconnectThisLaunch] = createSignal(savedDesktopPreferences.autoReconnect);
   const [autoReconnectAvailable, setAutoReconnectAvailable] = createSignal(true);
+  const [experimentalMode, setExperimentalModeEnabled] = createSignal(savedDesktopPreferences.experimentalMode);
+  const [experimentalModeReady, setExperimentalModeReady] = createSignal(false);
+  const [savingExperimentalMode, setSavingExperimentalMode] = createSignal(false);
   const [device, setDevice] = createSignal<BleDevice | null>(null);
   const [battery, setBattery] = createSignal<BatteryData>({
     left: null,
@@ -219,6 +222,15 @@ const App: Component = () => {
   };
 
   onMount(async () => {
+    try {
+      await setExperimentalMode(savedDesktopPreferences.experimentalMode);
+      setExperimentalModeReady(true);
+    } catch {
+      setExperimentalModeEnabled(false);
+      writeExperimentalMode(false);
+      notify(t("settings.preferenceSaveFailed"), "error");
+    }
+
     const storedTheme = getStoredTheme();
     applyTheme(storedTheme);
     setTheme(storedTheme);
@@ -337,6 +349,25 @@ const App: Component = () => {
     if (!enabled) setAutoReconnectThisLaunch(false);
   };
 
+  const handleExperimentalModeChange = async (enabled: boolean) => {
+    if (!experimentalModeReady() || savingExperimentalMode()) return;
+    if (!writeExperimentalMode(enabled)) {
+      notify(t("settings.preferenceSaveFailed"), "error");
+      return;
+    }
+    setSavingExperimentalMode(true);
+    try {
+      await setExperimentalMode(enabled);
+      setExperimentalModeEnabled(enabled);
+    } catch {
+      writeExperimentalMode(false);
+      setExperimentalModeEnabled(false);
+      notify(t("settings.preferenceSaveFailed"), "error");
+    } finally {
+      setSavingExperimentalMode(false);
+    }
+  };
+
   return (
     <div class="app">
       <ToastHost items={toasts()} onDismiss={dismissToast} />
@@ -362,6 +393,9 @@ const App: Component = () => {
               onSelectTheme={handleTheme}
               autoReconnect={autoReconnectEnabled()}
               onAutoReconnectChange={handleAutoReconnectChange}
+              experimentalMode={experimentalMode()}
+              experimentalModeDisabled={!experimentalModeReady() || savingExperimentalMode()}
+              onExperimentalModeChange={handleExperimentalModeChange}
               onNotify={notify}
               activeSubpage={settingsSubpage()}
               onNavigate={setSettingsSubpage}
