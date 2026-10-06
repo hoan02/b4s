@@ -273,7 +273,7 @@ fn merge_public_models(models: &mut Vec<ModelInfo>) {
 
         let patterns = public.name_patterns();
         let aliases: Vec<_> = patterns.iter().map(String::as_str).collect();
-        let model = scan_only_model(
+        let mut model = scan_only_model(
             &public.id,
             &public.model,
             &aliases,
