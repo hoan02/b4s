@@ -9,6 +9,7 @@ contains reviewed observations, not third-party decompiled source.
 - SHA-256: `a4ffc52b65f489914093fbe6c8eb8aa2e6e896b31ca4dbb024565962f3326222`.
 - Package `com.baseus.intelligent`, version name `2.17.0.1`, version code `184`.
 - Main APK plus `config.arm64_v8a.apk` and `config.mdpi.apk`.
+- Extracted split SHA-256: main APK `0161ee630de807164fd952f4b7942f5a955557269e55152afa8c9de08f155909`, ARM64 split `8cc8c20208b0692360bb8b62351649132a44a8b5d49046b9cb1f88f8c0204442`, and mdpi split `dd532313440efa219fd4a22098bb1c4037e24b17721d5fa4418cfe96e7cca37a`.
 - Local JADX 1.5.6 run with `--no-res`: 42,724 classes, 508 reported errors.
   Source output was produced, but this is not a claim that every method was
   recovered correctly. Native libraries and resources were not fully analyzed.
@@ -17,6 +18,20 @@ contains reviewed observations, not third-party decompiled source.
   they are not an earbud support matrix or a complete server catalog.
 - Local output is under gitignored `docs/re/apk-2.17.0.1/`. APKs, dumps and
   tool binaries must not be committed or bundled with B4S.
+
+### Local extraction inventory and error triage
+
+`python scripts/inventory-android-source.py docs/re/apk-2.17.0.1` recorded three
+APK inputs and SHA-256 hashes for all 106 native libraries in the ARM64 split.
+The JSON stays in ignored `.tmp/android-source-inventory.json`; it records file
+locations and digests only, not APK, native, or decompiled contents. Its 1,410
+source markers are not comparable to JADX's 508 run errors because one method
+can produce multiple markers. Six explicit `JADX ERROR` markers fall under the
+headphone source package; all six are in AI/recording/OTA paths rather than the
+offline control transport and state decoders. This narrows immediate triage but
+does not prove those methods or all 508 errors were recovered. Those features
+remain unresolved/cloud-dependent or deferred; verify any newly relevant failed
+call path against DEX/smali or a second engine before relying on it.
 
 ## Catalog comes from the server
 

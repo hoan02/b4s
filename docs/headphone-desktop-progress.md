@@ -19,7 +19,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P0.2 | Ghi firmware BP1 Ultra, Android/Windows version và Bluetooth adapter | External evidence required |
 | P0.3 | Ghi phạm vi product và policy đã được người dùng chốt | Complete — architecture/desktop-scope.md; updated direction supersedes legacy-facade policy |
 | P1.1 | Index entrypoints, model guards, SDK/native dependencies | In progress — transport dispatch indexed; feature/native inventory outstanding |
-| P1.2 | Triage JADX errors liên quan; extract resource/native inventory | In progress — reproducible local inventory tool; method triage/resource extraction outstanding |
+| P1.2 | Triage JADX errors liên quan; extract resource/native inventory | In progress — current APK/split hashes and all 106 ARM64 native-library digests inventoried locally; six explicit headphone-package JADX markers are isolated to AI/record/OTA paths; resource review and any secondary-engine verification remain open |
 | P1.3 | Lần theo family/transport/framing/firmware rules | In progress — exact transport/framing guards indexed; firmware/callback tracing outstanding |
 | P1.4 | Trace server dictionary/model-param consumers | In progress |
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
@@ -552,3 +552,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Promoted scan, connection, link-health, and connecting contracts to version 2. Scan payloads carry generation/revision; connection attempts carry the owning session; link snapshots carry session/revision. Frontend reducers and bounded reconnect discard older scan/link results, including command snapshots that arrive after newer events.
 - Scan revision advances on new scans, accepted OS-entry changes, scan failure/stop, mock result delivery, and mock completion. Added Rust serialization coverage for the scan cursor. `npx tsc --noEmit`, selected-file `rustfmt --check`, and `git diff --check` pass; no local Rust suite/build was run. P4.3 remains open for consistent typed errors and remaining command DTOs; P3.3 remains open for actor/event ownership.
+
+## Increment 76 — inventory Android source inputs and triage headphone errors
+
+- Re-ran the local input inventory without exporting source: three extracted APK splits were hashed, and all 106 ARM64 native libraries were hashed in place. The JSON report remains gitignored under `.tmp`.
+- The scanner found 1,410 source markers overall, which are not equivalent to the original JADX run's 508 reported errors. Six explicit error markers are inside the headphone package, all in AI/recording/OTA code paths. The authored findings document records the split hashes and this limitation; resource analysis and any secondary-engine checks remain open. No proprietary APK, native library, decompiled source, or raw inventory was added to Git.
