@@ -617,3 +617,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Removed the unreferenced `ListeningPanel` component, which duplicated home controls and included an ANC strength slider with no supported profile-backed readback. Removed its exclusive panel styles and renamed the remaining shared controls/device-header styles partial to `device-controls`.
 - Source reference search found no route/import for the removed component. TypeScript and Vite build are delegated to current-head CI; no user-visible routed screen was removed.
+
+## Increment 89 — avoid blind retries after uncertain commands
+
+- Device-command failures now set `retryable: false` in the typed Tauri error envelope. A write may have reached the device even when its readback fails, so a blanket retry signal could duplicate a stateful action. Added a Rust serialization regression.
+- Queue/transport error categories remain broad under P4.3; the conservative retry flag does not replace the remaining BLE-internal typed error taxonomy.

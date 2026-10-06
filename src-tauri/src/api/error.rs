@@ -37,7 +37,9 @@ impl ApiError {
 
 impl From<String> for ApiError {
     fn from(message: String) -> Self {
-        Self::new(ApiErrorCode::DeviceCommandFailed, message, true)
+        // A failed command may have reached the device before readback failed;
+        // callers must inspect state before deciding whether to issue it again.
+        Self::new(ApiErrorCode::DeviceCommandFailed, message, false)
     }
 }
 
@@ -53,5 +55,12 @@ mod tests {
         assert_eq!(value["code"], "connectionFailed");
         assert_eq!(value["message"], "adapter unavailable");
         assert_eq!(value["retryable"], true);
+    }
+
+    #[test]
+    fn uncertain_device_command_failures_do_not_claim_blind_retry_is_safe() {
+        let value = serde_json::to_value(ApiError::from("readback timed out".to_owned())).unwrap();
+        assert_eq!(value["code"], "deviceCommandFailed");
+        assert_eq!(value["retryable"], false);
     }
 }
