@@ -117,12 +117,13 @@ const App: Component = () => {
   let linkPoll: number | undefined;
   let toastTimers = new Map<number, number>();
 
-  const applyLink = (value: LinkHealth) => {
+  const applyLink = (value: LinkHealth): boolean => {
     if (value.sessionId < latestLinkSession ||
-      (value.sessionId === latestLinkSession && value.revision < latestLinkRevision)) return;
+      (value.sessionId === latestLinkSession && value.revision < latestLinkRevision)) return false;
     latestLinkSession = value.sessionId;
     latestLinkRevision = value.revision;
     setLink(value);
+    return true;
   };
 
   const notify = (
@@ -232,8 +233,8 @@ const App: Component = () => {
     try {
       const state = await getConnection();
       if (disposed) return;
-      if (state.link) applyLink(state.link);
-      if (state.connected && state.device) {
+      const current = !state.link || applyLink(state.link);
+      if (current && state.connected && state.device) {
         setAutoReconnectAvailable(false);
         session.selectDevice(state.device.id);
         setDevice(state.device);
@@ -253,11 +254,11 @@ const App: Component = () => {
     try {
       stopRuntimeSubscriptions = await subscribeDeviceRuntime({
         connection: (state) => {
+          if (state.link && !applyLink(state.link)) return;
           session.selectDevice(state.connected ? state.device?.id ?? null : null);
           if (state.connected) void refreshSnapshot().catch(() => {});
           setConnected(state.connected);
           setDevice(state.device);
-          if (state.link) applyLink(state.link);
           if (!state.connected) {
             setControlError(null);
             setView("home");
