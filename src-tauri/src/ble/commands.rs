@@ -1,6 +1,6 @@
 use super::*;
 
-pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
+pub async fn send_listening(command: ListeningCommand) -> Result<(), CommandError> {
     let profile = {
         let state = BLE.lock().await;
         let id = state.connected_id.as_ref().ok_or("Not connected")?;
@@ -41,7 +41,7 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
     .await
 }
 
-pub async fn send_eq_id(id: &str) -> Result<(), String> {
+pub async fn send_eq_id(id: &str) -> Result<(), CommandError> {
     let model_id = {
         let state = BLE.lock().await;
         state
@@ -63,7 +63,7 @@ pub async fn send_eq_id(id: &str) -> Result<(), String> {
 }
 
 #[allow(dead_code)]
-pub async fn send_eq(preset: EqPreset) -> Result<(), String> {
+pub async fn send_eq(preset: EqPreset) -> Result<(), CommandError> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetEq(preset)).await?;
     let state = BLE.lock().await;
     if state.mock {
@@ -86,7 +86,7 @@ pub async fn send_eq(preset: EqPreset) -> Result<(), String> {
     .await
 }
 
-pub async fn send_game_mode(on: bool) -> Result<(), String> {
+pub async fn send_game_mode(on: bool) -> Result<(), CommandError> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetGameMode(on)).await?;
     let state = BLE.lock().await;
     if state.mock {
@@ -109,7 +109,7 @@ pub async fn send_game_mode(on: bool) -> Result<(), String> {
     .await
 }
 
-pub async fn send_find_buds(start: bool) -> Result<(), String> {
+pub async fn send_find_buds(start: bool) -> Result<(), CommandError> {
     let data = encode_connected_feature(protocol::FeatureCommand::FindBuds(start)).await?;
     let state = BLE.lock().await;
     if state.mock {
@@ -142,7 +142,7 @@ pub async fn shutdown(app: AppHandle) {
     .await;
 }
 
-pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {
+pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), CommandError> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetSpatial(mode)).await?;
     if BLE.lock().await.mock {
         return observe_mock_state(
@@ -167,7 +167,7 @@ pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {
     .await
 }
 
-pub async fn send_eq_index(index: u8) -> Result<(), String> {
+pub async fn send_eq_index(index: u8) -> Result<(), CommandError> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetEqIndex(index)).await?;
     let state = BLE.lock().await;
     if state.mock {
@@ -193,7 +193,7 @@ pub async fn send_custom_eq(
     bands: Vec<protocol::EqBand>,
     dict_sort: u8,
     anc: bool,
-) -> Result<(), String> {
+) -> Result<(), CommandError> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetCustomEq {
         dict_sort,
         anc,
@@ -220,7 +220,7 @@ pub async fn send_custom_eq(
     .await
 }
 
-pub async fn send_bass_boost(level: u8) -> Result<(), String> {
+pub async fn send_bass_boost(level: u8) -> Result<(), CommandError> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetBassBoost(level)).await?;
     if BLE.lock().await.mock {
         return observe_mock_state(DeviceEvent::BassBoost(level), 0x53).await;
@@ -239,7 +239,7 @@ pub async fn send_bass_boost(level: u8) -> Result<(), String> {
     .await
 }
 
-pub async fn send_ldac(enabled: bool) -> Result<(), String> {
+pub async fn send_ldac(enabled: bool) -> Result<(), CommandError> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetLdac(enabled)).await?;
     let state = BLE.lock().await;
     if state.mock {
@@ -261,7 +261,7 @@ pub async fn send_ldac(enabled: bool) -> Result<(), String> {
     .await
 }
 
-pub async fn send_hearing_protection(enabled: bool, level: u8) -> Result<(), String> {
+pub async fn send_hearing_protection(enabled: bool, level: u8) -> Result<(), CommandError> {
     let data =
         encode_connected_feature(protocol::FeatureCommand::SetHearingProtection { enabled, level })
             .await?;
@@ -300,7 +300,7 @@ pub async fn get_device_snapshot() -> crate::device::snapshot::DeviceSnapshot {
     BLE.lock().await.snapshot.clone()
 }
 
-async fn observe_mock_state(event: DeviceEvent, opcode: u8) -> Result<(), String> {
+async fn observe_mock_state(event: DeviceEvent, opcode: u8) -> Result<(), CommandError> {
     let snapshot = {
         let mut state = BLE.lock().await;
         if !state.mock {
@@ -311,7 +311,7 @@ async fn observe_mock_state(event: DeviceEvent, opcode: u8) -> Result<(), String
     };
     let app = app_handle().ok_or("Application event handle is unavailable")?;
     app.emit("device://snapshot", &snapshot)
-        .map_err(|error| format!("Publish demo snapshot: {error}"))
+        .map_err(|error| CommandError::Operation(format!("Publish demo snapshot: {error}")))
 }
 
 // ---------------------------------------------------------------------------

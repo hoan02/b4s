@@ -704,6 +704,7 @@ pub async fn query_battery() -> Result<BatteryState, String> {
         })
     })
     .await
+    .map_err(|error| error.to_string())
 }
 
 // ---------------------------------------------------------------------------

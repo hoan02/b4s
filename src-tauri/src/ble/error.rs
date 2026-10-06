@@ -79,9 +79,57 @@ impl From<String> for ScanError {
     }
 }
 
+/// Stable internal categories for a connected device-command transaction.
+/// A write or readback failure leaves device state uncertain, so only an
+/// admission rejection that never reached transport is safe to repeat blindly.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommandError {
+    NotConnected,
+    UnsupportedFeature(String),
+    QueueFull,
+    Deadline,
+    SessionCancelled,
+    Operation(String),
+}
+
+impl CommandError {
+    pub fn is_retryable(&self) -> bool {
+        matches!(self, Self::QueueFull)
+    }
+}
+
+impl fmt::Display for CommandError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotConnected => formatter.write_str("Not connected"),
+            Self::UnsupportedFeature(message) => formatter.write_str(message),
+            Self::QueueFull => {
+                formatter.write_str("Device command queue is full; wait for the current operation")
+            }
+            Self::Deadline => {
+                formatter.write_str("Device command deadline expired; the device result is unknown")
+            }
+            Self::SessionCancelled => formatter.write_str("Device session was cancelled"),
+            Self::Operation(message) => formatter.write_str(message),
+        }
+    }
+}
+
+impl From<String> for CommandError {
+    fn from(message: String) -> Self {
+        Self::Operation(message)
+    }
+}
+
+impl From<&str> for CommandError {
+    fn from(message: &str) -> Self {
+        Self::Operation(message.to_owned())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{BleError, ScanError};
+    use super::{BleError, CommandError, ScanError};
 
     #[test]
     fn support_and_session_failures_have_distinct_retry_policies() {
@@ -100,6 +148,20 @@ mod tests {
         assert_eq!(
             ScanError::from("start_scan: busy".to_owned()),
             ScanError::Operation("start_scan: busy".into())
+        );
+    }
+
+    #[test]
+    fn only_rejected_command_admission_is_safe_to_repeat() {
+        assert!(CommandError::QueueFull.is_retryable());
+        assert!(!CommandError::NotConnected.is_retryable());
+        assert!(!CommandError::SessionCancelled.is_retryable());
+        assert!(!CommandError::Deadline.is_retryable());
+        assert!(!CommandError::UnsupportedFeature("no".into()).is_retryable());
+        assert!(!CommandError::Operation("readback timed out".into()).is_retryable());
+        assert_eq!(
+            CommandError::from("write failed"),
+            CommandError::Operation("write failed".into())
         );
     }
 }

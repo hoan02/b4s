@@ -69,6 +69,9 @@ jobs:
       - name: Desktop preference migration tests
         run: npm run test:preferences
 
+      - name: Bounded reconnect scan tests
+        run: npm run test:reconnect
+
       - name: Cargo check
         working-directory: src-tauri
         run: cargo check

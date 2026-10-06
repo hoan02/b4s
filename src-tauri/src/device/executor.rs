@@ -11,13 +11,13 @@ pub struct CommandExecutor {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub enum ExecutionError {
+pub enum ExecutionError<E> {
     #[error("Device command queue is full; wait for the current operation")]
     QueueFull,
     #[error("Device command deadline expired; the device result is unknown")]
     Deadline,
     #[error("{0}")]
-    Operation(String),
+    Operation(E),
 }
 
 impl Default for CommandExecutor {
@@ -35,10 +35,10 @@ impl CommandExecutor {
         }
     }
 
-    pub async fn run<T>(
+    pub async fn run<T, E>(
         &self,
-        work: impl Future<Output = Result<T, String>>,
-    ) -> Result<T, ExecutionError> {
+        work: impl Future<Output = Result<T, E>>,
+    ) -> Result<T, ExecutionError<E>> {
         let _admission = self
             .admission
             .try_acquire()
@@ -61,7 +61,7 @@ mod tests {
         let executor = CommandExecutor::new(1, Duration::from_secs(1));
         let _occupied = executor.admission.acquire().await.unwrap();
         let result = executor
-            .run(async {
+            .run::<(), String>(async {
                 panic!("rejected command wrote a packet");
                 #[allow(unreachable_code)]
                 Ok(())
@@ -75,7 +75,7 @@ mod tests {
         let executor = CommandExecutor::new(1, Duration::from_millis(10));
         let serial = executor.serial.lock().await;
         let result = executor
-            .run(async {
+            .run::<(), String>(async {
                 panic!("expired command wrote a packet");
                 #[allow(unreachable_code)]
                 Ok(())
@@ -83,7 +83,10 @@ mod tests {
             .await;
         assert_eq!(result, Err(ExecutionError::Deadline));
         drop(serial);
-        assert_eq!(executor.run(async { Ok(42) }).await.unwrap(), 42);
+        assert_eq!(
+            executor.run::<_, String>(async { Ok(42) }).await.unwrap(),
+            42
+        );
     }
 
     #[tokio::test]
@@ -91,10 +94,10 @@ mod tests {
         let executor = CommandExecutor::default();
         assert_eq!(
             executor
-                .run(async { Err::<(), _>("disconnected".into()) })
+                .run(async { Err::<(), _>("disconnected".to_owned()) })
                 .await,
-            Err(ExecutionError::Operation("disconnected".into()))
+            Err(ExecutionError::Operation("disconnected".to_owned()))
         );
-        assert!(executor.run(async { Ok(()) }).await.is_ok());
+        assert!(executor.run::<_, String>(async { Ok(()) }).await.is_ok());
     }
 }

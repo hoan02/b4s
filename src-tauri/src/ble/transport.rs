@@ -114,7 +114,7 @@ pub(super) async fn write_raw(peripheral: &Peripheral, data: &[u8]) -> Result<()
     Ok(())
 }
 
-pub(super) async fn with_connected_peripheral<F, T>(f: F) -> Result<T, String>
+pub(super) async fn with_connected_peripheral<F, T>(f: F) -> Result<T, CommandError>
 where
     F: FnOnce(
         Peripheral,
@@ -123,28 +123,42 @@ where
 {
     let state = BLE.lock().await;
     if state.mock {
-        return Err("MOCK".into());
+        return Err(CommandError::Operation("MOCK".into()));
     }
-    let id = state.connected_id.as_ref().ok_or("Not connected")?.clone();
-    let p = state.session.peripheral().ok_or("Peripheral gone")?;
+    let id = state
+        .connected_id
+        .as_ref()
+        .ok_or(CommandError::NotConnected)?
+        .clone();
+    let p = state
+        .session
+        .peripheral()
+        .ok_or(CommandError::NotConnected)?;
     let profile = state
         .devices
         .get(&id)
         .map(|device| device.device_profile.clone())
-        .ok_or("Connected device profile is missing")?;
+        .ok_or(CommandError::NotConnected)?;
     let token = state.session.token();
     let mut lease = state.session.lease(token);
     let executor = state.session.command_executor();
     drop(state);
     let result = tokio::select! {
         biased;
-        _ = lease.cancelled() => Err("Device session was cancelled".into()),
+        _ = lease.cancelled() => Err(CommandError::SessionCancelled),
         result = executor.run(async move {
-            crate::device::capability::authorize_control(&profile)?;
-            f(p).await
-        }) => result.map_err(|error| error.to_string()),
+            crate::device::capability::authorize_control(&profile)
+                .map_err(CommandError::UnsupportedFeature)?;
+            f(p).await.map_err(CommandError::Operation)
+        }) => result.map_err(|error| match error {
+            crate::device::executor::ExecutionError::QueueFull => CommandError::QueueFull,
+            crate::device::executor::ExecutionError::Deadline => CommandError::Deadline,
+            crate::device::executor::ExecutionError::Operation(error) => error,
+        }),
     };
-    ensure_session(token).await?;
+    if !BLE.lock().await.session.accepts(token) {
+        return Err(CommandError::SessionCancelled);
+    }
     result
 }
 

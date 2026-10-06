@@ -66,6 +66,18 @@ impl From<crate::ble::ScanError> for ApiError {
     }
 }
 
+impl From<crate::ble::CommandError> for ApiError {
+    fn from(error: crate::ble::CommandError) -> Self {
+        let code = match &error {
+            crate::ble::CommandError::NotConnected
+            | crate::ble::CommandError::UnsupportedFeature(_)
+            | crate::ble::CommandError::SessionCancelled => ApiErrorCode::DeviceUnavailable,
+            _ => ApiErrorCode::DeviceCommandFailed,
+        };
+        Self::new(code, error.to_string(), error.is_retryable())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,5 +122,32 @@ mod tests {
         .unwrap();
         assert_eq!(busy["code"], "scanFailed");
         assert_eq!(busy["retryable"], true);
+    }
+
+    #[test]
+    fn command_failures_expose_connection_state_and_retry_policy() {
+        let disconnected =
+            serde_json::to_value(ApiError::from(crate::ble::CommandError::NotConnected)).unwrap();
+        assert_eq!(disconnected["code"], "deviceUnavailable");
+        assert_eq!(disconnected["retryable"], false);
+
+        let denied = serde_json::to_value(ApiError::from(
+            crate::ble::CommandError::UnsupportedFeature("Eq is not supported".into()),
+        ))
+        .unwrap();
+        assert_eq!(denied["code"], "deviceUnavailable");
+        assert_eq!(denied["retryable"], false);
+
+        let queued =
+            serde_json::to_value(ApiError::from(crate::ble::CommandError::QueueFull)).unwrap();
+        assert_eq!(queued["code"], "deviceCommandFailed");
+        assert_eq!(queued["retryable"], true);
+
+        let uncertain = serde_json::to_value(ApiError::from(crate::ble::CommandError::Operation(
+            "readback timed out".into(),
+        )))
+        .unwrap();
+        assert_eq!(uncertain["code"], "deviceCommandFailed");
+        assert_eq!(uncertain["retryable"], false);
     }
 }
