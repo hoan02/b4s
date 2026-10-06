@@ -23,6 +23,7 @@ pub enum Feature {
     Find,
     Gesture,
     InEar,
+    Multipoint,
 }
 
 impl Feature {
@@ -31,6 +32,7 @@ impl Feature {
         match self {
             Feature::Gesture => "gesture",
             Feature::InEar => "inEar",
+            Feature::Multipoint => "multipoint",
             _ => "",
         }
     }
@@ -80,6 +82,7 @@ pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String
         Feature::Find => capability.find_buds,
         Feature::Gesture => capability.gesture,
         Feature::InEar => capability.in_ear,
+        Feature::Multipoint => capability.multipoint,
     };
     if enabled {
         let key = feature.key();

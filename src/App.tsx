@@ -76,6 +76,7 @@ const App: Component = () => {
   const [hearingThreshold, setHearingThreshold] = createSignal<number | null>(null);
   const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
   const [inEarOn, setInEarOn] = createSignal<boolean | null>(null);
+  const [multipointOn, setMultipointOn] = createSignal<boolean | null>(null);
   const [gestureState, setGestureState] = createSignal<Array<{ layout: number; left: number; right: number }>>([]);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
@@ -102,6 +103,7 @@ const App: Component = () => {
       setHearingProtect(null);
       setHearingThreshold(null);
       setInEarOn(null);
+      setMultipointOn(null);
       setGestureState([]);
       setSpatialOn(null);
       setAncModeUi(null);
@@ -120,6 +122,7 @@ const App: Component = () => {
     setHearingProtect(snapshot.hearing?.enabled ?? null);
     setHearingThreshold(snapshot.hearing?.level ?? null);
     setInEarOn(snapshot.inEar?.enabled ?? null);
+    setMultipointOn(snapshot.multipoint?.enabled ?? null);
     setGestureState(snapshot.gesture.map((value) => ({ layout: value.layout, left: value.left, right: value.right })));
   };
   const session = createDeviceSession(applySnapshot);
@@ -228,6 +231,9 @@ const App: Component = () => {
     (device()?.deviceProfile.capabilities.gesture ?? false) &&
     !!modelGesture() &&
     experimentalUnlocked("gesture");
+  const multipointSupported = () =>
+    (device()?.deviceProfile.capabilities.multipoint ?? false) &&
+    experimentalUnlocked("multipoint");
 
   const findController = createFindBudsController(notify);
 
@@ -559,6 +565,10 @@ const App: Component = () => {
                 inEarOn={inEarOn()}
                 inEarPending={gestures.pending()}
                 inEarError={gestures.error()}
+                multipointSupported={multipointSupported()}
+                multipointOn={multipointOn()}
+                multipointPending={gestures.pending()}
+                multipointError={gestures.error()}
                 moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
                 spatialPending={spatialController.pending()}
                 spatialError={spatialController.error()}
@@ -582,6 +592,7 @@ const App: Component = () => {
                 onOpenEq={() => setView("eq")}
                 onOpenGestures={() => setView("gestures")}
                 onInEar={gestures.setInEar}
+                onMultipoint={gestures.setMultipoint}
                 onSpatialOn={spatialController.setEnabled}
                 onSpatialMode={spatialController.selectMode}
                 onSoundFit={() =>

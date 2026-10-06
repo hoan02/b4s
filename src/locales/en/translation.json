@@ -282,5 +282,7 @@
   "gesture.fn.awakenAi": "Awaken AI assistant",
   "gesture.fn.quickPhoto": "Quick photo",
   "gesture.fn.switchConnection": "Switch connection mode",
-  "gesture.fn.microphone": "Microphone on/off"
+  "gesture.fn.microphone": "Microphone on/off",
+  "multipoint.title": "Multipoint",
+  "multipoint.hint": "Stay connected to two devices"
 }

@@ -53,6 +53,10 @@ interface Props {
   inEarOn: boolean | null;
   inEarPending?: boolean;
   inEarError?: string | null;
+  multipointSupported: boolean;
+  multipointOn: boolean | null;
+  multipointPending?: boolean;
+  multipointError?: string | null;
   gameMode: boolean | null;
   gamePending?: boolean;
   gameError?: string | null;
@@ -75,6 +79,7 @@ interface Props {
   onOpenEq: () => void;
   onOpenGestures: () => void;
   onInEar: (enabled: boolean) => void;
+  onMultipoint: (enabled: boolean) => void;
   onSpatialOn: (on: boolean) => void;
   onSpatialMode: (m: SpatialMode) => void;
   onSoundFit: () => void;
@@ -365,6 +370,28 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          </Show>
+
+          <Show when={props.multipointSupported}>
+          <div class="list-row">
+            <span class="list-ico list-ico-text">MP</span>
+            <div class="list-text">
+              <span class="list-title">{t("multipoint.title")}</span>
+              <span class="list-sub">{props.multipointOn === null ? t("control.unknown") : t("multipoint.hint")}</span>
+              <OperationStatus pending={props.multipointPending} error={props.multipointError} />
+            </div>
+            <label class="toggle sm">
+              <input
+                type="checkbox"
+                disabled={props.multipointPending}
+                aria-checked={props.multipointOn === null ? "mixed" : props.multipointOn}
+                checked={props.multipointOn === true}
+                aria-label={t("multipoint.title")}
+                onChange={(e) => props.onMultipoint((e.currentTarget as HTMLInputElement).checked)}
+              />
+              <span class="slider" />
+            </label>
+          </div>
           </Show>
 
           <button

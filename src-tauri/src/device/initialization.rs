@@ -9,6 +9,7 @@ pub enum StartupQuery {
     Ldac,
     HearingProtection,
     InEar,
+    Multipoint,
     Gesture(u8),
 }
 
@@ -32,6 +33,7 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
         (Feature::Ldac, StartupQuery::Ldac),
         (Feature::Hearing, StartupQuery::HearingProtection),
         (Feature::InEar, StartupQuery::InEar),
+        (Feature::Multipoint, StartupQuery::Multipoint),
     ] {
         if authorize(profile, feature).is_ok() {
             plan.push(query);
@@ -63,6 +65,7 @@ pub fn command_for(query: StartupQuery) -> Option<Command> {
         StartupQuery::Ldac => Some(Command::QueryLdac),
         StartupQuery::HearingProtection => Some(Command::QueryHearingProtection),
         StartupQuery::InEar => Some(Command::QueryInEar),
+        StartupQuery::Multipoint => Some(Command::QueryMultipoint),
         StartupQuery::Gesture(layout) => Some(Command::QueryGesture(layout)),
     }
 }
@@ -90,6 +93,7 @@ mod tests {
                 StartupQuery::Bass,
                 StartupQuery::Spatial,
                 StartupQuery::InEar,
+                StartupQuery::Multipoint,
                 StartupQuery::Gesture(0),
                 StartupQuery::Gesture(1),
                 StartupQuery::Gesture(2),

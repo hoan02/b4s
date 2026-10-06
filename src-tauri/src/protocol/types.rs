@@ -193,6 +193,8 @@ pub enum Command {
     FindBuds(bool),
     QueryInEar,
     SetInEar(bool),
+    QueryMultipoint,
+    SetMultipoint(bool),
     QueryGesture(u8),
     SetGesture {
         layout: u8,
@@ -229,6 +231,7 @@ pub enum DeviceEvent {
         right: u8,
     },
     InEar(bool),
+    Multipoint(bool),
     /// Raw / unknown — forwarded for debug
     Unknown {
         cmd: u8,

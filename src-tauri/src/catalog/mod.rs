@@ -80,11 +80,20 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
                 return Err(format!("invalid in-ear provenance in {}", profile.id));
             }
         }
+        if profile.capabilities.multipoint && profile.multipoint.is_none() {
+            return Err(format!("missing multipoint provenance in {}", profile.id));
+        }
+        if let Some(multipoint) = &profile.multipoint {
+            if multipoint.provenance.trim().is_empty() {
+                return Err(format!("invalid multipoint provenance in {}", profile.id));
+            }
+        }
         let mut experimental = std::collections::HashSet::new();
         for feature in &profile.experimental_features {
             let capability_enabled = match feature.as_str() {
                 "gesture" => profile.capabilities.gesture && profile.gesture.is_some(),
                 "inEar" => profile.capabilities.in_ear && profile.in_ear.is_some(),
+                "multipoint" => profile.capabilities.multipoint && profile.multipoint.is_some(),
                 _ => false,
             };
             if !capability_enabled || !experimental.insert(feature) {

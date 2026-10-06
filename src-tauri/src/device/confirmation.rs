@@ -30,6 +30,7 @@ pub enum ExpectedState {
         level: u8,
     },
     InEar(bool),
+    Multipoint(bool),
     Gesture {
         layout: u8,
         left: Option<u8>,
@@ -115,6 +116,9 @@ impl ExpectedState {
                 },
             ) => enabled == actual && level == actual_level,
             (Self::InEar(expected), 0x25, DeviceEvent::InEar(actual)) => expected == actual,
+            (Self::Multipoint(expected), 0x57, DeviceEvent::Multipoint(actual)) => {
+                expected == actual
+            }
             (
                 Self::Gesture {
                     layout,
@@ -474,6 +478,16 @@ mod tests {
     #[test]
     fn gesture_and_in_ear_confirm_only_from_their_state_opcode() {
         let session = SessionEpoch::default().token();
+        let mut multipoint = StateObservation {
+            session,
+            opcode: 0x57,
+            event: DeviceEvent::Multipoint(true),
+        };
+        assert!(ExpectedState::Multipoint(true).matches(session, &multipoint));
+        assert!(!ExpectedState::Multipoint(false).matches(session, &multipoint));
+        multipoint.opcode = 0x58;
+        assert!(!ExpectedState::Multipoint(true).matches(session, &multipoint));
+
         let mut observation = StateObservation {
             session,
             opcode: 0x25,

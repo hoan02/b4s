@@ -41,7 +41,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — bass readback and spatial enable/disable confirmation exist; real-device spatial mode remains unknown because AA42 confirms only enabled state; per-model hearing policy exists but feature remains disabled |
 | P6.4 | Gestures/in-ear, per-side mapping | In progress — backend encodes/decodes v1 gesture and in-ear with profile schema v2, shared authorization, reviewed layout/function allowlists, confirmation expectations and timestamped snapshot fields; BP1 Pro enables both as experimental-only behind the Experimental preference. Frontend now has an Experimental-gated gesture panel (per-layout left/right selects and in-ear toggle) plus startup queries for reviewed layouts. Firmware v1-vs-v2, v2 payloads and hardware acceptance remain open ([dossier](protocol/bp1-gesture-in-ear-source.md)) |
-| P6.5 | Multipoint/find/device settings | In progress — find start/stop distinguishes transport acceptance from confirmed device state; stop acknowledgement, multipoint and remaining settings require evidence |
+| P6.5 | Multipoint/find/device settings | In progress — find start/stop distinguishes transport acceptance from confirmed device state; multipoint (`BA57`/`AA57`, `BA58`/`AA58`) is implemented at source/replay level as an Experimental-only BP1 Pro toggle with a source dossier; stop acknowledgement, remaining device settings and hardware evidence remain open |
 | P7.1 | Classify headphone-only catalog và legacy migration | Complete — 124 current headphone candidates are separated from five regionally consistent speaker products; one-time migration covers 112 exact identities and preserves 12 historical names without a current catalog target as inert data; runtime resolver removed |
 | P7.2 | Adapter của family kế tiếp | Open |
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
@@ -795,3 +795,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Resolved the remaining gesture v2 payloads from the local 2.17.0.1 dump and recorded them in the dossier: `AA8B` support negotiation, `BA8C`/`AA8C` layout/action pairs, `BA8D`/`AA8D` set, and `BA8E`/`AA8E` + `BA8F`/`AA8F` child query/set with the count-prefixed child list. The v2 codec is now traced at frame level but intentionally not implemented because a model's v1-vs-v2 choice is only announced at runtime by `AA8B`.
 - Documentation-only; `git diff --check` passed. Enabling v2 still requires a capture of that negotiation and the rendered lists for a specific firmware.
+
+## Increment 123 — multipoint (dual connection)
+
+- Traced `BA57`/`AA57` query-state and `BA58`/`AA58` set-ack from the local dump and recorded it in `docs/protocol/bp1-multipoint-source.md`, including the acknowledgement-vs-state distinction and the dual-connection guards that block in-ear/gesture/`AA56` writes.
+- Added a `multipoint` capability and provenance schema, `AA57`/`BA57`/`BA58` codec, shared authorization, confirmation expectation, timestamped snapshot field and startup query. BP1 Pro enables it as experimental-only behind the Experimental preference, and the Home screen shows the toggle only when the capability and opt-in are present.
+- `cargo check` and 138 Rust library tests pass; `npx tsc --noEmit`, five-locale parity (286/286) and `npm run build` pass. Second-device/codec behavior and hardware acceptance remain open.

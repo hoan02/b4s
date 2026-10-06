@@ -85,6 +85,11 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             // GestureBleManager.a + EarHeadSetViewModel.o0: BA26 01 on / 00 off.
             Frame::write(0x26, &[if enabled { 0x01 } else { 0x00 }]).encode_write()
         }
+        Command::QueryMultipoint => Frame::write(0x57, &[]).encode_write(),
+        Command::SetMultipoint(enabled) => {
+            // EarphoneFunctionShowFragmentNewUI.Setting.n: BA58 01 on / 00 off.
+            Frame::write(0x58, &[if enabled { 0x01 } else { 0x00 }]).encode_write()
+        }
         Command::QueryGesture(layout) => Frame::write(0x21, &[layout]).encode_write(),
         Command::SetGesture {
             layout,

@@ -344,6 +344,25 @@ pub async fn send_gesture(
     .await
 }
 
+pub async fn send_multipoint(enabled: bool) -> Result<(), CommandError> {
+    let data = encode_connected_feature(protocol::FeatureCommand::SetMultipoint(enabled)).await?;
+    if BLE.lock().await.mock {
+        return observe_mock_state(DeviceEvent::Multipoint(enabled), 0x57).await;
+    }
+    with_connected_peripheral(|p| {
+        Box::pin(async move {
+            write_and_readback(
+                &p,
+                &data,
+                &[0xBA, 0x57],
+                crate::device::confirmation::ExpectedState::Multipoint(enabled),
+            )
+            .await
+        })
+    })
+    .await
+}
+
 async fn encode_connected_feature(command: protocol::FeatureCommand) -> Result<Vec<u8>, String> {
     let state = BLE.lock().await;
     let id = state.connected_id.as_ref().ok_or("Not connected")?;

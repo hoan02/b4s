@@ -49,6 +49,7 @@ pub enum FeatureCommand {
         right: Option<u8>,
     },
     SetInEar(bool),
+    SetMultipoint(bool),
 }
 
 pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Result<Vec<u8>, String> {
@@ -67,6 +68,7 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::FindBuds(_) => Feature::Find,
         FeatureCommand::SetGesture { .. } => Feature::Gesture,
         FeatureCommand::SetInEar(_) => Feature::InEar,
+        FeatureCommand::SetMultipoint(_) => Feature::Multipoint,
     };
     authorize(profile, feature)?;
     if let FeatureCommand::SetCustomEq {
@@ -152,6 +154,14 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
                 .and_then(|model| model.in_ear)
                 .ok_or("No reviewed in-ear schema")?;
         }
+        FeatureCommand::SetMultipoint(_) => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.multipoint)
+                .ok_or("No reviewed multipoint schema")?;
+        }
         _ => {}
     }
 
@@ -205,6 +215,9 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         })),
         (ProtocolFamily::Bp1Pro, FeatureCommand::SetInEar(enabled)) => {
             Ok(encode_command(Command::SetInEar(enabled)))
+        }
+        (ProtocolFamily::Bp1Pro, FeatureCommand::SetMultipoint(enabled)) => {
+            Ok(encode_command(Command::SetMultipoint(enabled)))
         }
         (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
@@ -456,6 +469,7 @@ mod tests {
         )
         .is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetMultipoint(true)).is_err());
 
         // Isolate the schema/allowlist behaviour from the Experimental gate.
         profile.experimental_features.clear();
@@ -494,6 +508,10 @@ mod tests {
         assert_eq!(
             encode_feature(&profile, FeatureCommand::SetInEar(true)).unwrap(),
             vec![0xBA, 0x26, 0x01]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetMultipoint(true)).unwrap(),
+            vec![0xBA, 0x58, 0x01]
         );
     }
 }

@@ -22,6 +22,7 @@ type DeviceCommand =
   | { kind: "setHearingProtection"; enabled: boolean; level: number }
   | { kind: "findBuds"; start: boolean }
   | { kind: "setInEar"; enabled: boolean }
+  | { kind: "setMultipoint"; enabled: boolean }
   | { kind: "setGesture"; layout: number; left: number | null; right: number | null };
 
 export interface DeviceCommandResponse {
@@ -131,6 +132,10 @@ export async function findBuds(start = true): Promise<DeviceCommandResponse> {
 
 export async function setInEar(enabled: boolean): Promise<DeviceCommandResponse> {
   return applyDeviceCommand({ kind: "setInEar", enabled });
+}
+
+export async function setMultipoint(enabled: boolean): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setMultipoint", enabled });
 }
 
 export async function setGesture(

@@ -34,6 +34,13 @@ pub struct InEarReading {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct MultipointReading {
+    pub enabled: bool,
+    pub observed_at_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GestureReading {
     pub layout: u8,
     pub left: u8,
@@ -68,6 +75,7 @@ pub struct DeviceSnapshot {
     pub bass_boost: Option<u8>,
     pub hearing: Option<HearingReading>,
     pub in_ear: Option<InEarReading>,
+    pub multipoint: Option<MultipointReading>,
     pub gesture: Vec<GestureReading>,
 }
 
@@ -90,6 +98,7 @@ impl DeviceSnapshot {
             bass_boost: None,
             hearing: None,
             in_ear: None,
+            multipoint: None,
             gesture: Vec::new(),
         }
     }
@@ -137,6 +146,12 @@ impl DeviceSnapshot {
             }
             DeviceEvent::InEar(enabled) => {
                 self.in_ear = Some(InEarReading {
+                    enabled: *enabled,
+                    observed_at_ms: at_ms,
+                })
+            }
+            DeviceEvent::Multipoint(enabled) => {
+                self.multipoint = Some(MultipointReading {
                     enabled: *enabled,
                     observed_at_ms: at_ms,
                 })
@@ -303,5 +318,18 @@ mod tests {
         let encoded = serde_json::to_value(snapshot).unwrap();
         assert_eq!(encoded["inEar"]["enabled"], true);
         assert_eq!(encoded["gesture"][0]["layout"], 3);
+    }
+
+    #[test]
+    fn multipoint_observation_is_timestamped_and_resets_with_session() {
+        let mut snapshot = DeviceSnapshot::new(6);
+        assert!(snapshot.multipoint.is_none());
+        snapshot.observe(0x57, &DeviceEvent::Multipoint(true), 21);
+        assert!(snapshot.multipoint.as_ref().unwrap().enabled);
+        assert_eq!(snapshot.multipoint.as_ref().unwrap().observed_at_ms, 21);
+        snapshot.observe(0x57, &DeviceEvent::Multipoint(false), 22);
+        assert!(!snapshot.multipoint.as_ref().unwrap().enabled);
+        assert_eq!(snapshot.multipoint.as_ref().unwrap().observed_at_ms, 22);
+        assert!(DeviceSnapshot::new(7).multipoint.is_none());
     }
 }

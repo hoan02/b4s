@@ -189,5 +189,7 @@
   "gesture.fn.awakenAi": "Despertar asistente de IA",
   "gesture.fn.quickPhoto": "Foto rápida",
   "gesture.fn.switchConnection": "Cambiar modo de conexión",
-  "gesture.fn.microphone": "Micrófono activado/desactivado"
+  "gesture.fn.microphone": "Micrófono activado/desactivado",
+  "multipoint.title": "Multipunto",
+  "multipoint.hint": "Mantener conectado a dos dispositivos"
 }

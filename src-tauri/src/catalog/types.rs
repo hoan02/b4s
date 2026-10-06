@@ -54,6 +54,8 @@ pub struct Capabilities {
     pub gesture: bool,
     #[serde(default)]
     pub in_ear: bool,
+    #[serde(default)]
+    pub multipoint: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -120,6 +122,12 @@ pub struct InEarProfile {
     pub provenance: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MultipointProfile {
+    pub provenance: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelProfile {
@@ -142,6 +150,8 @@ pub struct ModelProfile {
     pub gesture: Option<GestureProfile>,
     #[serde(default)]
     pub in_ear: Option<InEarProfile>,
+    #[serde(default)]
+    pub multipoint: Option<MultipointProfile>,
     /// Capability keys that are implemented from source/replay evidence but
     /// only eligible while the user opts into Experimental mode.
     #[serde(default)]

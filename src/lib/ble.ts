@@ -33,7 +33,7 @@ export interface BleDevice {
 }
 
 export interface DeviceProfile {
-  capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean; gesture: boolean; inEar: boolean };
+  capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean; gesture: boolean; inEar: boolean; multipoint: boolean };
   experimentalFeatures: string[];
   connection: {
     transport: "bleGatt" | "unresolved";
@@ -231,7 +231,7 @@ function isDeviceProfile(value: unknown): value is DeviceProfile {
     Array.isArray(connection.firmwareVersions) &&
     connection.firmwareVersions.every((item) => typeof item === "string") &&
     typeof connection.provenance === "string");
-  return ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac", "hearingProtection", "findBuds", "gesture", "inEar"]
+  return ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac", "hearingProtection", "findBuds", "gesture", "inEar", "multipoint"]
       .every((key) => typeof capabilities[key] === "boolean") &&
     Array.isArray(value.experimentalFeatures) &&
     value.experimentalFeatures.every((item) => typeof item === "string") &&

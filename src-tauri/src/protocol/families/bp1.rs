@@ -65,6 +65,12 @@ impl Bp1ProAnc {
                 [1] => Ok(DeviceEvent::InEar(true)),
                 _ => Err(DecodeError::UnknownOpcode(0x25)),
             },
+            // Multipoint (dual-connection) state: AA 57 [00|01]. AA58 is the set reply.
+            0x57 => match frame.payload.as_slice() {
+                [0] => Ok(DeviceEvent::Multipoint(false)),
+                [1] => Ok(DeviceEvent::Multipoint(true)),
+                _ => Err(DecodeError::UnknownOpcode(0x57)),
+            },
             // Gesture v1 configuration: AA 21 [layout] [left] [right].
             0x21 => match frame.payload.as_slice() {
                 [layout, left, right] if *layout <= 5 => Ok(DeviceEvent::GestureConfig {
@@ -579,6 +585,30 @@ mod tests {
         assert!(dec(&[0xAA, 0x22, 0x03, 0x01, 0x02]).is_err());
         assert!(dec(&[0xAA, 0x21, 0x03, 0x01]).is_err());
         assert!(dec(&[0xAA, 0x21, 0x09, 0x01, 0x02]).is_err());
+    }
+
+    #[test]
+    fn multipoint_state_and_set_reply_are_distinguished() {
+        assert_eq!(
+            dec(&[0xAA, 0x57, 0x01]).unwrap(),
+            DeviceEvent::Multipoint(true)
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x57, 0x00]).unwrap(),
+            DeviceEvent::Multipoint(false)
+        );
+        assert!(dec(&[0xAA, 0x58, 0x01]).is_err());
+        assert!(dec(&[0xAA, 0x57, 0x02]).is_err());
+        assert!(dec(&[0xAA, 0x57]).is_err());
+        assert_eq!(encode_command(Command::QueryMultipoint), vec![0xBA, 0x57]);
+        assert_eq!(
+            encode_command(Command::SetMultipoint(true)),
+            vec![0xBA, 0x58, 0x01]
+        );
+        assert_eq!(
+            encode_command(Command::SetMultipoint(false)),
+            vec![0xBA, 0x58, 0x00]
+        );
     }
 
     #[test]

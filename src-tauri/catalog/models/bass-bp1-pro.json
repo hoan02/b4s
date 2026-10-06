@@ -20,7 +20,8 @@
     "hearingProtection": false,
     "findBuds": true,
     "gesture": true,
-    "inEar": true
+    "inEar": true,
+    "multipoint": true
   },
   "noise": {
     "supportsAdaptive": true,
@@ -427,9 +428,13 @@
   "inEar": {
     "provenance": "GestureBleManager.a and EarHeadSetViewModel (BA25/BA26); model/firmware support not verified, experimental-only"
   },
+  "multipoint": {
+    "provenance": "EarphoneFunctionShowFragmentNewUI each-connect handlers and EarHeadSetViewModel.T (BA57/BA58); second-device/codec behavior not verified, experimental-only"
+  },
   "experimentalFeatures": [
     "gesture",
-    "inEar"
+    "inEar",
+    "multipoint"
   ],
   "schemaVersion": 2,
   "connection": {

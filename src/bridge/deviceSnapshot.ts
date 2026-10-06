@@ -17,6 +17,11 @@ export interface InEarReading {
   observedAtMs: number;
 }
 
+export interface MultipointReading {
+  enabled: boolean;
+  observedAtMs: number;
+}
+
 export interface GestureReading {
   layout: number;
   left: number;
@@ -45,6 +50,7 @@ export interface DeviceSnapshot {
   bassBoost: number | null;
   hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
   inEar: InEarReading | null;
+  multipoint: MultipointReading | null;
   gesture: GestureReading[];
 }
 
@@ -89,6 +95,9 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
   const inEar = value.inEar;
   const validInEar = inEar === null || (isRecord(inEar) &&
     typeof inEar.enabled === "boolean" && isCounter(inEar.observedAtMs));
+  const multipoint = value.multipoint;
+  const validMultipoint = multipoint === null || (isRecord(multipoint) &&
+    typeof multipoint.enabled === "boolean" && isCounter(multipoint.observedAtMs));
   const gesture = value.gesture;
   const validGesture = Array.isArray(gesture) && gesture.every((reading) =>
     isRecord(reading) && Number.isInteger(reading.layout) &&
@@ -108,7 +117,7 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
     ["game", "ldac", "spatialEnabled"].every((key) =>
       isNullable(value[key], (item) => typeof item === "boolean")) &&
     isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing &&
-    validInEar && validGesture;
+    validInEar && validMultipoint && validGesture;
 }
 
 function decodeSnapshotV2(payload: unknown): DeviceSnapshot {

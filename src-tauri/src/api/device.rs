@@ -60,6 +60,9 @@ enum DeviceCommand {
         left: Option<u8>,
         right: Option<u8>,
     },
+    SetMultipoint {
+        enabled: bool,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -216,6 +219,10 @@ pub(crate) async fn apply_device_command(
             right,
         } => {
             ble::commands::send_gesture(layout, left, right).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::SetMultipoint { enabled } => {
+            ble::commands::send_multipoint(enabled).await?;
             DeviceCommandDisposition::DeviceStateObserved
         }
     };

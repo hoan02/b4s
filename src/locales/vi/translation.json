@@ -245,5 +245,7 @@
   "gesture.fn.awakenAi": "Đánh thức trợ lý AI",
   "gesture.fn.quickPhoto": "Chụp ảnh nhanh",
   "gesture.fn.switchConnection": "Chuyển chế độ kết nối",
-  "gesture.fn.microphone": "Bật/tắt micrô"
+  "gesture.fn.microphone": "Bật/tắt micrô",
+  "multipoint.title": "Kết nối hai thiết bị",
+  "multipoint.hint": "Giữ kết nối với hai thiết bị"
 }

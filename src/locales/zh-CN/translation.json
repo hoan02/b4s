@@ -189,5 +189,7 @@
   "gesture.fn.awakenAi": "唤醒 AI 助手",
   "gesture.fn.quickPhoto": "快速拍照",
   "gesture.fn.switchConnection": "切换连接模式",
-  "gesture.fn.microphone": "麦克风开/关"
+  "gesture.fn.microphone": "麦克风开/关",
+  "multipoint.title": "双设备连接",
+  "multipoint.hint": "同时连接两台设备"
 }
