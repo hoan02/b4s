@@ -69,15 +69,24 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
         }
     }
 
-    let (attempt_token, mut attempt_lease, session_tasks) = {
+    let (attempt_token, mut attempt_lease, previous_peripheral, session_tasks) = {
         let mut state = BLE.lock().await;
         state.mock = false;
+        let previous_peripheral = state.session.take_peripheral();
         let session_tasks = state.reset_link();
         let attempt_token = state.session.token();
         let attempt_lease = state.session.lease(attempt_token);
-        (attempt_token, attempt_lease, session_tasks)
+        (
+            attempt_token,
+            attempt_lease,
+            previous_peripheral,
+            session_tasks,
+        )
     };
     super::runtime::join_session_tasks(session_tasks).await;
+    if let Some(peripheral) = previous_peripheral {
+        let _ = peripheral.disconnect().await;
+    }
 
     let _ = app.emit(
         "ble://connecting",
@@ -95,20 +104,23 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     match result {
         Ok(device) => Ok(device),
         Err(error) => {
-            if let Ok(peripheral) = resolve_peripheral(&device_id).await {
-                let _ = peripheral.disconnect().await;
-            }
-            let session_tasks = {
+            let (peripheral, session_tasks) = {
                 let mut state = BLE.lock().await;
                 if !state.session.accepts(attempt_token) {
                     return Err("Connection attempt was cancelled".into());
                 }
+                let peripheral = state.session.take_peripheral();
                 state.connected_id = None;
                 let session_tasks = state.reset_link();
                 state.peripherals.remove(&device_id);
-                session_tasks
+                (peripheral, session_tasks)
             };
             super::runtime::join_session_tasks(session_tasks).await;
+            if let Some(peripheral) = peripheral {
+                let _ = peripheral.disconnect().await;
+            } else if let Ok(peripheral) = resolve_peripheral(&device_id).await {
+                let _ = peripheral.disconnect().await;
+            }
             Err(error)
         }
     }
@@ -120,6 +132,12 @@ async fn connect_one(
     token: crate::device::session::SessionToken,
 ) -> Result<BleDevice, String> {
     let peripheral = resolve_peripheral(&device_id).await?;
+    {
+        let mut state = BLE.lock().await;
+        if !state.session.set_peripheral(token, peripheral.clone()) {
+            return Err("Connection attempt was cancelled".into());
+        }
+    }
     let mut first_connect = handshake::Handshake::new(30_000);
 
     // Ensure not half-open
@@ -588,7 +606,18 @@ pub async fn disconnect(app: AppHandle) -> Result<(), String> {
     let (id, peripheral, token, session_tasks) = {
         let mut state = BLE.lock().await;
         let id = state.connected_id.take();
-        let peripheral = id.as_ref().and_then(|id| state.peripherals.remove(id));
+        let peripheral = state
+            .session
+            .take_peripheral()
+            .or_else(|| id.as_ref().and_then(|id| state.peripherals.remove(id)));
+        let id = id.or_else(|| {
+            peripheral
+                .as_ref()
+                .map(|peripheral| id_to_string(&peripheral.id()))
+        });
+        if let Some(id) = id.as_ref() {
+            state.peripherals.remove(id);
+        }
         if let Some(device) = id.as_ref().and_then(|id| state.devices.get_mut(id)) {
             device.connected = false;
         }

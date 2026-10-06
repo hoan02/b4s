@@ -94,13 +94,14 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
     let _ = scanning::stop_scan(app.clone()).await;
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    let (device, session_tasks) = {
+    let (device, previous_peripheral, session_tasks) = {
         let mut state = BLE.lock().await;
         let mut device = state
             .devices
             .get(&device_id)
             .ok_or("Mock device not found")?
             .clone();
+        let previous_peripheral = state.session.take_peripheral();
         let session_tasks = state.reset_link();
         state.mock = true;
         state.has_write_uuid = false;
@@ -144,9 +145,12 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
         state
             .snapshot
             .observe(0x23, &DeviceEvent::GameMode(false), now_ms());
-        (device, session_tasks)
+        (device, previous_peripheral, session_tasks)
     };
     super::runtime::join_session_tasks(session_tasks).await;
+    if let Some(peripheral) = previous_peripheral {
+        let _ = peripheral.disconnect().await;
+    }
 
     emit_connection_state(&app).await;
     let snapshot = BLE.lock().await.snapshot.clone();

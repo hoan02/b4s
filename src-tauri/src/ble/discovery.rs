@@ -91,6 +91,7 @@ async fn listen_central_events(
                     let session_tasks = if still_active {
                         state.connected_id = None;
                         state.battery = BatteryState::default();
+                        let _ = state.session.take_peripheral();
                         state.reset_link()
                     } else {
                         Vec::new()

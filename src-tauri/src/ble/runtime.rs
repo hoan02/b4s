@@ -9,6 +9,7 @@ pub(super) struct SessionRuntime {
     epoch: crate::device::session::SessionEpoch,
     tasks: super::session_tasks::SessionTasks,
     executor: Arc<crate::device::executor::CommandExecutor>,
+    peripheral: Option<Peripheral>,
 }
 
 impl Default for SessionRuntime {
@@ -17,6 +18,7 @@ impl Default for SessionRuntime {
             epoch: Default::default(),
             tasks: Default::default(),
             executor: Arc::new(Default::default()),
+            peripheral: None,
         }
     }
 }
@@ -41,6 +43,22 @@ impl SessionRuntime {
         self.executor.clone()
     }
 
+    pub(super) fn set_peripheral(
+        &mut self,
+        token: crate::device::session::SessionToken,
+        peripheral: Peripheral,
+    ) -> bool {
+        if !self.epoch.accepts(token) || self.peripheral.is_some() {
+            return false;
+        }
+        self.peripheral = Some(peripheral);
+        true
+    }
+
+    pub(super) fn take_peripheral(&mut self) -> Option<Peripheral> {
+        self.peripheral.take()
+    }
+
     pub(super) fn register_notification(
         &mut self,
         token: crate::device::session::SessionToken,
@@ -59,6 +77,7 @@ impl SessionRuntime {
 
     fn reset(&mut self) -> Vec<tokio::task::JoinHandle<()>> {
         self.epoch.invalidate();
+        self.peripheral = None;
         let tasks = self.tasks.reset_for_session(self.epoch.token().id());
         self.executor = Arc::new(Default::default());
         tasks
