@@ -9,6 +9,7 @@ mod discovery;
 mod mock;
 mod runtime;
 pub mod scanning;
+mod session_tasks;
 mod transport;
 pub use contracts::{
     BleDevice, ConnectingState, ConnectionState, LinkHealth, LinkLevel, ScanStatus,

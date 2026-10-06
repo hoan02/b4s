@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 pub(super) struct BleInner {
     pub(super) adapter: Option<Adapter>,
     pub(super) central_task: Option<tokio::task::JoinHandle<()>>,
-    pub(super) notification_task: Option<tokio::task::JoinHandle<()>>,
+    pub(super) session_tasks: super::session_tasks::SessionTasks,
     pub(super) peripherals: HashMap<String, Peripheral>,
     pub(super) connected_id: Option<String>,
     pub(super) scanning: bool,
@@ -39,7 +39,7 @@ impl BleInner {
         Self {
             adapter: None,
             central_task: None,
-            notification_task: None,
+            session_tasks: Default::default(),
             peripherals: HashMap::new(),
             connected_id: None,
             scanning: false,
@@ -64,9 +64,8 @@ impl BleInner {
 
     pub(super) fn reset_link(&mut self) {
         self.session.invalidate();
-        if let Some(task) = self.notification_task.take() {
-            task.abort();
-        }
+        self.session_tasks
+            .reset_for_session(self.session.token().id());
         self.touch_link();
         self.snapshot = crate::device::snapshot::DeviceSnapshot::new(self.session.token().id());
         self.has_write_uuid = false;
@@ -88,15 +87,42 @@ mod tests {
     use super::BleInner;
 
     #[tokio::test]
-    async fn resetting_session_aborts_its_owned_notification_task() {
+    async fn resetting_session_aborts_its_owned_background_tasks() {
         let mut state = BleInner::new();
-        let task = tokio::spawn(std::future::pending::<()>());
-        let abort_handle = task.abort_handle();
-        state.notification_task = Some(task);
+        state.reset_link();
+        let session_id = state.session.token().id();
+        let notification = tokio::spawn(std::future::pending::<()>());
+        let notification_abort = notification.abort_handle();
+        assert!(state
+            .session_tasks
+            .register_notification(session_id, notification));
+        let poller = tokio::spawn(std::future::pending::<()>());
+        let poller_abort = poller.abort_handle();
+        assert!(state
+            .session_tasks
+            .register_battery_poller(session_id, poller));
 
         state.reset_link();
         tokio::task::yield_now().await;
 
+        assert!(notification_abort.is_finished());
+        assert!(poller_abort.is_finished());
+    }
+
+    #[tokio::test]
+    async fn old_session_task_is_aborted_if_registration_loses_the_reset_race() {
+        let mut state = BleInner::new();
+        state.reset_link();
+        let old_session_id = state.session.token().id();
+        state.reset_link();
+
+        let stale_task = tokio::spawn(std::future::pending::<()>());
+        let abort_handle = stale_task.abort_handle();
+
+        assert!(!state
+            .session_tasks
+            .register_notification(old_session_id, stale_task));
+        tokio::task::yield_now().await;
         assert!(abort_handle.is_finished());
     }
 }

@@ -257,7 +257,7 @@ async fn connect_one(
     let app_h = app.clone();
     let poll_id = device_id.clone();
     let mut lease = BLE.lock().await.session.lease(token);
-    tauri::async_runtime::spawn(async move {
+    let poller = tokio::spawn(async move {
         for i in 0..40 {
             tokio::select! {
                 biased;
@@ -281,6 +281,13 @@ async fn connect_one(
             emit_connection_state(&app_h).await;
         }
     });
+    let mut state = BLE.lock().await;
+    if !state
+        .session_tasks
+        .register_battery_poller(token.id(), poller)
+    {
+        return Err("Connection session changed before battery polling started".into());
+    }
     Ok(device)
 }
 
@@ -433,14 +440,10 @@ async fn subscribe_notifications(
     });
 
     let mut state = BLE.lock().await;
-    if !state.session.accepts(token) {
-        task.abort();
+    if !state.session_tasks.register_notification(token.id(), task) {
         return Err(
             "Device session was cancelled before notification ownership was registered".into(),
         );
-    }
-    if let Some(previous) = state.notification_task.replace(task) {
-        previous.abort();
     }
 
     Ok(())
