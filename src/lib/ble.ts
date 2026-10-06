@@ -17,6 +17,7 @@ export interface BleDevice {
   rssi: number;
   isBaseus: boolean;
   connected: boolean;
+  headphoneCandidate?: boolean;
   modelId?: string | null;
   modelName?: string | null;
   deviceProfile?: DeviceProfile;

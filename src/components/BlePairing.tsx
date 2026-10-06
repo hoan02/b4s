@@ -188,7 +188,7 @@ const BlePairing: Component<Props> = (props) => {
   };
 
   const matched = () => {
-    const list = devices().filter((d) => d.isBaseus);
+    const list = devices().filter((d) => d.isBaseus && d.headphoneCandidate !== false);
     return [...list].sort((a, b) => {
       const rank = (s?: string | null) =>
         s === "verified" ? 0 : s === "experimental" ? 1 : 2;

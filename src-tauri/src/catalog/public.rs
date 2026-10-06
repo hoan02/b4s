@@ -51,6 +51,16 @@ pub fn headphone_models() -> impl Iterator<Item = &'static PublicModel> {
     audio_models().filter(|model| !model.is_speaker_only())
 }
 
+/// Whether a resolved catalog identity belongs in the new headphone scan list.
+/// Unknown and regionally mixed identities remain visible until classified.
+pub fn is_headphone_candidate(name: &str) -> bool {
+    SNAPSHOT
+        .models
+        .iter()
+        .find(|model| identity_key(&model.model) == identity_key(name))
+        .map_or(true, |model| !model.is_speaker_only())
+}
+
 /// Prefix differences in the app registry are not different product identities.
 pub fn identity_key(name: &str) -> String {
     let lower = name.trim().to_lowercase();

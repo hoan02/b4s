@@ -51,6 +51,7 @@ pub struct BleDevice {
     pub rssi: i16,
     pub is_baseus: bool,
     pub connected: bool,
+    pub headphone_candidate: bool,
     /// Matched catalog model id (e.g. bass-bp1-pro)
     pub model_id: Option<String>,
     pub model_name: Option<String>,
@@ -471,6 +472,11 @@ async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, id: &Periph
         rssi,
         is_baseus,
         connected: false,
+        headphone_candidate: resolved
+            .model
+            .as_ref()
+            .map(|model| crate::catalog::public::is_headphone_candidate(&model.display_name))
+            .unwrap_or(true),
         model_id,
         model_name,
         device_profile,
@@ -937,6 +943,7 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
             rssi: 0,
             is_baseus: true,
             connected: true,
+            headphone_candidate: true,
             model_id: None,
             model_name: None,
             device_profile: protocol::profile_for(None, None, None),
@@ -1723,6 +1730,7 @@ mod scan_tests {
             rssi,
             is_baseus: true,
             connected: false,
+            headphone_candidate: true,
             model_id: Some("bass-bp1-pro".into()),
             model_name: Some("Baseus Bass BP1 Pro".into()),
             device_profile: protocol::profile_for(Some("bass-bp1-pro"), Some("Baseus Bass BP1 Pro"), None),
@@ -1847,6 +1855,7 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
                 rssi: *rssi,
                 is_baseus,
                 connected: false,
+                headphone_candidate: true,
                 model_id,
                 model_name,
                 device_profile,
