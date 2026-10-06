@@ -334,4 +334,4 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Catalog taxonomy audit covered 129 audio models and all seven variant leaf categories; only the same five products are consistently speaker-only.
 - The BLE scan payload now marks catalog-classified speakers, and the pairing UI omits them from new headphone choices. Stored-device auto-reconnect still reads the raw scan inventory and can resolve legacy IDs; unknown or regionally mixed products remain visible.
 - Contributor catalog guidance now distinguishes the offline audio metadata catalog from headphone pairing and documents the speaker and legacy-reconnect policy.
-- No local tests run per current task guidance. CI will validate Rust/TypeScript changes; visual pairing review and the remaining catalog/family gates remain open.
+- Added CI regression coverage for the five category exclusions, mixed regional categories and all legacy IDs. Local tests remain unrun by request; visual pairing review and the remaining catalog/family gates remain open.

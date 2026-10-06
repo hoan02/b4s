@@ -137,6 +137,35 @@ mod tests {
     }
 
     #[test]
+    fn headphone_discovery_excludes_only_consistently_classified_speakers() {
+        let speakers: Vec<_> = audio_models()
+            .filter(|model| model.is_speaker_only())
+            .collect();
+        assert_eq!(speakers.len(), 5);
+        assert_eq!(headphone_models().count(), audio_models().count() - speakers.len());
+        assert!(speakers
+            .iter()
+            .all(|model| !is_headphone_candidate(&model.model)));
+
+        let regionally_mixed = PublicModel {
+            id: "mixed-region".into(),
+            model: "Mixed Region".into(),
+            audio: true,
+            variants: vec![
+                PublicVariant {
+                    category_path: vec!["Audio".into(), "Speaker series".into()],
+                    colors: Vec::new(),
+                },
+                PublicVariant {
+                    category_path: vec!["Audio".into(), "In ear series".into()],
+                    colors: Vec::new(),
+                },
+            ],
+        };
+        assert!(!regionally_mixed.is_speaker_only());
+    }
+
+    #[test]
     fn non_audio_server_products_are_not_registered_as_earbuds() {
         let models = crate::protocol::catalog_json();
         for product in SNAPSHOT.models.iter().filter(|model| !model.audio) {

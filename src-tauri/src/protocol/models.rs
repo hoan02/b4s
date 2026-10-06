@@ -503,6 +503,20 @@ mod tests {
     }
 
     #[test]
+    fn legacy_speaker_identities_remain_resolvable_after_discovery_filtering() {
+        for (id, name) in [
+            ("aequr-30-air", "Baseus AeQur 30 Air"),
+            ("aequr-ds10", "Baseus AeQur DS10"),
+            ("aequr-n10", "Baseus AeQur N10"),
+            ("aequr-vo20", "Baseus AeQur VO20"),
+            ("server-sleep-sk1", "Baseus Sleep SK1"),
+        ] {
+            let resolved = identify(name).expect("legacy identity remains resolvable");
+            assert_eq!(resolved.id, id);
+        }
+    }
+
+    #[test]
     fn server_variant_does_not_inherit_a_shorter_legacy_alias() {
         let variant = identify("Baseus Bowie MC2 S 先锋版").unwrap();
         assert_eq!(variant.support, SupportLevel::ScanOnly);
