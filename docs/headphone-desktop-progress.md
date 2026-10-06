@@ -651,4 +651,4 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 ## Increment 95 — qualify BP1 Pro capture provenance
 
 - The feature matrix no longer says no BP1 Pro capture exists. Existing protocol notes say packet tables were hardware-verified, while the checked-in dossier does not identify capture IDs or firmware manifests; the matrix now records that narrower evidence gap.
-- Documentation-only; `git diff --check` passed. Current-head CI also validates increment 94; firmware-specific feature acceptance stays open under P2/P6/P8.
+- Documentation-only; `git diff --check` passed. Full current-head CI on `372aaba` passed on Ubuntu and Windows, including frontend validation/build/session tests, translation checks, `cargo check`, Rust tests and Tauri build. Firmware-specific feature acceptance stays open under P2/P6/P8.
