@@ -162,6 +162,7 @@ const EqPanel: Component<Props> = (props) => {
         <button
           type="button"
           class={tab() === "preset" ? "active" : ""}
+          aria-pressed={tab() === "preset"}
           onClick={() => setTab("preset")}
         >
           {t("eq.preset")}
@@ -170,6 +171,7 @@ const EqPanel: Component<Props> = (props) => {
           type="button"
           class={tab() === "custom" ? "active" : ""}
           disabled={!props.customSupported}
+          aria-pressed={tab() === "custom"}
           onClick={() => setTab("custom")}
         >
           {t("eq.customize")}
@@ -188,6 +190,7 @@ const EqPanel: Component<Props> = (props) => {
                 class={`eq-preset-card ${
                   !props.customActive && props.eqActive === p.id ? "active" : ""
                 }`}
+                aria-pressed={!props.customActive && props.eqActive === p.id}
                 onClick={() => {
                   setTab("preset");
                   props.onEq(p.id);

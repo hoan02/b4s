@@ -527,3 +527,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - The active find-buds dialog now maps Escape to its explicit stop command; in the ready/confirmation state Escape still closes through the cancel path. This keeps keyboard dismissal aligned with the visible Stop action and avoids leaving locating audio running after Escape.
 - `npx tsc --noEmit` and `git diff --check` passed. Hardware stop acknowledgement remains unverified.
+
+## Increment 71 — expose selected control state to assistive technology
+
+- Added `aria-pressed` to the selected ANC, transparency, adaptive-environment, spatial-mode, EQ-tab and EQ-preset buttons. Named control groups expose their labels to assistive technology while retaining normal button keyboard behavior.
+- `npx tsc --noEmit` and `git diff --check` passed. Full keyboard, screen-reader, theme contrast and Windows scaling acceptance remains open under P5.3/P8.1.

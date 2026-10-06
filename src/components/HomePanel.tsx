@@ -75,10 +75,10 @@ const AdaptiveEnvironmentCards = (props: {
   onSelect: (value: NoiseEnvironment) => void;
 }) => (
   <div class="noise-environments noise-environments-card">
-    <button type="button" class={props.selected === 102 ? "active" : ""} onClick={() => props.onSelect(102)}><IconOffice size={24} /><span><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></span></button>
-    <button type="button" class={props.selected === 103 ? "active" : ""} onClick={() => props.onSelect(103)}><IconOutdoor size={24} /><span><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></span></button>
-    <button type="button" class={props.selected === 101 ? "active" : ""} onClick={() => props.onSelect(101)}><IconTransit size={24} /><span><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></span></button>
-    <button type="button" class={props.selected === 108 ? "active" : ""} onClick={() => props.onSelect(108)}><IconFlight size={24} /><span><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></span></button>
+    <button type="button" class={props.selected === 102 ? "active" : ""} aria-pressed={props.selected === 102} onClick={() => props.onSelect(102)}><IconOffice size={24} /><span><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></span></button>
+    <button type="button" class={props.selected === 103 ? "active" : ""} aria-pressed={props.selected === 103} onClick={() => props.onSelect(103)}><IconOutdoor size={24} /><span><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></span></button>
+    <button type="button" class={props.selected === 101 ? "active" : ""} aria-pressed={props.selected === 101} onClick={() => props.onSelect(101)}><IconTransit size={24} /><span><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></span></button>
+    <button type="button" class={props.selected === 108 ? "active" : ""} aria-pressed={props.selected === 108} onClick={() => props.onSelect(108)}><IconFlight size={24} /><span><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></span></button>
   </div>
 );
 
@@ -170,6 +170,7 @@ const HomePanel: Component<Props> = (props) => {
           <button
             type="button"
             class={`noise-tile ${props.ancMode === "off" ? "active" : ""}`}
+            aria-pressed={props.ancMode === "off"}
             onClick={() => props.onAncMode("off")}
           >
             <IconNormal size={28} />
@@ -178,6 +179,7 @@ const HomePanel: Component<Props> = (props) => {
           <button
             type="button"
             class={`noise-tile ${props.ancMode === "transparency" ? "active" : ""}`}
+            aria-pressed={props.ancMode === "transparency"}
             onClick={() => props.onAncMode("transparency")}
           >
             <IconAmbient size={28} />
@@ -187,6 +189,7 @@ const HomePanel: Component<Props> = (props) => {
             type="button"
             class={`noise-tile ${props.ancMode === "anc" ? "active" : ""}`}
             disabled={!props.noiseSupported}
+            aria-pressed={props.ancMode === "anc"}
             onClick={() => props.onAncMode("anc")}
           >
             <IconAnc size={28} />
@@ -194,9 +197,9 @@ const HomePanel: Component<Props> = (props) => {
           </button>
         </div>
         <Show when={props.ancMode === "transparency"}>
-          <div class="noise-options" aria-label={t("home.transparencyOptions")}>
-            <button type="button" class={props.transparencyMode === "full" ? "active" : ""} onClick={() => props.onTransparencyMode("full")}><span>{t("home.fullTransparency")}</span><small>{t("home.default")}</small></button>
-            <button type="button" class={props.transparencyMode === "voice" ? "active" : ""} onClick={() => props.onTransparencyMode("voice")}><span>{t("home.voiceMode")}</span><small>{t("home.prioritizeVoice")}</small></button>
+          <div class="noise-options" role="group" aria-label={t("home.transparencyOptions")}>
+            <button type="button" class={props.transparencyMode === "full" ? "active" : ""} aria-pressed={props.transparencyMode === "full"} onClick={() => props.onTransparencyMode("full")}><span>{t("home.fullTransparency")}</span><small>{t("home.default")}</small></button>
+            <button type="button" class={props.transparencyMode === "voice" ? "active" : ""} aria-pressed={props.transparencyMode === "voice"} onClick={() => props.onTransparencyMode("voice")}><span>{t("home.voiceMode")}</span><small>{t("home.prioritizeVoice")}</small></button>
           </div>
         </Show>
         <Show when={props.ancMode === "anc"}>
@@ -206,7 +209,9 @@ const HomePanel: Component<Props> = (props) => {
             </Show>
             <div class="noise-adaptive-row"><div><strong>{t("home.adaptive")}</strong><small>{t("home.autoEnvironment")}</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported} checked={props.adaptiveNoise} onChange={(e) => props.onAdaptiveNoise((e.currentTarget as HTMLInputElement).checked)} /><span class="slider" /></label></div>
             <Show when={props.adaptiveNoise} fallback={<div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel}/{props.noiseMaxLevel}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>}>
-              <div class="noise-environments">{[[102, t("home.indoor"), t("home.homeOffice")], [103, t("home.outdoor"), t("home.streetPark")], [101, t("home.commuting"), t("home.subwayBus")], [108, t("home.inTransit"), t("home.planeTrain")]].map(([id, title, detail]) => <button type="button" class={props.noiseEnvironment === id ? "active" : ""} onClick={() => props.onNoiseEnvironment(id as NoiseEnvironment)}><span>{title}</span><small>{detail}</small></button>)}</div>
+              <div class="noise-environments" role="group" aria-label={t("home.adaptive")}>
+                {[[102, t("home.indoor"), t("home.homeOffice")], [103, t("home.outdoor"), t("home.streetPark")], [101, t("home.commuting"), t("home.subwayBus")], [108, t("home.inTransit"), t("home.planeTrain")]].map(([id, title, detail]) => <button type="button" class={props.noiseEnvironment === id ? "active" : ""} aria-pressed={props.noiseEnvironment === id} onClick={() => props.onNoiseEnvironment(id as NoiseEnvironment)}><span>{title}</span><small>{detail}</small></button>)}
+              </div>
             </Show>
           </div>
         </Show>
@@ -244,6 +249,7 @@ const HomePanel: Component<Props> = (props) => {
               type="button"
               disabled={props.spatialPending}
               class={props.spatialMode === "music" ? "active" : ""}
+              aria-pressed={props.spatialMode === "music"}
               onClick={() => props.onSpatialMode("music")}
             >
               {t("listen.music")}
@@ -252,6 +258,7 @@ const HomePanel: Component<Props> = (props) => {
               type="button"
               disabled={props.spatialPending}
               class={props.spatialMode === "cinema" ? "active" : ""}
+              aria-pressed={props.spatialMode === "cinema"}
               onClick={() => props.onSpatialMode("cinema")}
             >
               {t("listen.cinema")}
