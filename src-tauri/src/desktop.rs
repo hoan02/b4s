@@ -29,9 +29,11 @@ pub fn install_tray(app: &mut tauri::App) -> tauri::Result<()> {
             "quit" => {
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
-                    let _ =
-                        tokio::time::timeout(Duration::from_secs(4), ble::shutdown(app.clone()))
-                            .await;
+                    let _ = tokio::time::timeout(
+                        Duration::from_secs(4),
+                        ble::commands::shutdown(app.clone()),
+                    )
+                    .await;
                     app.exit(0);
                 });
             }

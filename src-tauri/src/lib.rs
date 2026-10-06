@@ -27,13 +27,13 @@ async fn ble_start_scan(app: tauri::AppHandle, mock: Option<bool>) -> Result<(),
     if mock.unwrap_or(false) {
         ble::start_mock_scan(app).await
     } else {
-        ble::start_scan(app).await
+        ble::scanning::start_scan(app).await
     }
 }
 
 #[tauri::command]
 async fn ble_stop_scan(app: tauri::AppHandle) -> Result<(), String> {
-    ble::stop_scan(app).await
+    ble::scanning::stop_scan(app).await
 }
 
 #[tauri::command]
@@ -45,13 +45,13 @@ async fn ble_connect(
     if mock.unwrap_or(false) || device_id.starts_with("mock-") {
         ble::mock_connect(app, device_id).await
     } else {
-        ble::connect(app, device_id).await
+        ble::connection::connect(app, device_id).await
     }
 }
 
 #[tauri::command]
 async fn ble_disconnect(app: tauri::AppHandle) -> Result<(), String> {
-    ble::disconnect(app).await
+    ble::connection::disconnect(app).await
 }
 
 #[tauri::command]
@@ -127,12 +127,12 @@ fn get_model_profile(model_id: String) -> Result<catalog::ModelProfile, String> 
 
 #[tauri::command]
 async fn get_device_snapshot() -> device::snapshot::DeviceSnapshot {
-    ble::get_device_snapshot().await
+    ble::commands::get_device_snapshot().await
 }
 
 #[tauri::command]
 async fn query_battery() -> Result<BatteryState, String> {
-    ble::query_battery().await
+    ble::connection::query_battery().await
 }
 
 #[tauri::command]
@@ -159,22 +159,22 @@ async fn set_listening_state(
         }
         _ => return Err(format!("Unknown listening mode: {mode}")),
     };
-    ble::send_listening(command).await
+    ble::commands::send_listening(command).await
 }
 
 #[tauri::command]
 async fn set_eq_preset(preset: String) -> Result<(), String> {
-    ble::send_eq_id(&preset).await
+    ble::commands::send_eq_id(&preset).await
 }
 
 #[tauri::command]
 async fn set_eq_index(index: u8) -> Result<(), String> {
-    ble::send_eq_index(index).await
+    ble::commands::send_eq_index(index).await
 }
 
 #[tauri::command]
 async fn set_game_mode(enabled: bool) -> Result<(), String> {
-    ble::send_game_mode(enabled).await
+    ble::commands::send_game_mode(enabled).await
 }
 
 #[tauri::command]
@@ -186,32 +186,32 @@ async fn set_spatial_mode(mode: String) -> Result<(), String> {
         "off" | "00" => SpatialMode::Off,
         _ => return Err(format!("Unknown spatial mode: {mode}")),
     };
-    ble::send_spatial(m).await
+    ble::commands::send_spatial(m).await
 }
 
 #[tauri::command]
 async fn set_bass_boost(level: u8) -> Result<(), String> {
-    ble::send_bass_boost(level).await
+    ble::commands::send_bass_boost(level).await
 }
 
 #[tauri::command]
 async fn set_custom_eq(bands: Vec<EqBand>, dict_sort: u8, anc: bool) -> Result<(), String> {
-    ble::send_custom_eq(bands, dict_sort, anc).await
+    ble::commands::send_custom_eq(bands, dict_sort, anc).await
 }
 
 #[tauri::command]
 async fn set_ldac(enabled: bool) -> Result<(), String> {
-    ble::send_ldac(enabled).await
+    ble::commands::send_ldac(enabled).await
 }
 
 #[tauri::command]
 async fn set_hearing_protection(enabled: bool, level: u8) -> Result<(), String> {
-    ble::send_hearing_protection(enabled, level).await
+    ble::commands::send_hearing_protection(enabled, level).await
 }
 
 #[tauri::command]
 async fn find_buds(start: bool) -> Result<(), String> {
-    ble::send_find_buds(start).await
+    ble::commands::send_find_buds(start).await
 }
 
 // ---------------------------------------------------------------------------

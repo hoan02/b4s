@@ -25,7 +25,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
-| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — exact profile UUIDs only; same-name entries stay explicit, full runtime extraction still required |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — scan/discovery, connection, command, and GATT I/O modules now split from `ble.rs`; central state ownership, transport interface, and remaining lifecycle cleanup still open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards integrated; actor/cancellation outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
@@ -402,3 +402,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Replaced per-feature device events with the versioned `device://snapshot` stream for battery, ANC, EQ, game, spatial, bass, LDAC, and hearing state. Demo-session observations publish the same snapshot contract; the frontend no longer listens to individual device events. Removed the direct battery getter and unused connected/disconnected/device/raw events.
 - Removed default mode/range arguments from custom EQ, hearing protection, and listening commands; callers must send explicit values, and invalid transparency enums now return errors.
 - Rust library suite passed 101/101 on the same change set before a dead empty branch was removed; latest `cargo check`, `npx tsc --noEmit`, and whitespace checks pass. CI is pending for this slice. Link-health, scan, and connection streams remain separate operational state and still need a versioned typed contract.
+
+
+## Increment 49 — split BLE runtime by responsibility
+
+- Extracted profile-driven scan/discovery coordination, connection/subscription/readback lifecycle, device commands, and exact-profile GATT writes into `ble/scanning.rs`, `ble/connection.rs`, `ble/commands.rs`, and `ble/transport.rs`. Tauri handlers now call the domain modules directly. `ble.rs` retains shared runtime state and cross-cutting snapshot/link helpers and is down from about 2,060 to 702 lines.
+- This is a module ownership refactor over the single strict execution path; it introduces no legacy wrapper or alternate transport. `cargo check` passes; the full Rust library suite is running. Central state ownership/actor extraction, injected transport abstraction for full connection tests, and typed scan/link/connection lifecycle events remain open.

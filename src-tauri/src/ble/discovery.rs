@@ -37,7 +37,7 @@ async fn listen_central_events(
                     continue;
                 }
                 if let Ok(p) = adapter.peripheral(&id).await {
-                    process_peripheral(&app, p, &id).await;
+                    super::scanning::process_peripheral(&app, p, &id).await;
                 }
             }
             CentralEvent::DeviceDisconnected(id) => {
