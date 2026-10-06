@@ -507,3 +507,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Moved EQ profile selection, model-scoped draft layout, confirmed preset/custom/reset operations, and spatial-conflict confirmation into `features/equalizer/controller.ts`. The app shell now supplies the session/profile state and composes the controller with `EqPanel`.
 - Kept confirmed snapshot values separate from custom drafts and preserved model-specific preset resolution. The confirmation flow now executes its deferred action directly after disabling spatial mode, avoiding a second conflict prompt. `npx tsc --noEmit` and `git diff --check` passed; no full local test/build run.
+
+## Increment 67 — update controller and contract status
+
+- Refreshed the work-package summary after moving ANC/transparency, EQ, game, spatial and advanced-sound workflows into dedicated feature controllers. P5.1 remains open for navigation/accessibility acceptance.
+- P4.3 now records full frontend shape validation and the remaining session/sequence/error semantics. No local tests/build were run for this tracker-only update.
