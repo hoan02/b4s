@@ -24,7 +24,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P1.4 | Trace server dictionary/model-param consumers | In progress |
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
-| P2.3 | Replay harness và scripted fake transport | Open |
+| P2.3 | Replay harness và scripted fake transport | In progress — synthetic framing/decoder/confirmation replay; fake transport/timing matrix outstanding |
 | P3.1 | Tách BLE discovery/GATT facade khỏi session | Open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards integrated; actor/cancellation outstanding |
@@ -300,3 +300,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Game mode UI uses nullable observed state, with localized unknown text/mixed checkbox before readback. Session reset no longer fabricates off.
 - Game command admission/pending/error and completion move to the shared confirmed-operation controller. Session is checked after both command and refresh; an old refresh cannot publish success in a new session. Removed duplicated handler lifecycle code.
 - Frontend typecheck, seven session/controller tests and whitespace checks passed. ANC draft/confirmed state, query readiness and hardware acceptance remain open under P5/P6.
+
+
+## Increment 35 — integrated synthetic notification replay
+
+- Added a pipeline replay through connection-local receiver, CRC/framing, BP1 decoder and session-scoped expected state. Every split point of a synthetic wrapped bass observation is exercised after a corrupt frame and bare set ACK.
+- Correct readback confirms only the matching desired state; ACK cannot decode as bass, corrupt input cannot reach confirmation and reconnect invalidates the old observation. Focused replay test passed and runs with the existing CI library suite.
+- This is synthetic pipeline evidence only. Fake transport write/queue/deadline scripting, late-response quarantine and capture-based replay remain open under P2.3/P3.4; no hardware promotion.
