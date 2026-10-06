@@ -497,3 +497,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Moved bass, LDAC and hearing-protection command workflows, shared confirmed-operation queue, and pending/error state into `features/sound/controller.ts`. The app shell now wires profile snapshot setters, session identity, and notifications into the controller.
 - Device changes still reset the operation and stale completions remain session-guarded. `npx tsc --noEmit` and `git diff --check` passed; no full local build/test suite was run.
+
+## Increment 65 — extract game and spatial controllers
+
+- Moved game-mode operation state/notifications and spatial mode intent/enable workflows into dedicated `features/game-mode` and `features/spatial` controllers. Snapshot-confirmed device values remain owned by the device session; controllers publish optimistic demo state only for demo links.
+- `App.tsx` now composes these feature controllers instead of owning their pending/error signals and command handlers. `npx tsc --noEmit` and `git diff --check` passed; no full local test/build run.

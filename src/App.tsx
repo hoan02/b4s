@@ -1,5 +1,5 @@
 import { Component, createEffect, createSignal, Show, onMount, onCleanup } from "solid-js";
-import type { AncMode, EqPresetId, SpatialMode } from "./lib/device";
+import type { AncMode, EqPresetId } from "./lib/device";
 import BlePairing from "./components/BlePairing";
 import HomePanel from "./components/HomePanel";
 import MorePanel from "./components/MorePanel";
@@ -14,6 +14,8 @@ import { subscribeDeviceRuntime } from "./features/devices/runtimeSubscriptions"
 import { createFindBudsController } from "./features/find-buds/controller";
 import { createListeningController } from "./features/listening/controller";
 import { createSoundController } from "./features/sound/controller";
+import { createGameModeController } from "./features/game-mode/controller";
+import { createSpatialController } from "./features/spatial/controller";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
@@ -29,7 +31,6 @@ import {
   setEqIndex,
   setEqPreset,
   setCustomEq,
-  setGameMode,
   setSpatialMode,
 } from "./lib/device";
 import { defaultCustomBands } from "./lib/eq";
@@ -80,14 +81,9 @@ const App: Component = () => {
   const [eqCustomBands, setEqCustomBands] = createSignal<number[]>([]);
   const [eqCustomActive, setEqCustomActive] = createSignal(false);
   const [eqPending, setEqPending] = createSignal(false);
-  const [gamePending, setGamePending] = createSignal(false);
   const [eqError, setEqError] = createSignal<string | null>(null);
-  const [gameError, setGameError] = createSignal<string | null>(null);
   const [gameOn, setGameOn] = createSignal<boolean | null>(null);
-  const [spatialPending, setSpatialPending] = createSignal(false);
-  const [spatialError, setSpatialError] = createSignal<string | null>(null);
   const [spatialOn, setSpatialOn] = createSignal<boolean | null>(null);
-  const [spatialMode, setSpatialModeUi] = createSignal<SpatialMode>("music");
   const [bassBoost, setBassBoostUi] = createSignal<number | null>(null);
   const [ldac, setLdac] = createSignal<boolean | null>(null);
   const [hearingThreshold, setHearingThreshold] = createSignal<number | null>(null);
@@ -110,8 +106,8 @@ const App: Component = () => {
     if (!snapshot) {
       equalizer.reset();
       sound.reset();
-      spatialOperation.reset();
-      gameOperation.reset();
+      spatialController.reset();
+      gameModeController.reset();
       setBassBoostUi(null);
       setHearingProtect(null);
       setHearingThreshold(null);
@@ -160,12 +156,6 @@ const App: Component = () => {
   const equalizer = createConfirmedOperation({
     session, refresh: refreshSnapshot, pending: setEqPending, error: setEqError, formatError,
   });
-  const spatialOperation = createConfirmedOperation({
-    session, refresh: refreshSnapshot, pending: setSpatialPending, error: setSpatialError, formatError,
-  });
-  const gameOperation = createConfirmedOperation({
-    session, refresh: refreshSnapshot, pending: setGamePending, error: setGameError, formatError,
-  });
   let disposed = false;
   let stopRuntimeSubscriptions: (() => void) | undefined;
   let linkPoll: number | undefined;
@@ -202,6 +192,23 @@ const App: Component = () => {
     setBassBoost: setBassBoostUi,
     setLdac,
     setHearingProtection: setHearingProtect,
+    formatError,
+    notifyError: (message) => notify(message, "error"),
+  });
+  const gameModeController = createGameModeController({
+    session,
+    refreshSnapshot,
+    isDemo: () => link().mock,
+    setGameMode: setGameOn,
+    formatError,
+    notifyChanged: (enabled) => notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info"),
+    notifyError: (message) => notify(message, "error"),
+  });
+  const spatialController = createSpatialController({
+    session,
+    refreshSnapshot,
+    isDemo: () => link().mock,
+    setSpatialEnabled: setSpatialOn,
     formatError,
     notifyError: (message) => notify(message, "error"),
   });
@@ -376,27 +383,6 @@ const App: Component = () => {
     }, (message) => notify(message, "error"));
   };
 
-  const handleGameMode = async (enabled: boolean) => {
-    await gameOperation.run(() => setGameMode(enabled), () => {
-      if (link().mock) setGameOn(enabled);
-      notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info");
-    }, (message) => notify(message, "error"));
-  };
-
-  const handleSpatialOn = async (on: boolean) => {
-    await spatialOperation.run(() => setSpatialMode(on ? spatialMode() : "off"), () => {
-      if (link().mock) setSpatialOn(on);
-    }, (message) => notify(message, "error"));
-  };
-
-  const handleSpatialMode = async (mode: SpatialMode) => {
-    await spatialOperation.run(() => setSpatialMode(mode), () => {
-      // Requested mode is a local choice; AA42 only confirms enabled state.
-      setSpatialModeUi(mode);
-      if (link().mock) setSpatialOn(mode !== "off");
-    }, (message) => notify(message, "error"));
-  };
-
   const confirmEqAction = async () => {
     const action = pendingEqAction();
     setPendingEqAction(null);
@@ -565,18 +551,18 @@ const App: Component = () => {
                 adaptiveSupported={noiseCaps()?.supportsAdaptive ?? false}
                 transparencyVoiceSupported={noiseCaps()?.supportsTransparencyVoice ?? false}
                 gameMode={gameOn()}
-                gamePending={gamePending()}
-                gameError={gameError()}
+                gamePending={gameModeController.pending()}
+                gameError={gameModeController.error()}
                 findActive={findController.active()}
                 spatialSupported={device()?.deviceProfile.capabilities.spatial ?? false}
                 gameSupported={device()?.deviceProfile.capabilities.gameMode ?? false}
                 eqSupported={device()?.deviceProfile.capabilities.eq ?? false}
                 findSupported={device()?.deviceProfile.capabilities.findBuds ?? false}
                 moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
-                spatialPending={spatialPending()}
-                spatialError={spatialError()}
+                spatialPending={spatialController.pending()}
+                spatialError={spatialController.error()}
                 spatialOn={spatialOn()}
-                spatialMode={spatialMode()}
+                spatialMode={spatialController.mode()}
                 eqLabel={
                   eqCustomActive()
                     ? t("eq.customize")
@@ -587,14 +573,14 @@ const App: Component = () => {
                 onAdaptiveNoise={listening.setAdaptiveNoise}
                 onNoiseEnvironment={listening.setNoiseEnvironment}
                 onNoiseLevel={listening.setNoiseLevel}
-                onGameMode={handleGameMode}
+                onGameMode={gameModeController.setMode}
                 onFindBuds={findController.request}
                 onOpenMore={() => setView("more")}
                 onOpenSettings={() => setView("settings")}
                 onDisconnect={handleDisconnect}
                 onOpenEq={() => setView("eq")}
-                onSpatialOn={handleSpatialOn}
-                onSpatialMode={handleSpatialMode}
+                onSpatialOn={spatialController.setEnabled}
+                onSpatialMode={spatialController.selectMode}
                 onSoundFit={() =>
                   notify(
                     t("toast.soundFitUnavailable"),
