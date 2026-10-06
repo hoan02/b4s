@@ -20,7 +20,9 @@ type DeviceCommand =
   | { kind: "setBassBoost"; level: number }
   | { kind: "setLdac"; enabled: boolean }
   | { kind: "setHearingProtection"; enabled: boolean; level: number }
-  | { kind: "findBuds"; start: boolean };
+  | { kind: "findBuds"; start: boolean }
+  | { kind: "setInEar"; enabled: boolean }
+  | { kind: "setGesture"; layout: number; left: number | null; right: number | null };
 
 export interface DeviceCommandResponse {
   contractVersion: 1;
@@ -125,4 +127,16 @@ export async function setHearingProtection(
 
 export async function findBuds(start = true): Promise<DeviceCommandResponse> {
   return applyDeviceCommand({ kind: "findBuds", start });
+}
+
+export async function setInEar(enabled: boolean): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setInEar", enabled });
+}
+
+export async function setGesture(
+  layout: number,
+  left: number | null,
+  right: number | null
+): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setGesture", layout, left, right });
 }

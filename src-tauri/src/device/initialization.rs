@@ -9,6 +9,7 @@ pub enum StartupQuery {
     Ldac,
     HearingProtection,
     InEar,
+    Gesture(u8),
 }
 
 pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<StartupQuery> {
@@ -36,6 +37,20 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
             plan.push(query);
         }
     }
+    // Gesture v1 state is queried per reviewed layout once the capability and
+    // the Experimental gate allow it.
+    if authorize(profile, Feature::Gesture).is_ok() {
+        if let Some(gesture) = profile
+            .model_id
+            .as_deref()
+            .and_then(crate::catalog::profile_for)
+            .and_then(|model| model.gesture)
+        {
+            for layout in gesture.layouts {
+                plan.push(StartupQuery::Gesture(layout.layout));
+            }
+        }
+    }
     plan
 }
 
@@ -48,6 +63,7 @@ pub fn command_for(query: StartupQuery) -> Option<Command> {
         StartupQuery::Ldac => Some(Command::QueryLdac),
         StartupQuery::HearingProtection => Some(Command::QueryHearingProtection),
         StartupQuery::InEar => Some(Command::QueryInEar),
+        StartupQuery::Gesture(layout) => Some(Command::QueryGesture(layout)),
     }
 }
 
@@ -73,7 +89,11 @@ mod tests {
                 StartupQuery::Eq,
                 StartupQuery::Bass,
                 StartupQuery::Spatial,
-                StartupQuery::InEar
+                StartupQuery::InEar,
+                StartupQuery::Gesture(0),
+                StartupQuery::Gesture(1),
+                StartupQuery::Gesture(2),
+                StartupQuery::Gesture(3)
             ]
         );
     }

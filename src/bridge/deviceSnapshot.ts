@@ -12,6 +12,18 @@ export interface AncReading {
   observedAtMs: number;
 }
 
+export interface InEarReading {
+  enabled: boolean;
+  observedAtMs: number;
+}
+
+export interface GestureReading {
+  layout: number;
+  left: number;
+  right: number;
+  observedAtMs: number;
+}
+
 export interface DeviceSnapshot {
   schemaVersion: 2;
   sessionId: number;
@@ -32,6 +44,8 @@ export interface DeviceSnapshot {
   spatialEnabled: boolean | null;
   bassBoost: number | null;
   hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
+  inEar: InEarReading | null;
+  gesture: GestureReading[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -72,6 +86,17 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
     typeof hearing.enabled === "boolean" && Number.isInteger(hearing.level) &&
     (hearing.level as number) >= 0 && (hearing.level as number) <= 255 &&
     isCounter(hearing.observedAtMs));
+  const inEar = value.inEar;
+  const validInEar = inEar === null || (isRecord(inEar) &&
+    typeof inEar.enabled === "boolean" && isCounter(inEar.observedAtMs));
+  const gesture = value.gesture;
+  const validGesture = Array.isArray(gesture) && gesture.every((reading) =>
+    isRecord(reading) && Number.isInteger(reading.layout) &&
+    (reading.layout as number) >= 0 && (reading.layout as number) <= 5 &&
+    Number.isInteger(reading.left) && Number.isInteger(reading.right) &&
+    (reading.left as number) >= 0 && (reading.left as number) <= 255 &&
+    (reading.right as number) >= 0 && (reading.right as number) <= 255 &&
+    isCounter(reading.observedAtMs));
   return ["left", "right", "case"].every((key) =>
     isNullable(battery[key], isBatteryReading)) &&
     isNullable(value.anc, isAncReading) &&
@@ -82,7 +107,8 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
     isNullable(value.eqIndex, (item) => Number.isInteger(item)) &&
     ["game", "ldac", "spatialEnabled"].every((key) =>
       isNullable(value[key], (item) => typeof item === "boolean")) &&
-    isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing;
+    isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing &&
+    validInEar && validGesture;
 }
 
 function decodeSnapshotV2(payload: unknown): DeviceSnapshot {

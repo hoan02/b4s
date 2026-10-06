@@ -33,7 +33,8 @@ export interface BleDevice {
 }
 
 export interface DeviceProfile {
-  capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean };
+  capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean; gesture: boolean; inEar: boolean };
+  experimentalFeatures: string[];
   connection: {
     transport: "bleGatt" | "unresolved";
     framing: "bareAaBa" | "headphone789c" | "unresolved";
@@ -118,6 +119,13 @@ export interface ModelProfile {
     customSlots: number;
     presets: Array<{ id: string; label: string; description: string; dictSort: number; curve: number[] }>;
   } | null;
+  gesture: {
+    dualButton: boolean;
+    layouts: Array<{ layout: number; functions: number[] }>;
+    provenance: string;
+  } | null;
+  inEar: { provenance: string } | null;
+  experimentalFeatures: string[];
   image: string | null;
 }
 
@@ -223,8 +231,10 @@ function isDeviceProfile(value: unknown): value is DeviceProfile {
     Array.isArray(connection.firmwareVersions) &&
     connection.firmwareVersions.every((item) => typeof item === "string") &&
     typeof connection.provenance === "string");
-  return ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac", "hearingProtection", "findBuds"]
+  return ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac", "hearingProtection", "findBuds", "gesture", "inEar"]
       .every((key) => typeof capabilities[key] === "boolean") &&
+    Array.isArray(value.experimentalFeatures) &&
+    value.experimentalFeatures.every((item) => typeof item === "string") &&
     isNullable(value.modelId, (item) => typeof item === "string") &&
     isNullable(value.modelName, (item) => typeof item === "string") &&
     isNullable(value.firmware, (item) => typeof item === "string") &&

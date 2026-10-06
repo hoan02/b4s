@@ -48,6 +48,11 @@ interface Props {
   findSupported: boolean;
   spatialSupported: boolean;
   moreSupported: boolean;
+  gestureSupported: boolean;
+  inEarSupported: boolean;
+  inEarOn: boolean | null;
+  inEarPending?: boolean;
+  inEarError?: string | null;
   gameMode: boolean | null;
   gamePending?: boolean;
   gameError?: string | null;
@@ -68,6 +73,8 @@ interface Props {
   onOpenSettings: () => void;
   onDisconnect: () => void;
   onOpenEq: () => void;
+  onOpenGestures: () => void;
+  onInEar: (enabled: boolean) => void;
   onSpatialOn: (on: boolean) => void;
   onSpatialMode: (m: SpatialMode) => void;
   onSoundFit: () => void;
@@ -322,6 +329,39 @@ const HomePanel: Component<Props> = (props) => {
             <div class="list-text">
               <span class="list-title">EQ</span>
               <span class="list-sub">{props.eqLabel}</span>
+            </div>
+            <span class="list-chev">›</span>
+          </button>
+          </Show>
+
+          <Show when={props.inEarSupported}>
+          <div class="list-row">
+            <span class="list-ico list-ico-text">IE</span>
+            <div class="list-text">
+              <span class="list-title">{t("gesture.inEar")}</span>
+              <span class="list-sub">{props.inEarOn === null ? t("control.unknown") : t("gesture.inEarHint")}</span>
+              <OperationStatus pending={props.inEarPending} error={props.inEarError} />
+            </div>
+            <label class="toggle sm">
+              <input
+                type="checkbox"
+                disabled={props.inEarPending}
+                aria-checked={props.inEarOn === null ? "mixed" : props.inEarOn}
+                checked={props.inEarOn === true}
+                aria-label={t("gesture.inEar")}
+                onChange={(e) => props.onInEar((e.currentTarget as HTMLInputElement).checked)}
+              />
+              <span class="slider" />
+            </label>
+          </div>
+          </Show>
+
+          <Show when={props.gestureSupported}>
+          <button type="button" class="list-row action" onClick={() => props.onOpenGestures()}>
+            <span class="list-ico list-ico-text">G</span>
+            <div class="list-text">
+              <span class="list-title">{t("gesture.title")}</span>
+              <span class="list-sub">{t("gesture.entryHint")}</span>
             </div>
             <span class="list-chev">›</span>
           </button>

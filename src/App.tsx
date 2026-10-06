@@ -4,6 +4,7 @@ import BlePairing from "./components/BlePairing";
 import HomePanel from "./components/HomePanel";
 import MorePanel from "./components/MorePanel";
 import EqPanel from "./components/EqPanel";
+import GesturePanel from "./components/GesturePanel";
 import Settings from "./components/Settings";
 import ToastHost from "./components/ToastHost";
 import ConfirmDialog from "./components/ConfirmDialog";
@@ -15,6 +16,7 @@ import { createListeningController } from "./features/listening/controller";
 import { createSoundController } from "./features/sound/controller";
 import { createGameModeController } from "./features/game-mode/controller";
 import { createSpatialController } from "./features/spatial/controller";
+import { createGestureController } from "./features/gestures/controller";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
@@ -39,7 +41,7 @@ import { formatError, t } from "./lib/i18n";
 import { IconBack } from "./components/Icons";
 import "./styles/main.scss";
 
-type View = "home" | "more" | "eq" | "settings";
+type View = "home" | "more" | "eq" | "settings" | "gestures";
 const App: Component = () => {
   migrateModelIdsOnce();
   const savedDesktopPreferences = readDesktopPreferences();
@@ -65,12 +67,16 @@ const App: Component = () => {
   const [ancMode, setAncModeUi] = createSignal<AncMode | null>(null);
   const [modelProfiles, setModelProfiles] = createSignal<ModelProfile[]>([]);
   const modelEq = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.eq;
+  const modelGesture = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.gesture ?? null;
+  const modelInEar = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.inEar ?? null;
   const [gameOn, setGameOn] = createSignal<boolean | null>(null);
   const [spatialOn, setSpatialOn] = createSignal<boolean | null>(null);
   const [bassBoost, setBassBoostUi] = createSignal<number | null>(null);
   const [ldac, setLdac] = createSignal<boolean | null>(null);
   const [hearingThreshold, setHearingThreshold] = createSignal<number | null>(null);
   const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
+  const [inEarOn, setInEarOn] = createSignal<boolean | null>(null);
+  const [gestureState, setGestureState] = createSignal<Array<{ layout: number; left: number; right: number }>>([]);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
   let latestLinkSession = -1;
@@ -95,9 +101,12 @@ const App: Component = () => {
       setBassBoostUi(null);
       setHearingProtect(null);
       setHearingThreshold(null);
+      setInEarOn(null);
+      setGestureState([]);
       setSpatialOn(null);
       setAncModeUi(null);
       listening.reset();
+      gestures.reset();
       setGameOn(null);
       setLdac(null);
       return;
@@ -110,6 +119,8 @@ const App: Component = () => {
     setBassBoostUi(snapshot.bassBoost ?? null);
     setHearingProtect(snapshot.hearing?.enabled ?? null);
     setHearingThreshold(snapshot.hearing?.level ?? null);
+    setInEarOn(snapshot.inEar?.enabled ?? null);
+    setGestureState(snapshot.gesture.map((value) => ({ layout: value.layout, left: value.left, right: value.right })));
   };
   const session = createDeviceSession(applySnapshot);
   const refreshSnapshot = async () => {
@@ -196,6 +207,27 @@ const App: Component = () => {
     formatError,
     notifyError: (message) => notify(message, "error"),
   });
+  const gestures = createGestureController({
+    session,
+    refreshSnapshot,
+    formatError,
+    notifyError: (message) => notify(message, "error"),
+  });
+
+  const experimentalUnlocked = (key: string): boolean => {
+    const profile = device()?.deviceProfile;
+    if (!profile) return false;
+    const experimental = profile.experimentalFeatures ?? [];
+    return !experimental.includes(key) || experimentalMode();
+  };
+  const inEarSupported = () =>
+    (device()?.deviceProfile.capabilities.inEar ?? false) &&
+    !!modelInEar() &&
+    experimentalUnlocked("inEar");
+  const gestureSupported = () =>
+    (device()?.deviceProfile.capabilities.gesture ?? false) &&
+    !!modelGesture() &&
+    experimentalUnlocked("gesture");
 
   const findController = createFindBudsController(notify);
 
@@ -306,6 +338,7 @@ const App: Component = () => {
     setDevice(dev);
     setConnected(true);
     findController.reset();
+    gestures.reset();
     setControlError(null);
     setView("home");
     startLinkPoll();
@@ -334,6 +367,7 @@ const App: Component = () => {
     setConnected(false);
     setDevice(null);
     findController.reset();
+    gestures.reset();
     setControlError(null);
     setView("home");
     stopLinkPoll();
@@ -451,6 +485,25 @@ const App: Component = () => {
           </section>
         </Show>
 
+        {/* —— Gestures / in-ear (experimental capability) —— */}
+        <Show when={view() === "gestures" && connected()}>
+          <section class="section section-scroll">
+            <GesturePanel
+              dualButton={modelGesture()?.dualButton ?? false}
+              layouts={modelGesture()?.layouts ?? []}
+              gestureState={gestureState()}
+              inEarSupported={inEarSupported()}
+              inEarOn={inEarOn()}
+              pending={gestures.pending()}
+              error={gestures.error()}
+              experimental={device()?.deviceProfile.experimentalFeatures?.includes("gesture") ?? false}
+              onBack={() => setView("home")}
+              onInEar={gestures.setInEar}
+              onGesture={gestures.setGesture}
+            />
+          </section>
+        </Show>
+
         {/* —— Home / Pair —— */}
         <Show when={view() === "home"}>
           <Show
@@ -501,6 +554,11 @@ const App: Component = () => {
                 gameSupported={device()?.deviceProfile.capabilities.gameMode ?? false}
                 eqSupported={device()?.deviceProfile.capabilities.eq ?? false}
                 findSupported={device()?.deviceProfile.capabilities.findBuds ?? false}
+                gestureSupported={gestureSupported()}
+                inEarSupported={inEarSupported()}
+                inEarOn={inEarOn()}
+                inEarPending={gestures.pending()}
+                inEarError={gestures.error()}
                 moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
                 spatialPending={spatialController.pending()}
                 spatialError={spatialController.error()}
@@ -522,6 +580,8 @@ const App: Component = () => {
                 onOpenSettings={() => setView("settings")}
                 onDisconnect={handleDisconnect}
                 onOpenEq={() => setView("eq")}
+                onOpenGestures={() => setView("gestures")}
+                onInEar={gestures.setInEar}
                 onSpatialOn={spatialController.setEnabled}
                 onSpatialMode={spatialController.selectMode}
                 onSoundFit={() =>
