@@ -38,6 +38,7 @@ import {
 } from "./lib/device";
 import { defaultCustomBands } from "./lib/eq";
 import { readDesktopPreferences, writeAutoReconnect } from "./lib/desktopPreferences";
+import { migrateModelIdsOnce } from "./lib/modelIdMigration";
 import { getAppInfo } from "./lib/app";
 import {
   applyTheme,
@@ -57,6 +58,7 @@ type PendingEqAction =
   | { kind: "resetCustom" };
 
 const App: Component = () => {
+  migrateModelIdsOnce();
   const savedDesktopPreferences = readDesktopPreferences();
   const [view, setView] = createSignal<View>("home");
   const [settingsSubpage, setSettingsSubpage] = createSignal<"language" | "appearance" | null>(null);
