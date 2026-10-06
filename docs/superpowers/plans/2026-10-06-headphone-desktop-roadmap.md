@@ -1,6 +1,6 @@
 # B4S: kế hoạch hoàn thiện desktop companion dành cho tai nghe
 
-Ngày: 2026-10-06. Trạng thái: phạm vi và chính sách sản phẩm đã chốt với người dùng; thiết kế kỹ thuật được review theo các mốc, chưa bắt đầu refactor theo tài liệu này.
+Ngày: 2026-10-06. Trạng thái: roadmap đang được triển khai theo lát cắt; tiến độ, kiểm chứng và các cổng phần cứng theo dõi tại [`docs/headphone-desktop-progress.md`](../../headphone-desktop-progress.md). Các hạng mục có gate ngoài repo vẫn để mở cho tới khi có bằng chứng tương ứng.
 
 ## 1. Quyết định đã chốt và mục tiêu
 

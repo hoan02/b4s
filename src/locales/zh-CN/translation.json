@@ -1,6 +1,11 @@
 {
   "language": "语言",
   "settings.general": "常规",
+  "settings.autoReconnect": "自动重新连接",
+  "settings.autoReconnectHint": "启用后，B4S 会在启动时扫描一次，重新连接上次使用的受支持耳机。默认关闭。",
+  "settings.startAtLogin": "登录时启动 B4S",
+  "settings.startAtLoginHint": "登录此电脑时启动 B4S。默认关闭。",
+  "settings.preferenceSaveFailed": "无法保存此设置。",
   "error.operationFailed": "操作失败",
   "nav.back": "返回",
   "nav.settings": "设置",

@@ -1,6 +1,11 @@
 {
   "language": "Idioma",
   "settings.general": "General",
+  "settings.autoReconnect": "Reconectar automáticamente",
+  "settings.autoReconnectHint": "Al activarlo, B4S busca una vez al iniciar los auriculares compatibles usados por última vez. Está desactivado por defecto.",
+  "settings.startAtLogin": "Iniciar B4S al iniciar sesión",
+  "settings.startAtLoginHint": "Abrir B4S cuando inicies sesión en este equipo. Desactivado por defecto.",
+  "settings.preferenceSaveFailed": "No se pudo guardar esta preferencia.",
   "error.operationFailed": "No se pudo completar la operación",
   "nav.back": "Volver",
   "nav.settings": "Configuración",

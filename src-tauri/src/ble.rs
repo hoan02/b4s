@@ -156,6 +156,8 @@ struct BleInner {
     /// Live battery merged from 0x02 + 0x27 notifies
     battery: BatteryState,
     last_anc: Option<AncMode>,
+    /// Best-effort record that a find-start write was accepted by the OS.
+    find_requested: bool,
     /// true when using mock (no real GATT)
     mock: bool,
     /// Live link diagnostics for UI
@@ -188,6 +190,7 @@ impl BleInner {
             devices: HashMap::new(),
             battery: BatteryState::default(),
             last_anc: None,
+            find_requested: false,
             mock: false,
             has_write_uuid: false,
             has_notify_uuid: false,
@@ -219,6 +222,7 @@ impl BleInner {
         self.write_char = None;
         self.notify_char = None;
         self.use_v2_wrap = false;
+        self.find_requested = false;
     }
 }
 
@@ -1504,11 +1508,24 @@ pub async fn send_find_buds(start: bool) -> Result<(), String> {
         return Ok(());
     }
     drop(state);
-    with_connected_peripheral(|p| {
+    let result = with_connected_peripheral(|p| {
         let d = data.clone();
         Box::pin(async move { write_bytes(&p, &d).await })
     })
-    .await
+    .await;
+    if result.is_ok() {
+        BLE.lock().await.find_requested = start;
+    }
+    result
+}
+
+pub async fn shutdown(app: AppHandle) {
+    let _ = tokio::time::timeout(Duration::from_secs(1), stop_scan(app.clone())).await;
+    let should_stop_find = BLE.lock().await.find_requested;
+    if should_stop_find {
+        let _ = tokio::time::timeout(Duration::from_secs(1), send_find_buds(false)).await;
+    }
+    let _ = tokio::time::timeout(Duration::from_secs(2), disconnect(app)).await;
 }
 
 pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {
@@ -1841,7 +1858,10 @@ async fn emit_scan_status(app: &AppHandle) {
 }
 
 async fn emit_connection_state(app: &AppHandle) {
-    let _ = app.emit("ble://connection", &get_connection_state().await);
+    let state = get_connection_state().await;
+    #[cfg(desktop)]
+    crate::desktop::update_tray_status(app, &state);
+    let _ = app.emit("ble://connection", &state);
 }
 
 // ---------------------------------------------------------------------------

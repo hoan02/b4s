@@ -26,6 +26,14 @@ export async function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("get_app_info");
 }
 
+export async function getStartAtLogin(): Promise<boolean> {
+  return invoke<boolean>("get_start_at_login");
+}
+
+export async function setStartAtLogin(enabled: boolean): Promise<void> {
+  await invoke("set_start_at_login", { enabled });
+}
+
 export async function checkForUpdates(): Promise<UpdateCheckResult> {
   return invoke<UpdateCheckResult>("check_for_updates");
 }

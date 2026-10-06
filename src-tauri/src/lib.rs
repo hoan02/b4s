@@ -4,6 +4,8 @@
 mod ble;
 mod catalog;
 mod device;
+#[cfg(desktop)]
+mod desktop;
 mod protocol;
 
 use protocol::{AncMode, BatteryState, EqBand, ListeningCommand, SpatialMode};
@@ -65,6 +67,40 @@ async fn ble_get_connection() -> Result<ble::ConnectionState, String> {
 #[tauri::command]
 async fn ble_get_link_health() -> Result<ble::LinkHealth, String> {
     Ok(ble::get_link_health().await)
+}
+
+#[tauri::command]
+fn get_start_at_login(app: AppHandle) -> Result<bool, String> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_autostart::ManagerExt;
+        return app.autolaunch().is_enabled().map_err(|error| error.to_string());
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = app;
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+fn set_start_at_login(app: AppHandle, enabled: bool) -> Result<(), String> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_autostart::ManagerExt;
+        let manager = app.autolaunch();
+        return if enabled {
+            manager.enable()
+        } else {
+            manager.disable()
+        }
+        .map_err(|error| error.to_string());
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = (app, enabled);
+        Err("Start at login is only available on desktop".into())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -390,10 +426,17 @@ pub fn run() {
     )
     .try_init();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        None,
+    ));
+
+    builder
         .invoke_handler(tauri::generate_handler![
             ble_check_adapter,
             ble_start_scan,
@@ -420,6 +463,8 @@ pub fn run() {
             set_ldac,
             set_hearing_protection,
             find_buds,
+            get_start_at_login,
+            set_start_at_login,
             get_app_info,
             check_for_updates,
             install_update,
@@ -433,6 +478,23 @@ pub fn run() {
                     window.open_devtools();
                 }
             }
+
+            #[cfg(desktop)]
+            match desktop::install_tray(app) {
+                Ok(()) => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let close_window = window.clone();
+                        window.on_window_event(move |event| {
+                            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                                api.prevent_close();
+                                let _ = close_window.hide();
+                            }
+                        });
+                    }
+                }
+                Err(error) => log::warn!("System tray unavailable; window close exits normally: {error}"),
+            }
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 match ble::init_adapter().await {

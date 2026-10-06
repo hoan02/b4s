@@ -47,6 +47,7 @@ import {
   toBatteryData,
 } from "./lib/device";
 import { defaultCustomBands } from "./lib/eq";
+import { readDesktopPreferences, writeAutoReconnect } from "./lib/desktopPreferences";
 import { getAppInfo } from "./lib/app";
 import {
   applyTheme,
@@ -73,6 +74,7 @@ const App: Component = () => {
   const [appVersion, setAppVersion] = createSignal("…");
   const [connected, setConnected] = createSignal(false);
   const [connectionReady, setConnectionReady] = createSignal(false);
+  const [autoReconnectEnabled, setAutoReconnectEnabled] = createSignal(readDesktopPreferences().autoReconnect);
   const [autoReconnectAvailable, setAutoReconnectAvailable] = createSignal(true);
   const [device, setDevice] = createSignal<BleDevice | null>(null);
   const [battery, setBattery] = createSignal<BatteryData>({
@@ -615,6 +617,15 @@ const App: Component = () => {
     setTheme(mode);
   };
 
+  const handleAutoReconnectChange = (enabled: boolean) => {
+    if (!writeAutoReconnect(enabled)) {
+      notify(t("settings.preferenceSaveFailed"), "error");
+      return;
+    }
+    setAutoReconnectEnabled(enabled);
+    setAutoReconnectAvailable(enabled);
+  };
+
   return (
     <div class="app">
       <ToastHost items={toasts()} onDismiss={dismissToast} />
@@ -638,6 +649,8 @@ const App: Component = () => {
             <Settings
               theme={theme()}
               onSelectTheme={handleTheme}
+              autoReconnect={autoReconnectEnabled()}
+              onAutoReconnectChange={handleAutoReconnectChange}
               onNotify={notify}
               activeSubpage={settingsSubpage()}
               onNavigate={setSettingsSubpage}
@@ -700,7 +713,7 @@ const App: Component = () => {
                     onConnected={handleConnected}
                     onOpenSettings={() => setView("settings")}
                     appVersion={appVersion()}
-                    autoReconnect={autoReconnectAvailable()}
+                    autoReconnect={autoReconnectEnabled() && autoReconnectAvailable()}
                     onAutoReconnectAttempt={() => setAutoReconnectAvailable(false)}
                   />
                 </Show>

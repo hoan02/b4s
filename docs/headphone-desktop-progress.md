@@ -46,7 +46,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P7.2 | Adapter của family kế tiếp | Open |
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
-| P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | External evidence required |
+| P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | In progress — tray lifecycle, bounded Quit cleanup, and opt-in startup/reconnect preferences; installer/signing and Windows acceptance remain external |
 | P8.3 | README/model matrix/diagnostics guide | Open |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | Open |
 
@@ -350,3 +350,11 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - The first CI run passed frontend checks and Cargo check; Rust tests exposed an outdated ACK-only fixture that still rejected valid AA42 spatial state, plus Sleep SK1 inheriting the legacy GATT UUID default.
 - Updated spatial decoder coverage to accept AA42 state while rejecting ACK AA43, and routed all catalog-derived scan-only entries through a helper that clears transport UUIDs. This preserves Sleep SK1 recognition without guessing a control connection.
 - CI rerun required. No local tests run; validation remains pending for the correction.
+
+
+## Increment 42 — desktop lifecycle and opt-in preferences
+
+- Added a system tray with Open, live device status and Quit. Closing the main window hides it only when tray setup succeeds; explicit Quit makes bounded best-effort scan/find cleanup and disconnect before exit.
+- Added OS-backed start-at-login preference and persisted auto-reconnect opt-in, both off by default. Reconnect remains one scan for the last supported device, and failure to save an OS preference is reported.
+- Rust `cargo check` passed on the Windows workspace after fixing the tray close-event signature and scan-only catalog mutability. Full CI is required for Linux/schema/frontend integration; tests were not run locally.
+- Signed installer/update artifacts, tray behavior on supported Windows versions, startup migration behavior, and the P8.1 sleep/resume/accessibility acceptance remain open. This increment does not close P8.2 or claim release readiness.
