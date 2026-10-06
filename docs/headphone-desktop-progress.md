@@ -1,7 +1,7 @@
 # Headphone desktop implementation tracker
 
 Source: [approved plan](superpowers/plans/2026-10-06-headphone-desktop-roadmap.md).
-Updated: 2026-10-06. This tracker records delivered work separately from hardware acceptance.
+Updated: 2026-10-06. This tracker records delivered work separately from hardware acceptance. Updated user direction: replace legacy runtime paths with one clean architecture; allow explicit one-time data migration only.
 
 ## Baseline
 
@@ -17,7 +17,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 |---|---|---|
 | P0.1 | Chụp baseline Git/build/test; ghi thay đổi đang có, không reset | Complete — clean base and original checks recorded |
 | P0.2 | Ghi firmware BP1 Ultra, Android/Windows version và Bluetooth adapter | External evidence required |
-| P0.3 | Ghi phạm vi product và policy đã được người dùng chốt | Complete — architecture/desktop-scope.md |
+| P0.3 | Ghi phạm vi product và policy đã được người dùng chốt | Complete — architecture/desktop-scope.md; updated direction supersedes legacy-facade policy |
 | P1.1 | Index entrypoints, model guards, SDK/native dependencies | In progress — transport dispatch indexed; feature/native inventory outstanding |
 | P1.2 | Triage JADX errors liên quan; extract resource/native inventory | In progress — reproducible local inventory tool; method triage/resource extraction outstanding |
 | P1.3 | Lần theo family/transport/framing/firmware rules | In progress — exact transport/framing guards indexed; firmware/callback tracing outstanding |
@@ -25,14 +25,14 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
-| P3.1 | Tách BLE discovery/GATT facade khỏi session | In progress — confirmed write/query transport seam |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — confirmed write/query seam; full single-path replacement still required |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards integrated; actor/cancellation outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — connection descriptors migrated; firmware/feature evidence outstanding |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract + compatibility bridge | In progress |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — typed snapshot present; compatibility listeners/bridge still need removal |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store and listener cleanup; feature controller extraction outstanding |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; device inventory/visual acceptance outstanding |
@@ -379,3 +379,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Auto-reconnect eligibility is captured when the app initializes. Enabling the preference mid-session applies on the next app launch; disabling it in Settings clears the current launch's eligibility. Returning to pairing can no longer unexpectedly start a reconnect attempt after a same-session opt-in change.
 - No local tests run; CI covers the frontend build. Full opt-in reconnection and cancellation acceptance on Windows hardware remain open under P8.1/P8.2.
+
+
+## Increment 46 — replace compatibility-first direction
+
+- User direction now requires one clean runtime architecture with no legacy runtime fallback or dual execution. The plan and desktop-scope ADR supersede earlier instructions to keep `ble.rs`/compatibility listeners as a bridge. P3.1 and P4.3 now require replacing those paths; P7.1 requires an explicit one-time ID migration followed by removal of legacy resolution.
+- Data-preserving migrations remain allowed when versioned and one-shot. Unknown model/firmware/transport remains unavailable; it cannot route through a generic adapter.
+- This records a policy change, not implementation completion. Replacement slices and regression evidence remain required. The pending EQ type guard passed `npx tsc --noEmit`; no tests were run locally.

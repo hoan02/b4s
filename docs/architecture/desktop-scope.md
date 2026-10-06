@@ -25,7 +25,10 @@ pending until device evidence confirms it. Identity/session keys scope events,
 commands and persistence. Never copy a shorter marketing alias's capabilities
 onto a Plus/Ultra edition or select framing by a substring.
 
-Migration is incremental, keeping the legacy facade until regression evidence
-supports removal. Each delivery records implementation and remaining gates in
-`docs/headphone-desktop-progress.md`. The approved plan remains the acceptance
-authority; this ADR records decisions rather than asserting completion.
+The runtime is being replaced by a clean transport/session architecture in
+verified vertical slices. Do not keep legacy facades, generic runtime fallbacks
+or dual execution after a slice has migrated. Preserve user data through an
+explicit one-time, versioned migration, then remove the old resolver/schema.
+Each delivery records implementation and remaining gates in
+`docs/headphone-desktop-progress.md`. This direction supersedes earlier
+incremental-compatibility notes in the initial plan.

@@ -1,6 +1,6 @@
 # B4S: kế hoạch hoàn thiện desktop companion dành cho tai nghe
 
-Ngày: 2026-10-06. Trạng thái: roadmap đang được triển khai theo lát cắt; tiến độ, kiểm chứng và các cổng phần cứng theo dõi tại [`docs/headphone-desktop-progress.md`](../../headphone-desktop-progress.md). Các hạng mục có gate ngoài repo vẫn để mở cho tới khi có bằng chứng tương ứng.
+Ngày: 2026-10-06. Trạng thái: roadmap đang được triển khai; tiến độ, kiểm chứng và các cổng phần cứng theo dõi tại [`docs/headphone-desktop-progress.md`](../../headphone-desktop-progress.md). Chỉ đạo cập nhật ngày 2026-10-06 yêu cầu xây kiến trúc mới sạch, không giữ đường runtime fallback/legacy. Ghi chú cũ về facade tương thích trong lúc chuyển đã bị thay thế; chỉ giữ phép chuyển dữ liệu một lần khi cần bảo toàn cài đặt người dùng.
 
 ## 1. Quyết định đã chốt và mục tiêu
 
@@ -197,9 +197,11 @@ src-tauri/src/
   diagnostics/         bounded logs, scrubbed replay/export, error explanations
 ```
 
-Đây là cấu trúc mục tiêu, không tạo toàn bộ directory rỗng ngay từ đầu. Chuyển
-module theo từng lát cắt có test. `ble.rs` và command hiện tại được giữ làm
-facade trong thời gian chuyển; chỉ xóa sau khi FE đã dùng API mới.
+Đây là cấu trúc mục tiêu. Chuyển toàn bộ luồng BLE và command sang ranh giới mới
+theo lát cắt có kiểm chứng; mỗi lát cắt phải xóa đường cũ khi đường mới thay
+thế xong. Không dual-run, silent fallback, hoặc giữ facade legacy sau migration.
+Quy trình chuyển dữ liệu người dùng phải versioned, explicit và chạy một lần;
+model/firmware/transport không có profile tường minh thì unavailable.
 
 | Ranh giới | Quy tắc |
 |---|---|
@@ -394,14 +396,14 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Capture guide + manifest schema | P0.2 | Có thể lặp lại cùng thao tác và so TX/RX |
 | P2.2 | BP1 capture core features/init/reconnect | BP1 golden traces local | P2.1, Android/log path | Model+firmware+state đầu+timeline rõ |
 | P2.3 | Replay harness và scripted fake transport | Offline test harness | P2.1 | Mô phỏng split/batched packet, timeout, late ACK, disconnect |
-| P3.1 | Tách BLE discovery/GATT facade khỏi session | Transport interface + BLE adapter | P2.3 | BP1 scan/connect vẫn qua; transport không encode ANC/EQ |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | Transport interface + BLE adapter | P2.3 | Một đường runtime duy nhất; BP1 qua transport tường minh, transport không encode ANC/EQ |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | Frame codecs | P1.3, P2.3 | Captured/replay vectors đúng; malformed/CRC sai không đổi state |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | Session actor/state machine | P3.1 | Không task/event cũ làm sai thiết bị mới |
 | P3.4 | Queue/correlation/deadline/readback | Command executor | P3.2/P3.3 | Write success không bị báo là device-confirmed |
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | ADR + nhỏ gọn prototype | P0.2/P1.3/U01 | Xác minh API Windows, RFCOMM/channel/pairing thật; BLE/SPP cùng profile có quy tắc explicit |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | Typed profiles + migration | P1.3/P1.4 | Không substring framing; firmware/UUID có provenance |
 | P4.2 | Capability resolver/readiness/query planner | Resolved device schema | P4.1/P3.4 | Unknown không gửi queries đoán; backend reject unsupported intent |
-| P4.3 | Device snapshot/error/event contract + compatibility bridge | DTOs/API v2 | P3.3/P4.2 | Contract typed/versioned; invalid enum không tạo packet |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | DTOs/API v2 | P3.3/P4.2 | Contract typed/versioned; không compatibility bridge; invalid enum không tạo packet |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | Device/preferences storage | P4.3 | A/B không lẫn state; corrupt/old prefs có recovery |
 | P5.1 | App shell/navigation/session store | Solid feature structure | P4.3 | Mount/unmount/reconnect không nhân đôi listener |
 | P5.2 | Devices/overview + accurate battery/connect feedback | First complete vertical slice | P5.1 | Scan→connect→identity→state→disconnect đúng trên BP1 |
@@ -411,7 +413,7 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P6.3 | Bass/spatial/codec/hearing constraints | Advanced sound slice | P1 traces/P3.4 | ACK khác state; codec restart UX/recovery verified |
 | P6.4 | Gestures/in-ear, per-side mapping | Controls slice | Gesture evidence/P4 | Read current map, save, re-query, single-ear restrictions đúng |
 | P6.5 | Multipoint/find/device settings | Connectivity/settings slice | Matching evidence | Stop/cancel/find safeguards; settings chỉ xuất hiện khi supported |
-| P7.1 | Classify headphone-only catalog và legacy migration | Catalog + support matrix | P1/P4 | Speaker exclusions reviewed; old IDs/user prefs không bị mất |
+| P7.1 | Classify headphone-only catalog và one-time identity migration | Catalog + support matrix | P1/P4 | Speaker exclusions reviewed; old IDs map explicit một lần rồi legacy resolver bị xóa |
 | P7.2 | Adapter của family kế tiếp | New-family replay + experimental profile | P1.3/P2.3/P3 | Codec/transport có tests; không đánh verified khi chưa có tai nghe |
 | P7.3 | Hardware validation cho family kế tiếp | Per-feature support report | Có thiết bị/capture | Discover/init/read/write/reconnect thật trên firmware ghi nhận |
 | P8.1 | Windows robustness và accessibility acceptance | Acceptance report | P5/P6 | Sleep/resume, BT off, app restart, OS scaling, cancellation qua |
@@ -419,9 +421,10 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P8.3 | README/model matrix/diagnostics guide | Release documentation | P8.1/P7 | Mỗi model/feature/platform có evidence/limitations rõ |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | ADRs/backlog riêng | Offline release + scope review | Không chặn release offline; rollout riêng có hardware/recovery gates |
 
-Không refactor toàn bộ rồi mới chạy app. Mỗi PR đi qua một lát cắt có outcome
-người dùng hoặc ranh giới được test. Không xóa facade legacy trong cùng PR
-với việc đưa runtime mới vào nếu chưa kiểm regression BP1.
+Không đổi toàn bộ code trước khi có lát cắt kiểm chứng. Mỗi PR thay một ranh
+giới hoàn chỉnh và xóa implementation cũ trong cùng thay đổi khi đường mới qua
+regression BP1. Không giữ legacy facade, generic fallback, hoặc hai runtime song
+song để che thiếu profile; giữ user data bằng migration có chủ đích.
 
 ## 9. Thứ tự triển khai đề xuất
 
@@ -512,7 +515,7 @@ Không lấy số model catalog nhân một thời lượng giả định để 
 | Windows transport khác Android | Decompiled logic không chạy được trực tiếp | Spike OS API và packet flow; separate transport adapter |
 | ACK/polarity theo model khác nhau | UI báo sai trạng thái | Family variant, query confirmation, tests đối chiếu source+capture |
 | Catalog server thay đổi | Mất model/ảnh/config | Snapshot version/hash/cache + diff/review; offline fallback |
-| Refactor làm hỏng BP1 đang dùng | Regression người dùng | Vertical migration, compatibility bridge, baseline/hardware gates |
+| Thay legacy làm hỏng BP1 đang dùng | Regression người dùng | Thay theo vertical slice; regression gate trước khi xóa implementation cũ, không duy trì runtime fallback |
 | Capability chỉ check FE | Backend vẫn gửi packet | Backend kiểm ở feature service/executor, FE dùng cùng resolved descriptor |
 | EQ curves tự suy diễn | UI/payload sai dù command đúng | Tách filter payload và visualization; trace consumer, không invent data |
 | SoundFit phụ thuộc SDK/calibration | Không thể port nguyên hành vi | Nghiên cứu riêng; không tạo kết quả đo/thuật toán giả |
@@ -535,6 +538,7 @@ Các quyết định sản phẩm dưới đây đã được người dùng ch�
 - Close mặc định vào tray; Quit riêng. Auto-start và auto-reconnect opt-in, tắt mặc định.
 - Experimental mode riêng, tắt mặc định; chỉ expose feature đủ evidence/implementation hoặc replay và giới hạn an toàn; backend kiểm capability/validation bắt buộc.
 
-Quyết định kiến trúc đề xuất: **metadata riêng, reviewed profile riêng; family
-codec riêng, transport riêng; backend state làm nguồn chính; UI theo capability;
-hardware verification theo feature/model/firmware/platform; migrate dần giữ BP1 hoạt động.**
+Quyết định kiến trúc: **metadata riêng, reviewed profile riêng; family codec
+riêng, transport riêng; backend state làm nguồn chính; UI theo capability;
+hardware verification theo feature/model/firmware/platform; thay runtime cũ bằng
+đường mới theo lát cắt và xóa fallback/legacy sau migration.**

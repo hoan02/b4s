@@ -25,6 +25,12 @@ const MAX_CUSTOM_PRESETS = 2;
 const MAX_PRESET_LABEL_LENGTH = 60;
 const MAX_PRESET_ID_LENGTH = 128;
 
+function isStoredCustomEqPresets(value: unknown): value is StoredCustomEqPresets {
+  return typeof value === "object" && value !== null &&
+    "version" in value && value.version === 1 &&
+    "presets" in value && Array.isArray(value.presets);
+}
+
 export function defaultCustomBands(bandCount: number): number[] {
   return Array.from({ length: bandCount }, () => 0);
 }
@@ -33,19 +39,20 @@ export function loadCustomEqPresets(storageKey: string, bandCount: number, minGa
   try {
     const key = `b4s.eq.custom.${storageKey}`;
     const raw = localStorage.getItem(key);
-    const parsed = raw ? JSON.parse(raw) : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
     const isLegacy = Array.isArray(parsed);
-    const stored = isLegacy
+    const stored: unknown[] = isLegacy
       ? parsed
-      : parsed && parsed.version === 1 && Array.isArray(parsed.presets)
-        ? parsed.presets
-        : [];
+      : isStoredCustomEqPresets(parsed) ? parsed.presets : [];
     const presets = stored.filter(
-      (item): item is CustomEqPreset =>
-        item && typeof item.id === "string" && item.id.length > 0 && item.id.length <= MAX_PRESET_ID_LENGTH &&
-        typeof item.label === "string" && item.label.trim().length > 0 && item.label.length <= MAX_PRESET_LABEL_LENGTH &&
-        Array.isArray(item.bands) && item.bands.length === bandCount &&
-        item.bands.every((gain: unknown) => typeof gain === "number" && Number.isFinite(gain) && gain >= minGain && gain <= maxGain)
+      (item): item is CustomEqPreset => {
+        if (typeof item !== "object" || item === null) return false;
+        const preset = item as Partial<CustomEqPreset>;
+        return typeof preset.id === "string" && preset.id.length > 0 && preset.id.length <= MAX_PRESET_ID_LENGTH &&
+          typeof preset.label === "string" && preset.label.trim().length > 0 && preset.label.length <= MAX_PRESET_LABEL_LENGTH &&
+          Array.isArray(preset.bands) && preset.bands.length === bandCount &&
+          preset.bands.every((gain: unknown) => typeof gain === "number" && Number.isFinite(gain) && gain >= minGain && gain <= maxGain);
+      }
     ).slice(0, MAX_CUSTOM_PRESETS);
     if (isLegacy) {
       try {
