@@ -107,8 +107,10 @@ const HomePanel: Component<Props> = (props) => {
         return t("home.demo");
       case "dead":
         return t("home.linkLost");
+      case "offline":
+        return t("device.offline");
       default:
-        return t("home.connected");
+        return t("control.unknown");
     }
   };
 
@@ -124,7 +126,7 @@ const HomePanel: Component<Props> = (props) => {
             <h1 class="home-sticky-name" title={props.name}>
               {props.name}
             </h1>
-            <div class="home-sticky-status">
+            <div class="home-sticky-status" role="status" aria-live="polite">
               <span class={`dot ${statusDot()}`} />
               <span>{statusText()}</span>
             </div>

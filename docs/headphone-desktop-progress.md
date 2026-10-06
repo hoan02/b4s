@@ -35,7 +35,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P4.3 | Device snapshot/error/event contract + compatibility bridge | In progress |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | Open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store and listener cleanup; feature controller extraction outstanding |
-| P5.2 | Devices/overview + accurate battery/connect feedback | Open |
+| P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; device inventory/visual acceptance outstanding |
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
 | P6.1 | ANC/transparency/game, constraints/readback | Open |
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
@@ -314,3 +314,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Extracted shared asynchronous state awaiter into device/confirmation. BLE feature/battery transactions subscribe before TX and delegate matching to it; executor retains deadline/cancellation ownership.
 - Scripted broadcast tests cover wrong state, ACK opcode, old session, eventual matching readback, channel close and lag overflow. Readback loss returns an error rather than accepting later residual messages. Five confirmation tests passed, whitespace clean.
 - Full fake write transport/deadline harness, late-response causality policy and captured replay remain open. The helper confirms observations within session only; it does not add request IDs to AA/BA.
+
+
+## Increment 37 — honest overview link status
+
+- Home status now renders explicit offline state and uses localized unknown text for unrecognized LinkHealth levels instead of labeling them connected. Status is exposed through a polite live region for assistive technology.
+- Frontend typecheck and whitespace checks passed; no additional local build/test. Full device inventory/connect progress, battery charging presentation, visual/accessibility acceptance remain open under P5.2/P8.1.
