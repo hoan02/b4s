@@ -671,9 +671,14 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
     state
         .snapshot
         .observe(0x27, &DeviceEvent::Battery(bat.clone()), now_ms());
-    state
-        .snapshot
-        .observe(0x34, &DeviceEvent::Anc(AncMode::Anc), now_ms());
+    state.snapshot.observe(
+        0x34,
+        &DeviceEvent::Anc {
+            mode: AncMode::Anc,
+            parameter: 0xFF,
+        },
+        now_ms(),
+    );
     state
         .snapshot
         .observe(0x42, &DeviceEvent::Eq(EqPreset::Balanced), now_ms());

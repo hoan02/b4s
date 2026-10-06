@@ -2,8 +2,8 @@
 //!
 //! Packet table verified on hardware (see docs/protocol/bp1-pro-anc.md).
 
-use crate::protocol::Frame;
 use crate::protocol::types::*;
+use crate::protocol::Frame;
 
 /// Decoder/command table verified from Bass BP1 Pro captures.
 ///
@@ -40,8 +40,8 @@ impl Bp1ProAnc {
 
             // ANC set/query reply: AA 34 [mode] [level?]
             // Wire modes match BA34: 00=Off, 01=ANC, 02=Transparency (docs + encode_command)
-            0x34 => match Self::resolve_anc_ack(&frame.payload, None) {
-                Some(mode) => Ok(DeviceEvent::Anc(mode)),
+            0x34 => match Self::resolve_anc_state(&frame.payload) {
+                Some((mode, parameter)) => Ok(DeviceEvent::Anc { mode, parameter }),
                 None => Err(DecodeError::UnknownOpcode(0x34)),
             },
 
@@ -57,7 +57,8 @@ impl Bp1ProAnc {
                 _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
             },
             0x53 => Self::bass_level_from_payload(&frame.payload)
-                .map(DeviceEvent::BassBoost).ok_or(DecodeError::UnknownOpcode(frame.cmd)),
+                .map(DeviceEvent::BassBoost)
+                .ok_or(DecodeError::UnknownOpcode(frame.cmd)),
             0x74 => match frame.payload.as_slice() {
                 [0] => Ok(DeviceEvent::Ldac(true)),
                 [1] => Ok(DeviceEvent::Ldac(false)),
@@ -89,20 +90,24 @@ impl Bp1ProAnc {
         }
     }
 
-    /// Resolve AA 34 noise-mode notify.
+    /// Resolve AA 34 noise-mode state notification.
     ///
     /// Official write: `BA 34 <mode> <level>` with mode `00|01|02`.
     /// Many firmwares echo the same; some only send a 1-byte "ok" (`01`).
-    /// Generic success is not state, even when the desired mode is known.
-    pub fn resolve_anc_ack(payload: &[u8], _last_commanded: Option<AncMode>) -> Option<AncMode> {
-        // A one-byte success ACK cannot prove the requested mode was applied.
-        if payload.len() < 2 { return None; }
-        match payload[0] {
-            0 => Some(AncMode::Off),
-            1 => Some(AncMode::Anc),
-            2 => Some(AncMode::Transparency),
-            _ => None,
+    /// A one-byte success ACK is not state. Preserve the returned parameter so
+    /// command confirmation can match ANC level or transparency submode too.
+    pub fn resolve_anc_state(payload: &[u8]) -> Option<(AncMode, u8)> {
+        if payload.len() != 2 {
+            return None;
         }
+        let parameter = *payload.get(1)?;
+        let mode = match payload[0] {
+            0 => AncMode::Off,
+            1 => AncMode::Anc,
+            2 => AncMode::Transparency,
+            _ => return None,
+        };
+        Some((mode, parameter))
     }
 
     /// Some firmwares encode charging as high bit (0x80 | pct). Strip for display.
@@ -121,15 +126,28 @@ impl Bp1ProAnc {
 
     fn decode_battery(payload: &[u8]) -> Result<DeviceEvent, DecodeError> {
         // Exact AA02 LL 00 RR 01 layout; percentages do not determine validity.
-        if payload.len() == 4 && payload[1] == 0 && payload[3] == 1
-            && Self::is_pct_byte(payload[0]) && Self::is_pct_byte(payload[2]) {
+        if payload.len() == 4
+            && payload[1] == 0
+            && payload[3] == 1
+            && Self::is_pct_byte(payload[0])
+            && Self::is_pct_byte(payload[2])
+        {
             let (left, left_charging) = Self::pct_and_charge(payload[0]);
             let (right, right_charging) = Self::pct_and_charge(payload[2]);
             return Ok(DeviceEvent::Battery(BatteryState {
-                left, right, case: 0, left_charging, right_charging, case_charging: false,
+                left,
+                right,
+                case: 0,
+                left_charging,
+                right_charging,
+                case_charging: false,
             }));
         }
-        Err(DecodeError::PayloadTooShort { opcode: 2, need: 4, got: payload.len() })
+        Err(DecodeError::PayloadTooShort {
+            opcode: 2,
+            need: 4,
+            got: payload.len(),
+        })
     }
 
     fn decode_case(payload: &[u8]) -> Result<DeviceEvent, DecodeError> {
@@ -219,8 +237,8 @@ impl Bp1ProAnc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{encode_command, init_state_payload};
     use crate::protocol::framing::Frame;
+    use crate::protocol::{encode_command, init_state_payload};
 
     fn dec(raw: &[u8]) -> Result<DeviceEvent, DecodeError> {
         let f = Frame::decode_notify(raw).unwrap();
@@ -248,7 +266,11 @@ mod tests {
     #[test]
     fn exact_low_battery_and_zero_are_values() {
         for percentage in 0..=4 {
-            let DeviceEvent::Battery(battery) = dec(&[0xAA, 2, percentage, 0, percentage, 1]).unwrap() else { panic!("battery expected"); };
+            let DeviceEvent::Battery(battery) =
+                dec(&[0xAA, 2, percentage, 0, percentage, 1]).unwrap()
+            else {
+                panic!("battery expected");
+            };
             assert_eq!(battery.left, percentage);
             assert_eq!(battery.right, percentage);
         }
@@ -281,7 +303,10 @@ mod tests {
 
     #[test]
     fn game_mode_on() {
-        assert_eq!(dec(&[0xAA, 0x23, 0x01]).unwrap(), DeviceEvent::GameMode(true));
+        assert_eq!(
+            dec(&[0xAA, 0x23, 0x01]).unwrap(),
+            DeviceEvent::GameMode(true)
+        );
     }
 
     #[test]
@@ -299,20 +324,24 @@ mod tests {
 
     #[test]
     fn empty_invalid_and_ack_only_payloads_never_create_state() {
-        for packet in [vec![0xAA, 0x23], vec![0xAA, 0x23, 2],
-            vec![0xAA, 0x30], vec![0xAA, 0x30, 0, 1], vec![0xAA, 0x43, 1],
-            vec![0xAA, 0x74], vec![0xAA, 0x74, 2], vec![0xAA, 0x75, 1],
-            vec![0xAA, 0x34, 1]] {
+        for packet in [
+            vec![0xAA, 0x23],
+            vec![0xAA, 0x23, 2],
+            vec![0xAA, 0x30],
+            vec![0xAA, 0x30, 0, 1],
+            vec![0xAA, 0x43, 1],
+            vec![0xAA, 0x74],
+            vec![0xAA, 0x74, 2],
+            vec![0xAA, 0x75, 1],
+            vec![0xAA, 0x34, 1],
+        ] {
             assert!(dec(&packet).is_err(), "unexpected state from {packet:02X?}");
         }
     }
 
     #[test]
     fn eq_bass() {
-        assert_eq!(
-            dec(&[0xAA, 0x30, 0x01]).unwrap(),
-            DeviceEvent::EqIndex(1)
-        );
+        assert_eq!(dec(&[0xAA, 0x30, 0x01]).unwrap(), DeviceEvent::EqIndex(1));
     }
 
     #[test]
@@ -324,34 +353,27 @@ mod tests {
     }
 
     #[test]
-    fn anc_ack_explicit_modes() {
+    fn anc_state_retains_mode_and_parameter() {
         assert_eq!(
-            Bp1ProAnc::resolve_anc_ack(&[0x00, 0xFF], None),
-            Some(AncMode::Off)
+            Bp1ProAnc::resolve_anc_state(&[0x00, 0xFF]),
+            Some((AncMode::Off, 0xFF))
         );
         assert_eq!(
-            Bp1ProAnc::resolve_anc_ack(&[0x02, 0xFF], None),
-            Some(AncMode::Transparency)
+            Bp1ProAnc::resolve_anc_state(&[0x02, 0x01]),
+            Some((AncMode::Transparency, 1))
         );
         assert_eq!(
-            Bp1ProAnc::resolve_anc_ack(&[0x01, 0x68], None),
-            Some(AncMode::Anc)
+            Bp1ProAnc::resolve_anc_state(&[0x01, 0x05]),
+            Some((AncMode::Anc, 5))
         );
     }
 
     #[test]
-    fn anc_ack_generic_ok_never_becomes_confirmed_state() {
+    fn anc_short_ack_and_unknown_mode_never_become_confirmed_state() {
         // AA34 01 alone is generic success, not evidence of any mode.
-        assert_eq!(
-            Bp1ProAnc::resolve_anc_ack(&[0x01], Some(AncMode::Off)),
-            None
-        );
-        assert_eq!(
-            Bp1ProAnc::resolve_anc_ack(&[0x01], Some(AncMode::Transparency)),
-            None
-        );
-        // No last command + vague ack → no event (was defaulting to Anc)
-        assert_eq!(Bp1ProAnc::resolve_anc_ack(&[0x01], None), None);
+        assert_eq!(Bp1ProAnc::resolve_anc_state(&[0x01]), None);
+        assert_eq!(Bp1ProAnc::resolve_anc_state(&[0x03, 0x02]), None);
+        assert_eq!(Bp1ProAnc::resolve_anc_state(&[0x01, 0x05, 0x00]), None);
     }
 
     #[test]
@@ -383,8 +405,14 @@ mod tests {
 
     #[test]
     fn bass_boost_uses_dedicated_ba54_command() {
-        assert_eq!(encode_command(Command::SetBassBoost(1)), vec![0xBA, 0x54, 0x01]);
-        assert_eq!(encode_command(Command::SetBassBoost(0)), vec![0xBA, 0x54, 0x00]);
+        assert_eq!(
+            encode_command(Command::SetBassBoost(1)),
+            vec![0xBA, 0x54, 0x01]
+        );
+        assert_eq!(
+            encode_command(Command::SetBassBoost(0)),
+            vec![0xBA, 0x54, 0x00]
+        );
     }
 
     #[test]
@@ -398,19 +426,31 @@ mod tests {
     #[test]
     fn find_buds_has_start_and_stop_commands() {
         assert_eq!(Bp1ProAnc::cmd_find_buds(true), vec![0xBA, 0x10, 0x02, 0x01]);
-        assert_eq!(Bp1ProAnc::cmd_find_buds(false), vec![0xBA, 0x10, 0x02, 0x00]);
+        assert_eq!(
+            Bp1ProAnc::cmd_find_buds(false),
+            vec![0xBA, 0x10, 0x02, 0x00]
+        );
     }
 
     #[test]
     fn ldac_toggle_uses_ba75_inverted_flag_from_apk() {
-        assert_eq!(encode_command(Command::SetLdac(true)), vec![0xBA, 0x75, 0x00]);
-        assert_eq!(encode_command(Command::SetLdac(false)), vec![0xBA, 0x75, 0x01]);
+        assert_eq!(
+            encode_command(Command::SetLdac(true)),
+            vec![0xBA, 0x75, 0x00]
+        );
+        assert_eq!(
+            encode_command(Command::SetLdac(false)),
+            vec![0xBA, 0x75, 0x01]
+        );
     }
 
     #[test]
     fn hearing_protection_includes_enable_and_level() {
         assert_eq!(
-            encode_command(Command::SetHearingProtection { enabled: true, level: 3 }),
+            encode_command(Command::SetHearingProtection {
+                enabled: true,
+                level: 3
+            }),
             vec![0xBA, 0x94, 0x01, 0x03]
         );
     }
@@ -447,30 +487,55 @@ mod tests {
     }
     #[test]
     fn source_preset_filters_use_little_endian_u16_fields() {
-        let filters = [EqBand { frequency: 190, gain: -5.8, q_value: 0.64, filter: 1 }];
-        assert_eq!(Bp1ProAnc::cmd_set_eq_filters(0, &filters),
-            vec![0xBA, 0x31, 0, 190, 0, 62, 0, 6, 0, 1, 0]);
-        let filters = [EqBand { frequency: 1000, gain: 0.0, q_value: 32.0, filter: 2 }];
-        assert_eq!(Bp1ProAnc::cmd_set_eq_filters(10, &filters),
-            vec![0xBA, 0x31, 10, 0xE8, 3, 120, 0, 0x40, 1, 2, 0]);
+        let filters = [EqBand {
+            frequency: 190,
+            gain: -5.8,
+            q_value: 0.64,
+            filter: 1,
+        }];
+        assert_eq!(
+            Bp1ProAnc::cmd_set_eq_filters(0, &filters),
+            vec![0xBA, 0x31, 0, 190, 0, 62, 0, 6, 0, 1, 0]
+        );
+        let filters = [EqBand {
+            frequency: 1000,
+            gain: 0.0,
+            q_value: 32.0,
+            filter: 2,
+        }];
+        assert_eq!(
+            Bp1ProAnc::cmd_set_eq_filters(10, &filters),
+            vec![0xBA, 0x31, 10, 0xE8, 3, 120, 0, 0x40, 1, 2, 0]
+        );
     }
 
     #[test]
     fn eq_readback_preserves_wire_index_and_ignores_spatial_and_ack() {
         assert_eq!(dec(&[0xAA, 0x30, 101]).unwrap(), DeviceEvent::EqIndex(101));
-        assert_eq!(dec(&[0xAA, 0x42, 1]).unwrap(), DeviceEvent::SpatialEnabled(true));
+        assert_eq!(
+            dec(&[0xAA, 0x42, 1]).unwrap(),
+            DeviceEvent::SpatialEnabled(true)
+        );
         assert!(dec(&[0xAA, 0x43, 1]).is_err());
         assert!(dec(&[0xAA, 0x30, 1, 2]).is_err());
     }
 
     #[test]
     fn bass_errors_and_invalid_layouts_never_become_level_three() {
-        for payload in [vec![], vec![0x0B], vec![0x0C], vec![0x0D], vec![4],
-            vec![2, 1], vec![0, 2], vec![1, 4], vec![1, 2, 0]] {
+        for payload in [
+            vec![],
+            vec![0x0B],
+            vec![0x0C],
+            vec![0x0D],
+            vec![4],
+            vec![2, 1],
+            vec![0, 2],
+            vec![1, 4],
+            vec![1, 2, 0],
+        ] {
             let mut frame = vec![0xAA, 0x54];
             frame.extend(payload);
             assert!(dec(&frame).is_err());
         }
     }
-
 }

@@ -543,7 +543,7 @@ async fn apply_event(event: DeviceEvent, token: crate::device::session::SessionT
                 _ => return,
             }
         }
-        DeviceEvent::Anc(mode) => {
+        DeviceEvent::Anc { mode, .. } => {
             // Only update last_anc + UI when mode actually changes (avoid flicker)
             let prev = state.last_anc;
             state.last_anc = Some(*mode);

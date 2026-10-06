@@ -15,7 +15,7 @@ pub struct StateObservation {
 
 pub enum ExpectedState {
     Battery,
-    Anc(AncMode),
+    Anc { mode: AncMode, parameter: u8 },
     Eq(EqPreset),
     EqIndex(u8),
     Game(bool),
@@ -76,7 +76,14 @@ impl ExpectedState {
         }
         match (self, observation.opcode, &observation.event) {
             (Self::Battery, 0x02, DeviceEvent::Battery(_)) => true,
-            (Self::Anc(expected), 0x34, DeviceEvent::Anc(actual)) => expected == actual,
+            (
+                Self::Anc { mode, parameter },
+                0x34,
+                DeviceEvent::Anc {
+                    mode: actual_mode,
+                    parameter: actual_parameter,
+                },
+            ) => mode == actual_mode && parameter == actual_parameter,
             (Self::Eq(expected), 0x30, DeviceEvent::EqIndex(actual)) => {
                 expected.to_byte() == *actual
             }
@@ -332,18 +339,29 @@ mod tests {
         let expected = StateObservation {
             session,
             opcode: 0x34,
-            event: DeviceEvent::Anc(AncMode::Transparency),
+            event: DeviceEvent::Anc {
+                mode: AncMode::Transparency,
+                parameter: 0xFF,
+            },
         };
         let transport = FakeTransport::new([ScriptedWrite::Reply(expected)]);
         let found = write_and_observe(
             &transport,
             session,
             &[0xBA, 0x34, 0x02, 0xFF],
-            ExpectedState::Anc(AncMode::Transparency),
+            ExpectedState::Anc {
+                mode: AncMode::Transparency,
+                parameter: 0xFF,
+            },
         )
         .await
         .unwrap();
         assert_eq!(found.opcode, 0x34);
+        assert!(!ExpectedState::Anc {
+            mode: AncMode::Transparency,
+            parameter: 1,
+        }
+        .matches(session, &found));
         assert_eq!(
             *transport.writes.lock().unwrap(),
             vec![vec![0xBA, 0x34, 0x02, 0xFF]]

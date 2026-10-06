@@ -87,16 +87,20 @@ impl DeviceSnapshot {
                     observed_at_ms: at_ms,
                 });
             }
-            DeviceEvent::Anc(value) => self.anc = Some(*value),
+            DeviceEvent::Anc { mode, .. } => self.anc = Some(*mode),
             DeviceEvent::Eq(value) => self.eq = Some(*value),
             DeviceEvent::EqIndex(value) => self.eq_index = Some(*value),
             DeviceEvent::GameMode(value) => self.game = Some(*value),
             DeviceEvent::Ldac(value) => self.ldac = Some(*value),
             DeviceEvent::SpatialEnabled(value) => self.spatial_enabled = Some(*value),
             DeviceEvent::BassBoost(value) => self.bass_boost = Some(*value),
-            DeviceEvent::HearingProtection { enabled, level } => self.hearing = Some(HearingReading {
-                enabled: *enabled, level: *level, observed_at_ms: at_ms,
-            }),
+            DeviceEvent::HearingProtection { enabled, level } => {
+                self.hearing = Some(HearingReading {
+                    enabled: *enabled,
+                    level: *level,
+                    observed_at_ms: at_ms,
+                })
+            }
             _ => return,
         }
         // Receipt revision advances even when the observed value is unchanged.
@@ -132,16 +136,29 @@ mod tests {
         let mut snapshot = DeviceSnapshot::new(1);
         assert!(snapshot.bass_boost.is_none() && snapshot.hearing.is_none());
         snapshot.observe(0x54, &DeviceEvent::BassBoost(0), 10);
-        snapshot.observe(0x93, &DeviceEvent::HearingProtection { enabled: false, level: 0 }, 20);
+        snapshot.observe(
+            0x93,
+            &DeviceEvent::HearingProtection {
+                enabled: false,
+                level: 0,
+            },
+            20,
+        );
         assert_eq!(snapshot.bass_boost, Some(0));
         let hearing = snapshot.hearing.as_ref().unwrap();
         assert!(!hearing.enabled);
         assert_eq!(hearing.observed_at_ms, 20);
-        snapshot.observe(0x93, &DeviceEvent::HearingProtection { enabled: false, level: 0 }, 30);
+        snapshot.observe(
+            0x93,
+            &DeviceEvent::HearingProtection {
+                enabled: false,
+                level: 0,
+            },
+            30,
+        );
         assert_eq!(snapshot.revision, 3);
         assert_eq!(snapshot.hearing.as_ref().unwrap().observed_at_ms, 30);
         let next = DeviceSnapshot::new(2);
         assert!(next.bass_boost.is_none() && next.hearing.is_none());
     }
-
 }

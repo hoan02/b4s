@@ -18,10 +18,14 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
         }
         ListeningCommand::CustomLevel(_) | ListeningCommand::AdaptiveEnvironment(_) => AncMode::Anc,
     };
+    let parameter = data
+        .get(3)
+        .copied()
+        .ok_or("Encoded listening command is incomplete")?;
     log::info!("TX ANC {:?} → {:02X?}", mode, data);
     if BLE.lock().await.mock {
         BLE.lock().await.last_anc = Some(mode);
-        return observe_mock_state(DeviceEvent::Anc(mode), 0x34).await;
+        return observe_mock_state(DeviceEvent::Anc { mode, parameter }, 0x34).await;
     }
     with_connected_peripheral(|p| {
         let d = data.clone();
@@ -29,7 +33,7 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
             write_and_observe(
                 &p,
                 &d,
-                crate::device::confirmation::ExpectedState::Anc(mode),
+                crate::device::confirmation::ExpectedState::Anc { mode, parameter },
             )
             .await
         })

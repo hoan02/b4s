@@ -51,7 +51,7 @@ that framing.
 |-------|-------|----------------|
 | Battery L/R | `AA 02 <L%> 00 <R%> 01` | Nullable readings; zero is valid |
 | Case battery | `AA 27 <case%> <charging>` | First payload byte is percentage |
-| ANC | `AA 34 …` | Decode only a recognized state layout |
+| ANC | `AA 34 <mode> <parameter>` | B4S accepts the exact two-byte state payload and confirms a command only when both mode and parameter match; one-byte ACK and unknown layouts do not update state |
 | EQ query/state | `AA 42 …` / `AA 43 …` | A write ACK alone does not confirm requested state |
 | Game state | `AA 23 <00|01>` | State query observation |
 | Hearing protection | `AA 93 <enabled> <level>` | The only accepted confirmed-state opcode; `AA 94` is ACK/error only |

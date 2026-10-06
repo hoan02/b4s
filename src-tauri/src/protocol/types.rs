@@ -201,7 +201,10 @@ pub enum Command {
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 pub enum DeviceEvent {
     Battery(BatteryState),
-    Anc(AncMode),
+    Anc {
+        mode: AncMode,
+        parameter: u8,
+    },
     Eq(EqPreset),
     EqIndex(u8),
     GameMode(bool),
