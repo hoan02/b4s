@@ -41,7 +41,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — bass readback and spatial enable/disable confirmation exist; real-device spatial mode remains unknown because AA42 confirms only enabled state; per-model hearing policy exists but feature remains disabled |
 | P6.4 | Gestures/in-ear, per-side mapping | In progress — backend encodes/decodes v1 gesture and in-ear with profile schema v2, shared authorization, reviewed layout/function allowlists, confirmation expectations and timestamped snapshot fields; BP1 Pro enables both as experimental-only behind the Experimental preference. Frontend now has an Experimental-gated gesture panel (per-layout left/right selects and in-ear toggle) plus startup queries for reviewed layouts. Firmware v1-vs-v2, v2 payloads and hardware acceptance remain open ([dossier](protocol/bp1-gesture-in-ear-source.md)) |
-| P6.5 | Multipoint/find/device settings | In progress — find start/stop distinguishes transport acceptance from confirmed device state; multipoint (`BA57`/`AA57`, `BA58`/`AA58`) is implemented at source/replay level as an Experimental-only BP1 Pro toggle with a source dossier; stop acknowledgement, remaining device settings and hardware evidence remain open |
+| P6.5 | Multipoint/find/device settings | In progress — find start/stop distinguishes transport acceptance from confirmed device state; multipoint (`BA57`/`AA57`, `BA58`/`AA58`) is implemented at source/replay level as an Experimental-only BP1 Pro toggle. A device-settings opcode map covers firmware query, restore-defaults, touch lock and the phone-side call-number commands; auto-off/prompt opcodes and hardware evidence remain open ([map](protocol/bp1-device-settings-source.md)) |
 | P7.1 | Classify headphone-only catalog và legacy migration | Complete — 124 current headphone candidates are separated from five regionally consistent speaker products; one-time migration covers 112 exact identities and preserves 12 historical names without a current catalog target as inert data; runtime resolver removed |
 | P7.2 | Adapter của family kế tiếp | Open |
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
@@ -806,3 +806,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Each custom-EQ band slider now pairs the range control with a numeric gain input (clamped to the model's min/max by the same `setBand` path), satisfying the roadmap rule that sliders must not require pointer dragging and remain keyboard/adjustable. The range control keeps native arrow-key increments.
 - `npx tsc --noEmit` and `npm run build` passed; no protocol or backend change. Remaining accessibility acceptance (scaling, screen reader, contrast) stays open under P5.3/P8.1.
+
+## Increment 125 — map the BP1 device-settings opcodes
+
+- Traced and recorded the confidently identified device-settings commands in `docs/protocol/bp1-device-settings-source.md`: `BA19`/`AA19` firmware query, `BA36`/`AA36` restore-defaults availability, `BA37`/`AA37` restore (with `0C`/`0D` conflicts), `BA44`–`BA47`/`AA44`–`AA47` call-number availability/query/set, and `BA4A`/`AA4A` touch-control lock.
+- Explicitly listed the unresolved opcodes (auto-off, prompt language/volume, indicator light, `BA3F`/`BA49`/`BA55`/`BA56`/`BA77`/`BA90`/`BA9A`) and did not implement them, to avoid guessing semantics. Documentation-only; `git diff --check` passed.
