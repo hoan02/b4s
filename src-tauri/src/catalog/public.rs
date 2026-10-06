@@ -44,6 +44,13 @@ pub fn audio_models() -> impl Iterator<Item = &'static PublicModel> {
     SNAPSHOT.models.iter().filter(|model| model.audio)
 }
 
+/// New headphone discovery excludes products classified only as speakers.
+/// A model remains eligible when regional metadata disagrees, avoiding a
+/// false exclusion from one region's category label.
+pub fn headphone_models() -> impl Iterator<Item = &'static PublicModel> {
+    audio_models().filter(|model| !model.is_speaker_only())
+}
+
 /// Prefix differences in the app registry are not different product identities.
 pub fn identity_key(name: &str) -> String {
     let lower = name.trim().to_lowercase();
@@ -51,6 +58,16 @@ pub fn identity_key(name: &str) -> String {
 }
 
 impl PublicModel {
+    fn is_speaker_only(&self) -> bool {
+        !self.variants.is_empty()
+            && self.variants.iter().all(|variant| {
+                variant
+                    .category_path
+                    .last()
+                    .is_some_and(|category| category.to_lowercase().contains("speaker"))
+            })
+    }
+
     pub fn name_patterns(&self) -> Vec<String> {
         let mut names = vec![self.model.to_lowercase(), identity_key(&self.model)];
         names.sort();

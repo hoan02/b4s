@@ -253,9 +253,9 @@ pub fn all_models() -> Vec<ModelInfo> {
 }
 
 fn merge_public_models(models: &mut Vec<ModelInfo>) {
-    use crate::catalog::public::{audio_models, identity_key};
+    use crate::catalog::public::{headphone_models, identity_key};
 
-    for public in audio_models() {
+    for public in headphone_models() {
         // Match full identities, never the legacy substring aliases. For example,
         // metadata for "BP1 Pro+" must not enable BP1 Pro's command adapter.
         if let Some(existing) = models
@@ -412,6 +412,20 @@ fn legacy_models() -> Vec<ModelInfo> {
         m("aequr-g10", "Baseus AeQur G10", &["aequr g10", "g10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "AeQur"),
         m("aequr-n10", "Baseus AeQur N10", &["aequr n10", "n10"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "AeQur"),
         m("aequr-vo20", "Baseus AeQur VO20", &["aequr vo20", "vo20"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, false, true, false, "tws", "AeQur"),
+        // Keep the historical identity resolvable while excluding its speaker-only
+        // public-catalog entry from new headphone discovery.
+        m(
+            "server-sleep-sk1",
+            "Baseus Sleep SK1",
+            &["sleep sk1"],
+            SupportLevel::ScanOnly,
+            ProtocolFamily::Unknown,
+            false,
+            false,
+            false,
+            "audio",
+            "Speaker series",
+        ),
         m("bass-1-plus", "Baseus Bass 1+", &["bass 1+"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "Other"),
         m("bowie-30", "Baseus Bowie 30", &["bowie 30"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "Other"),
         m("bowie-35", "Baseus Bowie 35", &["bowie 35"], SupportLevel::Experimental, ProtocolFamily::Bp1Pro, true, true, false, "tws", "Other"),

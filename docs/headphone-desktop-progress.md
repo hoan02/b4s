@@ -42,7 +42,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; hearing threshold/spatial policy outstanding |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
 | P6.5 | Multipoint/find/device settings | Open |
-| P7.1 | Classify headphone-only catalog và legacy migration | Open |
+| P7.1 | Classify headphone-only catalog và legacy migration | In progress |
 | P7.2 | Adapter của family kế tiếp | Open |
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
@@ -320,3 +320,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Home status now renders explicit offline state and uses localized unknown text for unrecognized LinkHealth levels instead of labeling them connected. Status is exposed through a polite live region for assistive technology.
 - Frontend typecheck and whitespace checks passed; no additional local build/test. Full device inventory/connect progress, battery charging presentation, visual/accessibility acceptance remain open under P5.2/P8.1.
+
+
+## Increment 38 — speaker exclusion from new discovery
+
+- Public catalog discovery now filters products whose regional category paths all classify them as speaker series. A regionally mixed classification stays eligible to avoid a false exclusion.
+- The five reviewed speaker-only products (AeQur 30 Air, DS10, N10, VO20, Sleep SK1) already have explicit legacy registry entries. Filtering only applies while merging new public-catalog discovery, so legacy IDs and preferences remain resolvable.
+- No local tests run per current task guidance; CI will validate the Rust change. P7.1 still needs broader family/type audit and user-preference migration evidence before closure.
