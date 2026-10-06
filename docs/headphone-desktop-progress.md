@@ -647,3 +647,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added a Tokio regression that gives `BleInner` a pending owned notification task, resets the session, and asserts its abort handle has finished. This covers the lifecycle edge introduced in increment 93.
 - No local Rust suite was run; selected-file formatting and whitespace checks are local, and CI covers the test. P3.3 remains open for actor ownership, central events, and ordered cleanup/join.
+
+## Increment 95 — qualify BP1 Pro capture provenance
+
+- The feature matrix no longer says no BP1 Pro capture exists. Existing protocol notes say packet tables were hardware-verified, while the checked-in dossier does not identify capture IDs or firmware manifests; the matrix now records that narrower evidence gap.
+- Documentation-only; `git diff --check` passed. Current-head CI also validates increment 94; firmware-specific feature acceptance stays open under P2/P6/P8.

@@ -3,14 +3,17 @@
 Scope: Baseus 2.17.0.1 source observations and the B4S `bass-bp1-pro` profile.
 This matrix separates source/replay implementation from physical-device
 acceptance. The reviewed BP1 Ultra record remains scan-only and is outside this
-control matrix because its transport has not been captured.
+control matrix because its transport has not been captured. The current repo
+does not link a BP1 Pro capture ID or firmware manifest to these feature rows;
+this matrix therefore records source/replay coverage separately from
+firmware-specific acceptance.
 
 | Feature | APK source trace | B4S behavior | Evidence result and remaining limit |
 |---|---|---|---|
-| ANC / transparency | `BA34` set and `AA34` state; mode and parameter are both significant | Implemented for BP1 Pro. Command waits for exact same-session mode+parameter observation. Snapshot v2 retains parameter/time; UI derives only profile-valid transparency submode and ANC environment/level. | **Implemented** at source/replay level. No physical BP1 Pro capture; firmware-specific parameters and freshness under external changes remain unverified. See [ANC dossier](bp1-pro-anc.md). |
+| ANC / transparency | `BA34` set and `AA34` state; mode and parameter are both significant | Implemented for BP1 Pro. Command waits for exact same-session mode+parameter observation. Snapshot v2 retains parameter/time; UI derives only profile-valid transparency submode and ANC environment/level. | **Implemented** at source/replay level. The checked-in dossier does not link a capture ID or firmware manifest; parameter coverage and freshness under external changes remain unverified per firmware. See [ANC dossier](bp1-pro-anc.md). |
 | EQ preset / custom EQ | `BA30` query, `AA30` current index, `BA31` custom filter payload; model response includes `dictSort` and variable filter tuples | Implemented through the model EQ schema, exact index/readback and model-scoped custom draft. Empty server arrays do not grant or revoke a capability. | **Implemented** at source/replay level. Server snapshots and source are not device acceptance. See [EQ dossier](bp1-pro-eq-source.md). |
-| Game mode | `BA23` query/state and `BA24` set | Implemented behind the BP1 Pro capability; write waits for matching game state. | **Implemented** at source/replay level; hardware notifications and firmware guard still need capture. |
-| Bass boost | `BA53` query/state and `BA54` set | Implemented behind the BP1 Pro capability; write waits for matching observed level. | **Implemented** at source/replay level; level semantics and hardware readback need capture. |
+| Game mode | `BA23` query/state and `BA24` set | Implemented behind the BP1 Pro capability; write waits for matching game state. | **Implemented** at source/replay level; the checked-in dossier does not identify the capture/firmware scope for notification guards. |
+| Bass boost | `BA53` query/state and `BA54` set | Implemented behind the BP1 Pro capability; write waits for matching observed level. | **Implemented** at source/replay level; per-firmware level semantics and hardware readback scope are not linked in the checked-in dossier. |
 | Spatial audio | `BA42` enabled state, `BA43` selected mode, and `BA5E` support negotiation | Enable/disable is observed through `AA42`. The current state report does not confirm the selected mode; B4S keeps that UI selection unknown. | Enable control is **implemented** at source/replay level. Mode selection remains **unresolved** until a mode readback is identified and captured. |
 | Find buds | `BA10` carries side and start/stop values | B4S sends start/stop only after its safety confirmation and reports transport acceptance. It does not claim sound started or stopped. | Request path is **implemented**. Actual playback, stop acknowledgement and cancellation behavior are **unresolved** pending hardware capture. |
 | In-ear detection | `BA25` query and `BA26` set | No BP1 Pro capability or frontend control is exposed. | **Planned**; device readback, single-ear behavior and firmware constraints need tracing before implementation. |
