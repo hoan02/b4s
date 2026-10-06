@@ -17,19 +17,19 @@ export interface BleDevice {
   rssi: number;
   isBaseus: boolean;
   connected: boolean;
-  headphoneCandidate?: boolean;
-  modelId?: string | null;
-  modelName?: string | null;
-  deviceProfile?: DeviceProfile;
+  headphoneCandidate: boolean;
+  modelId: string | null;
+  modelName: string | null;
+  deviceProfile: DeviceProfile;
   /** verified | experimental | scanOnly */
-  support?: string | null;
+  support: string | null;
   /** Dual-entry / pairing tip from backend */
-  hint?: string | null;
-  imageUrl?: string | null;
-  imageProvenance?: string;
-  colorVariants?: string[];
-  serial?: string | null;
-  advertisedServices?: string[];
+  hint: string | null;
+  imageUrl: string | null;
+  imageProvenance: string;
+  colorVariants: string[];
+  serial: string | null;
+  advertisedServices: string[];
 }
 
 export interface DeviceProfile {
@@ -49,7 +49,7 @@ export interface DeviceProfile {
   modelId?: string | null;
   modelName?: string | null;
   firmware?: string | null;
-  protocol: "bp1Pro" | "baseusAaBaExperimental" | "unknown" | string;
+  protocol: "bp1Pro" | "unknown";
   verified: boolean;
   noise: {
     supportsAdaptive: boolean;
@@ -189,7 +189,43 @@ function isBleDevice(value: unknown): value is BleDevice {
   return ["id", "name", "address"].every((key) => typeof value[key] === "string") &&
     typeof value.rssi === "number" &&
     typeof value.isBaseus === "boolean" &&
-    typeof value.connected === "boolean";
+    typeof value.connected === "boolean" &&
+    typeof value.headphoneCandidate === "boolean" &&
+    ["modelId", "modelName", "support", "hint", "imageUrl", "serial"].every((key) =>
+      isNullable(value[key], (item) => typeof item === "string")) &&
+    typeof value.imageProvenance === "string" &&
+    Array.isArray(value.colorVariants) && value.colorVariants.every((item) => typeof item === "string") &&
+    Array.isArray(value.advertisedServices) && value.advertisedServices.every((item) => typeof item === "string") &&
+    isDeviceProfile(value.deviceProfile);
+}
+
+function isDeviceProfile(value: unknown): value is DeviceProfile {
+  if (!isRecord(value) || !isRecord(value.capabilities) || !isRecord(value.noise)) return false;
+  const capabilities = value.capabilities;
+  const noise = value.noise;
+  const connection = value.connection;
+  const validConnection = connection === null || (isRecord(connection) &&
+    ["bleGatt", "unresolved"].includes(connection.transport as string) &&
+    ["bareAaBa", "headphone789c", "unresolved"].includes(connection.framing as string) &&
+    ["serviceUuid", "writeUuid", "notifyUuid"].every((key) =>
+      isNullable(connection[key], (item) => typeof item === "string")) &&
+    Array.isArray(connection.handshake) &&
+    connection.handshake.every((item) => Number.isInteger(item) && item >= 0 && item <= 255) &&
+    typeof connection.initStateQuery === "boolean" &&
+    Array.isArray(connection.firmwareVersions) &&
+    connection.firmwareVersions.every((item) => typeof item === "string") &&
+    typeof connection.provenance === "string");
+  return ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac", "hearingProtection", "findBuds"]
+      .every((key) => typeof capabilities[key] === "boolean") &&
+    isNullable(value.modelId, (item) => typeof item === "string") &&
+    isNullable(value.modelName, (item) => typeof item === "string") &&
+    isNullable(value.firmware, (item) => typeof item === "string") &&
+    ["bp1Pro", "unknown"].includes(value.protocol as string) &&
+    typeof value.verified === "boolean" &&
+    typeof noise.supportsAdaptive === "boolean" &&
+    Array.isArray(noise.environments) && noise.environments.every((item) => Number.isInteger(item)) &&
+    typeof noise.maxCustomLevel === "number" &&
+    typeof noise.supportsTransparencyVoice === "boolean" && validConnection;
 }
 
 function isConnectionState(value: unknown): value is ConnectionState {

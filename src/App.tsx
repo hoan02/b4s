@@ -99,7 +99,7 @@ const App: Component = () => {
   const [pendingEqAction, setPendingEqAction] = createSignal<PendingEqAction | null>(null);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
-  const noiseCaps = () => device()?.deviceProfile?.noise;
+  const noiseCaps = () => device()?.deviceProfile.noise;
 
   const applySnapshot = (snapshot: DeviceSnapshot | null) => {
     setBattery({
@@ -144,7 +144,7 @@ const App: Component = () => {
   createEffect(() => {
     if (link().mock) return;
     const selection = resolveEqSelection(eqWireIndex(), modelEq()?.presets ?? [],
-      device()?.deviceProfile?.capabilities.customEq ?? false);
+      device()?.deviceProfile.capabilities.customEq ?? false);
     setEqCustomActive(selection.kind === "custom");
     setEqActive(selection.kind === "preset" ? selection.id : "");
   });
@@ -330,7 +330,7 @@ const App: Component = () => {
   };
 
   const requestEqAction = (action: PendingEqAction): boolean => {
-    if (spatialOn() === false || !device()?.deviceProfile?.capabilities.spatial) return true;
+    if (spatialOn() === false || !device()?.deviceProfile.capabilities.spatial) return true;
     setPendingEqAction(action);
     return false;
   };
@@ -404,7 +404,7 @@ const App: Component = () => {
     setPendingEqAction(null);
     if (!action) return;
     try {
-      if (spatialOn() !== false && device()?.deviceProfile?.capabilities.spatial) {
+      if (spatialOn() !== false && device()?.deviceProfile.capabilities.spatial) {
         const generation = session.capture();
         await setSpatialMode("off");
         if (!session.isCurrent(generation)) return;
@@ -506,7 +506,7 @@ const App: Component = () => {
               frequencies={modelEq()?.bands ?? []}
               minGain={modelEq()?.minGain ?? -12}
               maxGain={modelEq()?.maxGain ?? 12}
-              customSupported={device()?.deviceProfile?.capabilities.customEq ?? false}
+              customSupported={device()?.deviceProfile.capabilities.customEq ?? false}
               presets={(modelEq()?.presets ?? []).map((preset) => ({ ...preset, sub: preset.description }))}
               eqActive={eqActive()}
               pending={eqPending()}
@@ -527,11 +527,11 @@ const App: Component = () => {
         <Show when={view() === "more" && connected()}>
           <section class="section section-scroll">
             <MorePanel
-              bassSupported={device()?.deviceProfile?.capabilities.bassBoost ?? false}
-              ldacSupported={device()?.deviceProfile?.capabilities.ldac ?? false}
+              bassSupported={device()?.deviceProfile.capabilities.bassBoost ?? false}
+              ldacSupported={device()?.deviceProfile.capabilities.ldac ?? false}
               pending={soundPending()}
               error={soundError()}
-              hearingSupported={device()?.deviceProfile?.capabilities.hearingProtection ?? false}
+              hearingSupported={device()?.deviceProfile.capabilities.hearingProtection ?? false}
               bassBoost={bassBoost()}
               ldac={ldac()}
               hearingProtect={hearingProtect()}
@@ -586,11 +586,11 @@ const App: Component = () => {
                 gamePending={gamePending()}
                 gameError={gameError()}
                 findActive={findController.active()}
-                spatialSupported={device()?.deviceProfile?.capabilities.spatial ?? false}
-                gameSupported={device()?.deviceProfile?.capabilities.gameMode ?? false}
-                eqSupported={device()?.deviceProfile?.capabilities.eq ?? false}
-                findSupported={device()?.deviceProfile?.capabilities.findBuds ?? false}
-                moreSupported={Boolean(device()?.deviceProfile?.capabilities.bassBoost || device()?.deviceProfile?.capabilities.ldac || device()?.deviceProfile?.capabilities.hearingProtection)}
+                spatialSupported={device()?.deviceProfile.capabilities.spatial ?? false}
+                gameSupported={device()?.deviceProfile.capabilities.gameMode ?? false}
+                eqSupported={device()?.deviceProfile.capabilities.eq ?? false}
+                findSupported={device()?.deviceProfile.capabilities.findBuds ?? false}
+                moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
                 spatialPending={spatialPending()}
                 spatialError={spatialError()}
                 spatialOn={spatialOn()}

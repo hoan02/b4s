@@ -487,3 +487,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Scan, connection and link adapters now validate required field types and closed link levels after checking contract version 1. The device snapshot bridge validates required fields, nullable observations, and protocol enums before exposing payloads to Solid state.
 - `npx tsc --noEmit` and `git diff --check` passed. No test suite or full local build was run; CI remains the cross-platform verification gate. P4.3 remains open for backend session/sequence envelopes and structured error semantics.
+
+## Increment 63 — remove optional legacy BLE device DTO fields
+
+- The frontend `BleDevice` shape now matches the required Rust payload, including its always-present reviewed `deviceProfile`, metadata arrays, and nullable identity fields. Removed the retired experimental protocol family from the frontend protocol union and removed optional-chain capability fallbacks in `App.tsx`.
+- Lifecycle payload validation now checks the complete reviewed profile and GATT descriptor shape before accepting a scan/connection event. `npx tsc --noEmit` and `git diff --check` passed; no full build or test suite was run locally.
