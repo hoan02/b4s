@@ -682,3 +682,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Tray Quit and the fallback window-close path now share one bounded shutdown helper. When tray creation fails, closing the main window prevents immediate teardown, starts BLE cleanup once, then exits; with a working tray, close continues to hide the window.
 - Selected-file formatting and `git diff --check` passed; no full local tests/build were run. Full Windows and Ubuntu CI on `a27d15f` passed, including frontend checks/build/session tests, translation validation, `cargo check`, Rust tests and Tauri build ([run](https://github.com/hoan02/b4s/actions/runs/37435703953)). Ordered cleanup for other process-driven exits and a complete session actor remain open under P3.3/P8.2.
+
+## Increment 102 — keep delayed discovery events inside their scan
+
+- The central listener now captures the active scan generation before awaiting peripheral lookup and passes it through processing. The scanner validates that generation both before reading properties and immediately before registry mutation, so an old event cannot be relabeled as belonging to a restarted scan.
+- Added a regression for current, stopped and superseded scan generations. Selected-file formatting and `git diff --check` passed; no local test/build was run. Full Windows and Ubuntu CI on `b10b42e` passed, including frontend checks/build/session tests, translation validation, `cargo check`, Rust tests and Tauri build ([run](https://github.com/hoan02/b4s/actions/runs/37439043339)). A full session actor and injected transport remain open under P3.1/P3.3.
