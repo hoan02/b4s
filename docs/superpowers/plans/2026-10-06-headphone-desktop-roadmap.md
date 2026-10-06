@@ -392,7 +392,7 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P1.1 | Index entrypoints, model guards, SDK/native dependencies | Earphone feature inventory | P0 | Mọi screen/action tìm thấy có status và source pointer |
 | P1.2 | Triage JADX errors liên quan; extract resource/native inventory | Extraction coverage report | P1.1 | Các call paths ưu tiên không còn đoạn pseudocode chưa kiểm chứng |
 | P1.3 | Lần theo family/transport/framing/firmware rules | Protocol-family matrix | P1.1 | Mỗi family candidate có evidence và unknowns |
-| P1.4 | Trace server dictionary/model-param consumers | Configuration contract notes | P1.1 | Phân biệt metadata, display curves, wire values và runtime capabilities |
+| P1.4 | Trace server dictionary/model-param consumers | Configuration contract notes ([current dossier](../../protocol/model-parameter-consumers.md)) | P1.1 | Partial: consumer fields are classified for EQ, gesture imagery, guides, cleaning and shared sleep UI; profile dictionary is traced to account/avatar presentation. Dynamic headphone dictionary names, full field/guard coverage and configuration contract remain open. |
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Capture guide + manifest schema | P0.2 | Có thể lặp lại cùng thao tác và so TX/RX |
 | P2.2 | BP1 capture core features/init/reconnect | BP1 golden traces local | P2.1, Android/log path | Model+firmware+state đầu+timeline rõ |
 | P2.3 | Replay harness và scripted fake transport | Offline test harness | P2.1 | Mô phỏng split/batched packet, timeout, late ACK, disconnect |

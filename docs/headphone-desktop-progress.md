@@ -21,7 +21,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P1.1 | Index entrypoints, model guards, SDK/native dependencies | In progress — transport dispatch indexed; feature/native inventory outstanding |
 | P1.2 | Triage JADX errors liên quan; extract resource/native inventory | In progress — current APK/split hashes and all 106 ARM64 native-library digests inventoried locally; six explicit headphone-package JADX markers are isolated to AI/record/OTA paths; resource review and any secondary-engine verification remain open |
 | P1.3 | Lần theo family/transport/framing/firmware rules | In progress — exact transport/framing guards indexed; firmware/callback tracing outstanding |
-| P1.4 | Trace server dictionary/model-param consumers | In progress |
+| P1.4 | Trace server dictionary/model-param consumers | In progress — model parameter fields are mapped to EQ, gesture presentation, phone guides, cleaning and shared sleep UI; traced profile dictionary use is account presentation; dynamic headphone dictionary names and full field/guard coverage remain open ([consumer dossier](protocol/model-parameter-consumers.md)) |
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
@@ -597,3 +597,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Spatial snapshots only confirm the AA42 enabled bit; AA43 does not provide a mode readback. Real-device mode no longer starts as Music or becomes locally selected after an enabled-bit observation. The UI leaves mode buttons unselected/unknown until there is actual mode evidence, while each explicit mode action still waits for the available enable-state observation. The demo may retain its deterministic selected mode.
 - Re-enable through the on/off switch is blocked while the current real-device mode is unknown; users can choose a mode explicitly to enable the feature. Exact mode query/state evidence and per-firmware hardware acceptance remain open.
+
+## Increment 85 — trace model-parameter consumers
+
+- Added an authored consumer dossier from the local 2.17.0.1 source extraction. It separates EQ wire-facing data from presentation assets and records the traced consumers for gesture imagery, operation guides, cleaning configuration, splash metadata and sleep audio. A `dictByName` profile lookup is classified as account/avatar presentation; no model-scoped headphone control dictionary name was verified.
+- BP1 Pro/Ultra local parameter snapshots differ in `eq_sound_mode` (seven entries versus empty) and both expose model UI metadata; neither observation promotes a device capability. APK data and decompiled source remain ignored. Dynamic dictionary names, full field coverage and model/firmware guard tracing remain open under P1.1/P1.4.
