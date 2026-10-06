@@ -583,18 +583,22 @@ async fn apply_event(event: DeviceEvent, token: crate::device::session::SessionT
 pub async fn disconnect(app: AppHandle) -> Result<(), String> {
     // Invalidate first, including a connection that has not published its ID.
     // No old notification can mutate state during the asynchronous OS cleanup.
-    let (id, peripheral, token) = {
+    let (id, peripheral, token, session_tasks) = {
         let mut state = BLE.lock().await;
         let id = state.connected_id.take();
         let peripheral = id.as_ref().and_then(|id| state.peripherals.remove(id));
+        let session_tasks = state.session_tasks.abort_and_drain();
         if let Some(device) = id.as_ref().and_then(|id| state.devices.get_mut(id)) {
             device.connected = false;
         }
         state.battery = BatteryState::default();
         state.last_anc = None;
         state.reset_link();
-        (id, peripheral, state.session.token())
+        (id, peripheral, state.session.token(), session_tasks)
     };
+    for task in session_tasks {
+        let _ = task.await;
+    }
     if let Some(p) = peripheral {
         let notify_uuid = if let Some(id) = id.as_ref() {
             BLE.lock()

@@ -125,6 +125,27 @@ mod tests {
         tokio::task::yield_now().await;
         assert!(abort_handle.is_finished());
     }
+
+    #[tokio::test]
+    async fn explicit_cleanup_returns_aborted_session_tasks_for_joining() {
+        let mut state = BleInner::new();
+        state.reset_link();
+        let session_id = state.session.token().id();
+        let notification = tokio::spawn(std::future::pending::<()>());
+        let poller = tokio::spawn(std::future::pending::<()>());
+        assert!(state
+            .session_tasks
+            .register_notification(session_id, notification));
+        assert!(state
+            .session_tasks
+            .register_battery_poller(session_id, poller));
+
+        let tasks = state.session_tasks.abort_and_drain();
+        assert_eq!(tasks.len(), 2);
+        for task in tasks {
+            assert!(task.await.is_err());
+        }
+    }
 }
 
 pub(super) static BLE: Lazy<Arc<Mutex<BleInner>>> =

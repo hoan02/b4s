@@ -29,6 +29,17 @@ impl SessionTasks {
         Self::register(&mut self.battery_poller, self.session_id, session_id, task)
     }
 
+    pub(super) fn abort_and_drain(&mut self) -> Vec<tokio::task::JoinHandle<()>> {
+        let tasks = [self.notification.take(), self.battery_poller.take()]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        for task in &tasks {
+            task.abort();
+        }
+        tasks
+    }
+
     fn register(
         slot: &mut Option<tokio::task::JoinHandle<()>>,
         current_session_id: Option<u64>,
@@ -46,11 +57,6 @@ impl SessionTasks {
     }
 
     fn abort_all(&mut self) {
-        if let Some(task) = self.notification.take() {
-            task.abort();
-        }
-        if let Some(task) = self.battery_poller.take() {
-            task.abort();
-        }
+        let _ = self.abort_and_drain();
     }
 }
