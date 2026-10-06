@@ -66,6 +66,9 @@ jobs:
       - name: Frontend session controller tests
         run: npm run test:session
 
+      - name: Desktop preference migration tests
+        run: npm run test:preferences
+
       - name: Cargo check
         working-directory: src-tauri
         run: cargo check

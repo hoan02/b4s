@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test:session": "node --test scripts/device-session.test.mjs",
+    "test:preferences": "node --test scripts/desktop-preferences.test.mjs",
     "test:reconnect": "node --test scripts/reconnect.test.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
