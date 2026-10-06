@@ -9,7 +9,8 @@ pub mod scanning;
 mod transport;
 use runtime::BLE;
 use transport::{
-    with_connected_peripheral, write_and_readback, write_bytes, write_command, write_raw,
+    with_connected_peripheral, write_and_observe, write_and_readback, write_bytes, write_command,
+    write_raw,
 };
 #[path = "ble/handshake.rs"]
 mod handshake;

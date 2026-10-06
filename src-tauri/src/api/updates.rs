@@ -1,6 +1,6 @@
 use super::error::{ApiError, ApiErrorCode};
 use serde::Serialize;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tauri_plugin_updater::UpdaterExt;
 
 #[derive(Debug, Clone, Serialize)]
@@ -132,8 +132,7 @@ pub(crate) async fn install_update(app: AppHandle) -> Result<(), ApiError> {
                 true,
             )
         })?;
-    app.restart();
-    Ok(())
+    app.restart()
 }
 
 async fn github_latest_version() -> Result<String, String> {
