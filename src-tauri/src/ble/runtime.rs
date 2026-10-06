@@ -59,6 +59,10 @@ impl SessionRuntime {
         self.peripheral.take()
     }
 
+    pub(super) fn peripheral(&self) -> Option<Peripheral> {
+        self.peripheral.clone()
+    }
+
     pub(super) fn register_notification(
         &mut self,
         token: crate::device::session::SessionToken,

@@ -126,7 +126,7 @@ where
         return Err("MOCK".into());
     }
     let id = state.connected_id.as_ref().ok_or("Not connected")?.clone();
-    let p = state.peripherals.get(&id).ok_or("Peripheral gone")?.clone();
+    let p = state.session.peripheral().ok_or("Peripheral gone")?;
     let profile = state
         .devices
         .get(&id)
