@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 pub(super) struct BleInner {
     pub(super) adapter: Option<Adapter>,
     pub(super) central_task: Option<tokio::task::JoinHandle<()>>,
+    pub(super) notification_task: Option<tokio::task::JoinHandle<()>>,
     pub(super) peripherals: HashMap<String, Peripheral>,
     pub(super) connected_id: Option<String>,
     pub(super) scanning: bool,
@@ -43,6 +44,7 @@ impl BleInner {
         Self {
             adapter: None,
             central_task: None,
+            notification_task: None,
             peripherals: HashMap::new(),
             connected_id: None,
             scanning: false,
@@ -72,6 +74,9 @@ impl BleInner {
 
     pub(super) fn reset_link(&mut self) {
         self.session.invalidate();
+        if let Some(task) = self.notification_task.take() {
+            task.abort();
+        }
         self.touch_link();
         self.snapshot = crate::device::snapshot::DeviceSnapshot::new(self.session.token().id());
         self.has_write_uuid = false;

@@ -290,7 +290,7 @@ async fn connect_one(
     let app_h = app.clone();
     let poll_id = device_id.clone();
     let mut lease = BLE.lock().await.session.lease(token);
-    tauri::async_runtime::spawn(async move {
+    let task = tauri::async_runtime::spawn(async move {
         for i in 0..40 {
             tokio::select! {
                 biased;
@@ -442,6 +442,17 @@ async fn subscribe_notifications(
         }
         log::info!("Notification stream ended");
     });
+
+    let mut state = BLE.lock().await;
+    if !state.session.accepts(token) {
+        task.abort();
+        return Err(
+            "Device session was cancelled before notification ownership was registered".into(),
+        );
+    }
+    if let Some(previous) = state.notification_task.replace(task) {
+        previous.abort();
+    }
 
     Ok(())
 }
