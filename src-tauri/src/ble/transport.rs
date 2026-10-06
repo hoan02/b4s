@@ -134,11 +134,12 @@ where
         .ok_or("Connected device profile is missing")?;
     let token = state.session.token();
     let mut lease = state.session.lease(token);
+    let executor = state.session_executor.clone();
     drop(state);
     let result = tokio::select! {
         biased;
         _ = lease.cancelled() => Err("Device session was cancelled".into()),
-        result = COMMAND_EXECUTOR.run(async move {
+        result = executor.run(async move {
             crate::device::capability::authorize_control(&profile)?;
             f(p).await
         }) => result.map_err(|error| error.to_string()),

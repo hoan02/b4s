@@ -41,9 +41,6 @@ static OBSERVATIONS: Lazy<
     tokio::sync::broadcast::Sender<crate::device::confirmation::StateObservation>,
 > = Lazy::new(|| tokio::sync::broadcast::channel(64).0);
 
-static COMMAND_EXECUTOR: Lazy<crate::device::executor::CommandExecutor> =
-    Lazy::new(Default::default);
-
 static CONNECT_ATTEMPT: Mutex<()> = Mutex::const_new(());
 static ADAPTER_INIT: Mutex<()> = Mutex::const_new(());
 

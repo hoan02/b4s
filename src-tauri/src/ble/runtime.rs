@@ -9,6 +9,7 @@ pub(super) struct BleInner {
     pub(super) adapter: Option<Adapter>,
     pub(super) central_task: Option<tokio::task::JoinHandle<()>>,
     pub(super) session_tasks: super::session_tasks::SessionTasks,
+    pub(super) session_executor: Arc<crate::device::executor::CommandExecutor>,
     pub(super) peripherals: HashMap<String, Peripheral>,
     pub(super) connected_id: Option<String>,
     pub(super) scanning: bool,
@@ -40,6 +41,7 @@ impl BleInner {
             adapter: None,
             central_task: None,
             session_tasks: Default::default(),
+            session_executor: Arc::new(Default::default()),
             peripherals: HashMap::new(),
             connected_id: None,
             scanning: false,
@@ -67,6 +69,7 @@ impl BleInner {
         let tasks = self
             .session_tasks
             .reset_for_session(self.session.token().id());
+        self.session_executor = Arc::new(Default::default());
         self.touch_link();
         self.snapshot = crate::device::snapshot::DeviceSnapshot::new(self.session.token().id());
         self.has_write_uuid = false;
@@ -157,6 +160,19 @@ mod tests {
         assert_eq!(tasks.len(), 1);
         join_session_tasks(tasks).await;
         assert!(owned_abort.is_finished());
+    }
+
+    #[test]
+    fn resetting_session_replaces_its_command_executor() {
+        let mut state = BleInner::new();
+        let old_executor = state.session_executor.clone();
+
+        let _ = state.reset_link();
+
+        assert!(!std::sync::Arc::ptr_eq(
+            &old_executor,
+            &state.session_executor
+        ));
     }
 }
 
