@@ -47,7 +47,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
 | P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | In progress — tray lifecycle, bounded Quit cleanup, and opt-in startup/reconnect preferences; installer/signing and Windows acceptance remain external |
-| P8.3 | README/model matrix/diagnostics guide | Open |
+| P8.3 | README/model matrix/diagnostics guide | In progress — current lifecycle/support limits documented; full model/feature evidence matrix remains open |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | Open |
 
 ## Delivery sequence
@@ -358,3 +358,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Added OS-backed start-at-login preference and persisted auto-reconnect opt-in, both off by default. Reconnect remains one scan for the last supported device, and failure to save an OS preference is reported.
 - Rust `cargo check` passed on the Windows workspace after fixing the tray close-event signature and scan-only catalog mutability. Full CI is required for Linux/schema/frontend integration; tests were not run locally.
 - Signed installer/update artifacts, tray behavior on supported Windows versions, startup migration behavior, and the P8.1 sleep/resume/accessibility acceptance remain open. This increment does not close P8.2 or claim release readiness.
+
+
+## Increment 43 — correct desktop support and troubleshooting docs
+
+- Updated the five READMEs to describe reconnect as opt-in/off by default, the 12-second one-shot search, separate start-at-login preference, and close-to-tray/Quit behavior. Removed the unsupported claim that BP1 Ultra is verified for control; its transport remains scan-only pending evidence.
+- Added a desktop troubleshooting guide with current scan/connect steps, startup/tray behavior, issue-reporting fields, and explicit diagnostic collection/privacy limits. Updated the model catalog guidance to distinguish reviewed profile data from hardware verification.
+- Documentation links and claims were reviewed against current code and the support tracker; no local tests run. Full per-model/per-feature evidence matrix and P8.1/P8.2 external acceptance remain open.

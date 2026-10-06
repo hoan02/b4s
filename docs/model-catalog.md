@@ -57,9 +57,11 @@ Register the JSON family name in catalog validation and runtime model resolution
 as well. Route reply decoding alongside writes, and review startup queries,
 handshake, UUID selection and wrapping for the new family.
 
-Baseus Bass BP1 Pro and BP1 Ultra are the verified hardware targets for the
-`bp1` family. They remain separate model records because framing and firmware
-behavior can differ. Only BP1 Pro currently has an extracted JSON profile at
-`src-tauri/catalog/models/bass-bp1-pro.json`; BP1 Ultra and legacy entries are
-still represented by the discovery registry. Do not infer that the JSON catalog
-is complete from the verified status of a registry entry.
+BP1 Pro has a reviewed JSON profile at
+`src-tauri/catalog/models/bass-bp1-pro.json`. BP1 Ultra is recognizable but
+remains scan-only while its control transport is unverified; its registry entry
+does not authorize a connection. Keep their model records separate because
+framing and firmware behavior can differ. Do not infer that the JSON catalog is
+complete from a registry entry or a shared family name. The app's `verified`
+support label is reserved for model and feature behavior checked on real
+hardware; consult the progress tracker for remaining evidence gates.
