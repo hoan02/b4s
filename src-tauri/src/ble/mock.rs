@@ -3,7 +3,7 @@
 use super::*;
 use crate::device::{DeviceIdentity, DeviceRegistry};
 
-pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
+pub async fn start_mock_scan(app: AppHandle) -> Result<(), ScanError> {
     let mut state = BLE.lock().await;
     state.scanning = true;
     state.scan_generation = state

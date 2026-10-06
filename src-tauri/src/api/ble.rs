@@ -16,14 +16,12 @@ pub(crate) async fn ble_start_scan(
     } else {
         ble::scanning::start_scan(app).await
     };
-    result.map_err(|error| ApiError::new(ApiErrorCode::ScanFailed, error, true))
+    result.map_err(ApiError::from)
 }
 
 #[tauri::command]
 pub(crate) async fn ble_stop_scan(app: tauri::AppHandle) -> Result<(), ApiError> {
-    ble::scanning::stop_scan(app)
-        .await
-        .map_err(|error| ApiError::new(ApiErrorCode::ScanFailed, error, true))
+    ble::scanning::stop_scan(app).await.map_err(ApiError::from)
 }
 
 #[tauri::command]

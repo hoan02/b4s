@@ -56,6 +56,16 @@ impl From<crate::ble::BleError> for ApiError {
     }
 }
 
+impl From<crate::ble::ScanError> for ApiError {
+    fn from(error: crate::ble::ScanError) -> Self {
+        Self::new(
+            ApiErrorCode::ScanFailed,
+            error.to_string(),
+            error.is_retryable(),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,5 +95,20 @@ mod tests {
         .unwrap();
         assert_eq!(value["code"], "deviceUnavailable");
         assert_eq!(value["retryable"], false);
+    }
+
+    #[test]
+    fn scan_failures_expose_power_state_and_retry_policy() {
+        let disabled =
+            serde_json::to_value(ApiError::from(crate::ble::ScanError::BluetoothDisabled)).unwrap();
+        assert_eq!(disabled["code"], "scanFailed");
+        assert_eq!(disabled["retryable"], false);
+
+        let busy = serde_json::to_value(ApiError::from(crate::ble::ScanError::Operation(
+            "start_scan: busy".into(),
+        )))
+        .unwrap();
+        assert_eq!(busy["code"], "scanFailed");
+        assert_eq!(busy["retryable"], true);
     }
 }

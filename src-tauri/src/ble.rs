@@ -16,7 +16,7 @@ mod transport;
 pub use contracts::{
     BleDevice, ConnectingState, ConnectionState, LinkHealth, LinkLevel, ScanStatus,
 };
-pub use error::BleError;
+pub use error::{BleError, ScanError};
 use runtime::BLE;
 use transport::{
     with_connected_peripheral, write_and_observe, write_and_readback, write_bytes, write_command,

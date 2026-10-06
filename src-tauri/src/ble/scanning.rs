@@ -16,18 +16,21 @@ fn scan_generation_is_current(scanning: bool, current: u64, event: u64) -> bool 
     scanning && current == event
 }
 
-pub async fn start_scan(app: AppHandle) -> Result<(), String> {
+pub async fn start_scan(app: AppHandle) -> Result<(), ScanError> {
     let _scan_operation = super::adapter::SCAN_OPERATION.lock().await;
-    init_adapter().await?;
+    if let Err(error) = init_adapter().await {
+        log::warn!("Bluetooth adapter unavailable: {error}");
+        return Err(ScanError::AdapterUnavailable);
+    }
     let adapter = super::adapter::current()
         .await
-        .ok_or_else(|| "No Bluetooth adapter found".to_string())?;
+        .ok_or(ScanError::AdapterUnavailable)?;
     let adapter_state = adapter
         .adapter_state()
         .await
-        .map_err(|e| format!("Bluetooth state: {e}"))?;
+        .map_err(|e| ScanError::Operation(format!("Bluetooth state: {e}")))?;
     if adapter_state == CentralState::PoweredOff {
-        return Err("Bluetooth đang tắt trên thiết bị này".into());
+        return Err(ScanError::BluetoothDisabled);
     }
     let mut state = BLE.lock().await;
     if state.scanning {
@@ -48,12 +51,14 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     state.mock = false;
     drop(state);
 
-    let start_result = async {
-        discovery::ensure_central_listener(app.clone(), adapter.clone()).await?;
+    let start_result: Result<(), ScanError> = async {
+        discovery::ensure_central_listener(app.clone(), adapter.clone())
+            .await
+            .map_err(ScanError::Operation)?;
         adapter
             .start_scan(ScanFilter::default())
             .await
-            .map_err(|error| format!("start_scan: {error}"))
+            .map_err(|error| ScanError::Operation(format!("start_scan: {error}")))
     }
     .await;
     if let Err(error) = start_result {
@@ -238,12 +243,12 @@ mod tests {
     }
 }
 
-pub async fn stop_scan(app: AppHandle) -> Result<(), String> {
+pub async fn stop_scan(app: AppHandle) -> Result<(), ScanError> {
     stop_scan_session(app, None).await
 }
 
 // A previous scan's deadline must not stop a later manual or automatic scan.
-async fn stop_scan_session(app: AppHandle, generation: Option<u64>) -> Result<(), String> {
+async fn stop_scan_session(app: AppHandle, generation: Option<u64>) -> Result<(), ScanError> {
     let _scan_operation = super::adapter::SCAN_OPERATION.lock().await;
     let scan_generation = {
         let state = BLE.lock().await;
@@ -258,7 +263,7 @@ async fn stop_scan_session(app: AppHandle, generation: Option<u64>) -> Result<()
         Some(adapter) => adapter
             .stop_scan()
             .await
-            .map_err(|error| format!("stop_scan: {error}"))?,
+            .map_err(|error| ScanError::Operation(format!("stop_scan: {error}")))?,
         None => {}
     }
     {

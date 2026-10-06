@@ -47,9 +47,41 @@ impl From<String> for BleError {
     }
 }
 
+/// Stable internal categories for BLE scan start/stop failures. Platform
+/// details stay in `Operation`; adapter/BT-power categories need a user action
+/// before a repeat scan can succeed, so they are not auto-retryable.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ScanError {
+    AdapterUnavailable,
+    BluetoothDisabled,
+    Operation(String),
+}
+
+impl ScanError {
+    pub fn is_retryable(&self) -> bool {
+        matches!(self, Self::Operation(_))
+    }
+}
+
+impl fmt::Display for ScanError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AdapterUnavailable => formatter.write_str("No Bluetooth adapter is available"),
+            Self::BluetoothDisabled => formatter.write_str("Bluetooth đang tắt trên thiết bị này"),
+            Self::Operation(message) => formatter.write_str(message),
+        }
+    }
+}
+
+impl From<String> for ScanError {
+    fn from(message: String) -> Self {
+        Self::Operation(message)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::BleError;
+    use super::{BleError, ScanError};
 
     #[test]
     fn support_and_session_failures_have_distinct_retry_policies() {
@@ -58,5 +90,16 @@ mod tests {
         assert!(!BleError::DeviceUnavailable.is_retryable());
         assert!(BleError::SessionCancelled.is_retryable());
         assert!(BleError::Operation("adapter busy".into()).is_retryable());
+    }
+
+    #[test]
+    fn adapter_and_power_failures_require_a_user_action_before_retry() {
+        assert!(!ScanError::AdapterUnavailable.is_retryable());
+        assert!(!ScanError::BluetoothDisabled.is_retryable());
+        assert!(ScanError::Operation("start_scan: busy".into()).is_retryable());
+        assert_eq!(
+            ScanError::from("start_scan: busy".to_owned()),
+            ScanError::Operation("start_scan: busy".into())
+        );
     }
 }
