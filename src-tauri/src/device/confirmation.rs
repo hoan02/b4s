@@ -87,7 +87,7 @@ mod tests {
     }
     #[test]
     fn spatial_enable_requires_query_state_not_ack_or_other_session() {
-        let epoch = SessionEpoch::default();
+        let mut epoch = SessionEpoch::default();
         let session = epoch.token();
         let mut observation = StateObservation { session, opcode: 0x42,
             event: DeviceEvent::SpatialEnabled(true) };

@@ -102,7 +102,7 @@ const App: Component = () => {
   const [findDialogMode, setFindDialogMode] = createSignal<"confirm" | "active">("confirm");
   const [spatialPending, setSpatialPending] = createSignal(false);
   const [spatialError, setSpatialError] = createSignal<string | null>(null);
-  const [spatialOn, setSpatialOn] = createSignal(false);
+  const [spatialOn, setSpatialOn] = createSignal<boolean | null>(null);
   const [spatialMode, setSpatialModeUi] = createSignal<SpatialMode>("music");
   const [bassBoost, setBassBoostUi] = createSignal<number | null>(null);
   const [ldac, setLdac] = createSignal<boolean | null>(null);
@@ -135,7 +135,7 @@ const App: Component = () => {
       setBassBoostUi(null);
       setHearingProtect(null);
       setHearingThreshold(null);
-      setSpatialOn(false);
+      setSpatialOn(null);
       setEqCustomActive(false);
       setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
       setAncModeUi("off");
@@ -146,7 +146,7 @@ const App: Component = () => {
     }
     if (snapshot.anc !== null) setAncModeUi(snapshot.anc);
     if (snapshot.game !== null) setGameOn(snapshot.game);
-    if (snapshot.spatialEnabled != null) setSpatialOn(snapshot.spatialEnabled);
+    setSpatialOn(snapshot.spatialEnabled ?? null);
     setLdac(snapshot.ldac ?? null);
     setBassBoostUi(snapshot.bassBoost ?? null);
     setHearingProtect(snapshot.hearing?.enabled ?? null);
@@ -405,7 +405,7 @@ const App: Component = () => {
   };
 
   const requestEqAction = (action: PendingEqAction): boolean => {
-    if (!spatialOn()) return true;
+    if (spatialOn() === false || !device()?.deviceProfile?.capabilities.spatial) return true;
     setPendingEqAction(action);
     return false;
   };
@@ -551,7 +551,7 @@ const App: Component = () => {
     setPendingEqAction(null);
     if (!action) return;
     try {
-      if (spatialOn()) {
+      if (spatialOn() !== false && device()?.deviceProfile?.capabilities.spatial) {
         const generation = session.capture();
         await setSpatialMode("off");
         if (!session.isCurrent(generation)) return;

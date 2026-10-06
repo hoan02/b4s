@@ -279,3 +279,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Spatial writes query BA42 and wait for exact AA42 enabled state in the current serialized session; AA43 ACK cannot complete them. This confirms enablement only, not selected mode.
 - UI uses shared operation admission/pending/error guards and retains observed enable state on failure. EQ conflict disable waits for readback and checks session before continuing; stale completion cannot apply EQ to a newly selected session.
 - Cargo check/frontend typecheck passed. Added query-versus-ACK/wrong-state/old-session confirmation test for CI. Mode selection remains a local requested choice until a model-specific mode readback is verified; nullable spatial UI, firmware mode constraints and hardware acceptance remain open.
+
+
+## Increment 32 — unknown spatial state and conflict gate
+
+- Spatial enabled state is nullable in the UI, resets to unknown and adopts nullable snapshots. Unknown is displayed with localized text and mixed checkbox state instead of confirmed off.
+- EQ conflict handling treats an unknown spatial state as unresolved when spatial capability exists; disable/readback completes before proceeding. Models without spatial capability are exempt from this conflict route.
+- Fixed mutable epoch declaration in the new confirmation test. Three confirmation tests and frontend typecheck passed; whitespace clean. Latest inspected CI run 37394930493 was pending. Selected-mode evidence, backend conflict policy and accessibility/hardware acceptance remain open.

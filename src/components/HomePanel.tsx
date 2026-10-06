@@ -47,7 +47,7 @@ interface Props {
   findActive: boolean;
   spatialPending?: boolean;
   spatialError?: string | null;
-  spatialOn: boolean;
+  spatialOn: boolean | null;
   spatialMode: SpatialMode;
   eqLabel: string;
   onAncMode: (m: AncMode) => void;
@@ -243,13 +243,15 @@ const HomePanel: Component<Props> = (props) => {
           </span>
           <div class="list-text">
             <span class="list-title">{t("home.spatial")}</span>
-            <span class="list-sub">{t("listen.spatialHint")}</span>
+            <span class="list-sub">{props.spatialOn === null ? t("control.unknown") : t("listen.spatialHint")}</span>
           </div>
           <label class="toggle sm">
             <input
               type="checkbox"
               disabled={props.spatialPending}
-              checked={props.spatialOn}
+              aria-label={t("home.spatial")}
+              aria-checked={props.spatialOn === null ? "mixed" : props.spatialOn}
+              checked={props.spatialOn === true}
               onChange={(e) =>
                 props.onSpatialOn((e.currentTarget as HTMLInputElement).checked)
               }
