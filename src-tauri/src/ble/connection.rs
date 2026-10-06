@@ -407,7 +407,7 @@ async fn subscribe_notifications(
         .map_err(|e| format!("notifications stream: {e}"))?;
 
     let mut lease = BLE.lock().await.session.lease(token);
-    let task = tauri::async_runtime::spawn(async move {
+    let task = tokio::spawn(async move {
         let mut receivers = HashMap::<uuid::Uuid, protocol::receiver::NotificationReceiver>::new();
         loop {
             let n = tokio::select! {
