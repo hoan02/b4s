@@ -67,6 +67,7 @@ type PendingEqAction =
   | { kind: "resetCustom" };
 
 const App: Component = () => {
+  const savedDesktopPreferences = readDesktopPreferences();
   const [view, setView] = createSignal<View>("home");
   const [settingsSubpage, setSettingsSubpage] = createSignal<"language" | "appearance" | null>(null);
   const [theme, setTheme] = createSignal<ThemeMode>("dark");
@@ -74,7 +75,8 @@ const App: Component = () => {
   const [appVersion, setAppVersion] = createSignal("…");
   const [connected, setConnected] = createSignal(false);
   const [connectionReady, setConnectionReady] = createSignal(false);
-  const [autoReconnectEnabled, setAutoReconnectEnabled] = createSignal(readDesktopPreferences().autoReconnect);
+  const [autoReconnectEnabled, setAutoReconnectEnabled] = createSignal(savedDesktopPreferences.autoReconnect);
+  const [autoReconnectThisLaunch, setAutoReconnectThisLaunch] = createSignal(savedDesktopPreferences.autoReconnect);
   const [autoReconnectAvailable, setAutoReconnectAvailable] = createSignal(true);
   const [device, setDevice] = createSignal<BleDevice | null>(null);
   const [battery, setBattery] = createSignal<BatteryData>({
@@ -623,7 +625,7 @@ const App: Component = () => {
       return;
     }
     setAutoReconnectEnabled(enabled);
-    setAutoReconnectAvailable(enabled);
+    if (!enabled) setAutoReconnectThisLaunch(false);
   };
 
   return (
@@ -713,7 +715,7 @@ const App: Component = () => {
                     onConnected={handleConnected}
                     onOpenSettings={() => setView("settings")}
                     appVersion={appVersion()}
-                    autoReconnect={autoReconnectEnabled() && autoReconnectAvailable()}
+                    autoReconnect={autoReconnectThisLaunch() && autoReconnectAvailable()}
                     onAutoReconnectAttempt={() => setAutoReconnectAvailable(false)}
                   />
                 </Show>

@@ -15,14 +15,14 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 
 | ID | Work | Status |
 |---|---|---|
-| P0.1 | Chụp baseline Git/build/test; ghi thay đổi đang có, không reset | In progress |
+| P0.1 | Chụp baseline Git/build/test; ghi thay đổi đang có, không reset | Complete — clean base and original checks recorded |
 | P0.2 | Ghi firmware BP1 Ultra, Android/Windows version và Bluetooth adapter | External evidence required |
 | P0.3 | Ghi phạm vi product và policy đã được người dùng chốt | Complete — architecture/desktop-scope.md |
 | P1.1 | Index entrypoints, model guards, SDK/native dependencies | In progress — transport dispatch indexed; feature/native inventory outstanding |
 | P1.2 | Triage JADX errors liên quan; extract resource/native inventory | In progress — reproducible local inventory tool; method triage/resource extraction outstanding |
 | P1.3 | Lần theo family/transport/framing/firmware rules | In progress — exact transport/framing guards indexed; firmware/callback tracing outstanding |
 | P1.4 | Trace server dictionary/model-param consumers | In progress |
-| P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Open |
+| P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
 | P3.1 | Tách BLE discovery/GATT facade khỏi session | In progress — confirmed write/query transport seam |
@@ -356,6 +356,7 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added a system tray with Open, live device status and Quit. Closing the main window hides it only when tray setup succeeds; explicit Quit makes bounded best-effort scan/find cleanup and disconnect before exit.
 - Added OS-backed start-at-login preference and persisted auto-reconnect opt-in, both off by default. Reconnect remains one scan for the last supported device, and failure to save an OS preference is reported.
+- The reconnect decision is captured at app launch: enabling it during a running session takes effect next launch, while disabling it cancels any remaining reconnect opportunity in the current session.
 - Rust `cargo check` passed on the Windows workspace after fixing the tray close-event signature and scan-only catalog mutability. CI found that resolving the new plugin had advanced the Rust Tauri crate to 2.12 while the JS API is 2.11; the Rust crate and its locked runtime/build family are now aligned to 2.11.5. Full CI is required for Linux/schema/frontend integration; tests were not run locally.
 - Signed installer/update artifacts, tray behavior on supported Windows versions, startup migration behavior, and the P8.1 sleep/resume/accessibility acceptance remain open. This increment does not close P8.2 or claim release readiness.
 
@@ -372,3 +373,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Custom EQ remains keyed by device address, model ID and band layout. Stored data now uses a versioned envelope, validates IDs/labels/gains/band count, caps the saved list to the UI's two-preset limit, and migrates the legacy array shape on read without discarding usable values if storage is unavailable.
 - Locale preference reads and writes now tolerate browser storage denial; language switching remains available for the current session. Theme and reconnect preferences already handle storage errors independently.
 - No local tests run. The bounded diagnostic cache and broader persistence migration matrix remain open under P4.4.
+
+
+## Increment 45 — honor reconnect launch boundary
+
+- Auto-reconnect eligibility is captured when the app initializes. Enabling the preference mid-session applies on the next app launch; disabling it in Settings clears the current launch's eligibility. Returning to pairing can no longer unexpectedly start a reconnect attempt after a same-session opt-in change.
+- No local tests run; CI covers the frontend build. Full opt-in reconnection and cancellation acceptance on Windows hardware remain open under P8.1/P8.2.
