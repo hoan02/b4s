@@ -34,7 +34,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
 | P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — feature observations use a typed snapshot; scan/connection/link DTOs now carry contract version 1 and link levels are closed enums; remaining Tauri command types and lifecycle envelopes still need consolidation |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
-| P5.1 | App shell/navigation/session store | In progress — ordered session store and runtime subscriptions now have a dedicated async owner with unmount cleanup; feature controller extraction remains outstanding |
+| P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions and find-buds workflow now have dedicated owners; remaining feature-controller extraction and navigation/accessibility acceptance are open |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
 | P6.1 | ANC/transparency/game, constraints/readback | Open |
@@ -453,3 +453,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Removed the hidden ANC strength slider/state and two permanently hidden find-bud dialogs. Removed duplicate adaptive-environment cards so each available environment appears once.
 - Updated the catalog identity comment to describe exact product normalization rather than a retired app registry. `npx tsc --noEmit` and `git diff --check` passed; visual/hardware acceptance remains open under P5.2/P8.1.
+
+
+## Increment 57 — extract find-buds controller
+
+- Moved find-buds active/confirmation state, start/stop commands and localized feedback into `features/find-buds/controller.ts`. `App.tsx` now composes the controller with the home view and dialog; reconnect/disconnect reset feature-local state.
+- `npx tsc --noEmit` and `git diff --check` passed. No test suite was run locally; CI validates the frontend build. Other listening/equalizer controllers and hardware stop/cancel behavior remain open.

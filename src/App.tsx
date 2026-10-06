@@ -11,6 +11,7 @@ import { getDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot"
 import { createConfirmedOperation } from "./features/shared/confirmedOperation";
 import { resolveEqSelection } from "./features/equalizer/selection";
 import { subscribeDeviceRuntime } from "./features/devices/runtimeSubscriptions";
+import { createFindBudsController } from "./features/find-buds/controller";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
@@ -32,7 +33,6 @@ import {
   setBassBoost,
   setLdac as sendLdac,
   setHearingProtection as sendHearingProtection,
-  findBuds,
   profileNoise,
 } from "./lib/device";
 import { defaultCustomBands } from "./lib/eq";
@@ -91,9 +91,6 @@ const App: Component = () => {
   const [eqError, setEqError] = createSignal<string | null>(null);
   const [gameError, setGameError] = createSignal<string | null>(null);
   const [gameOn, setGameOn] = createSignal<boolean | null>(null);
-  const [findActive, setFindActive] = createSignal(false);
-  const [findConfirmOpen, setFindConfirmOpen] = createSignal(false);
-  const [findDialogMode, setFindDialogMode] = createSignal<"confirm" | "active">("confirm");
   const [spatialPending, setSpatialPending] = createSignal(false);
   const [spatialError, setSpatialError] = createSignal<string | null>(null);
   const [spatialOn, setSpatialOn] = createSignal<boolean | null>(null);
@@ -200,6 +197,8 @@ const App: Component = () => {
     toastTimers.set(t.id, id);
   };
 
+  const findController = createFindBudsController(notify);
+
   const dismissToast = (id: number) => {
     setToasts((prev) => prev.filter((x) => x.id !== id));
     const tm = toastTimers.get(id);
@@ -298,7 +297,7 @@ const App: Component = () => {
     session.selectDevice(dev.id);
     setDevice(dev);
     setConnected(true);
-    setFindActive(false);
+    findController.reset();
     setControlError(null);
     setView("home");
     startLinkPoll();
@@ -412,50 +411,6 @@ const App: Component = () => {
     }, (message) => notify(message, "error"));
   };
 
-  const startFindBuds = async () => {
-    try {
-      await findBuds(true);
-      setFindActive(true);
-      setFindDialogMode("active");
-      notify(t("toast.finding"), "info", t("toast.findingTitle"));
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const stopFindBuds = async () => {
-    try {
-      await findBuds(false);
-      setFindActive(false);
-      setFindConfirmOpen(false);
-      setFindDialogMode("confirm");
-      notify(t("toast.findStopped"), "info", t("toast.stopped"));
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
-  const handleFindBuds = async () => {
-    if (!findActive()) {
-      setFindDialogMode("confirm");
-      setFindConfirmOpen(true);
-      return;
-    }
-    const start = !findActive();
-    try {
-      await findBuds(start);
-      setFindActive(start);
-      if (!start) setFindConfirmOpen(false);
-      notify(
-        start ? t("toast.finding") : t("toast.findStopped"),
-        "info",
-        start ? t("toast.findingTitle") : t("toast.stopped")
-      );
-    } catch (e) {
-      notify(formatError(e), "error", t("home.find"));
-    }
-  };
-
   const applyNoiseParameter = async (mode: AncMode, parameter: number) => {
     setControlError(null);
     try {
@@ -539,7 +494,7 @@ const App: Component = () => {
     }
     setConnected(false);
     setDevice(null);
-    setFindActive(false);
+    findController.reset();
     setLink(emptyLink());
     setControlError(null);
     setView("home");
@@ -678,7 +633,7 @@ const App: Component = () => {
                 gameMode={gameOn()}
                 gamePending={gamePending()}
                 gameError={gameError()}
-                findActive={findActive()}
+                findActive={findController.active()}
                 spatialSupported={device()?.deviceProfile?.capabilities.spatial ?? false}
                 gameSupported={device()?.deviceProfile?.capabilities.gameMode ?? false}
                 eqSupported={device()?.deviceProfile?.capabilities.eq ?? false}
@@ -699,7 +654,7 @@ const App: Component = () => {
                 onNoiseEnvironment={handleNoiseEnvironment}
                 onNoiseLevel={handleNoiseLevel}
                 onGameMode={handleGameMode}
-                onFindBuds={handleFindBuds}
+                onFindBuds={findController.request}
                 onOpenMore={() => setView("more")}
                 onOpenSettings={() => setView("settings")}
                 onDisconnect={handleDisconnect}
@@ -726,14 +681,14 @@ const App: Component = () => {
           onConfirm={confirmEqAction}
         />
       </Show>
-      <Show when={findConfirmOpen() || findActive()}>
+      <Show when={findController.confirmationOpen() || findController.active()}>
         <ConfirmDialog
           title={t("dialog.loudSoundTitle")}
           message={t("dialog.loudSoundMessage")}
-          showCancel={findDialogMode() === "confirm"}
-          confirmLabel={findDialogMode() === "active" ? t("dialog.stopFinding") : t("dialog.ready")}
-          onCancel={() => setFindConfirmOpen(false)}
-          onConfirm={() => (findDialogMode() === "active" ? stopFindBuds() : startFindBuds())}
+          showCancel={findController.dialogMode() === "confirm"}
+          confirmLabel={findController.dialogMode() === "active" ? t("dialog.stopFinding") : t("dialog.ready")}
+          onCancel={findController.closeConfirmation}
+          onConfirm={() => (findController.dialogMode() === "active" ? findController.stop() : findController.start())}
         />
       </Show>
     </div>
