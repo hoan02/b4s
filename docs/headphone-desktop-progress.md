@@ -677,3 +677,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Bounded tray Quit cleanup now removes, aborts and awaits the app-scoped adapter event listener after scan/find/disconnect cleanup. The per-session notification and battery-poller owner remains independent, so session rollover does not stop discovery events.
 - Selected-file `rustfmt --check` and `git diff --check` passed; no local tests/build were run. Full Windows and Ubuntu CI on `80bb6b2` passed, including Rust tests and Tauri build ([run](https://github.com/hoan02/b4s/actions/runs/37433079687)). Normal close when tray setup fails and a full session actor remain open under P3.3/P8.2.
+
+## Increment 101 — shut down BLE when tray setup fails
+
+- Tray Quit and the fallback window-close path now share one bounded shutdown helper. When tray creation fails, closing the main window prevents immediate teardown, starts BLE cleanup once, then exits; with a working tray, close continues to hide the window.
+- Selected-file formatting and `git diff --check` passed; no full local tests/build were run. Full Windows and Ubuntu CI on `a27d15f` passed, including frontend checks/build/session tests, translation validation, `cargo check`, Rust tests and Tauri build ([run](https://github.com/hoan02/b4s/actions/runs/37435703953)). Ordered cleanup for other process-driven exits and a complete session actor remain open under P3.3/P8.2.
