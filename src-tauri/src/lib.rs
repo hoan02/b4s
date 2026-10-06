@@ -10,6 +10,11 @@ mod device;
 mod protocol;
 
 use api::{ble::*, desktop::*, device::*, updates::*};
+#[cfg(desktop)]
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tauri::Manager;
 
 // ---------------------------------------------------------------------------
@@ -65,20 +70,34 @@ pub fn run() {
             }
 
             #[cfg(desktop)]
-            match desktop::install_tray(app) {
-                Ok(()) => {
-                    if let Some(window) = app.get_webview_window("main") {
-                        let close_window = window.clone();
-                        window.on_window_event(move |event| {
-                            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            {
+                let tray_available = match desktop::install_tray(app) {
+                    Ok(()) => true,
+                    Err(error) => {
+                        log::warn!(
+                            "System tray unavailable; window close will quit cleanly: {error}"
+                        );
+                        false
+                    }
+                };
+
+                if let Some(window) = app.get_webview_window("main") {
+                    let close_window = window.clone();
+                    let app_handle = app.handle().clone();
+                    let close_started = Arc::new(AtomicBool::new(false));
+                    window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            if tray_available {
                                 api.prevent_close();
                                 let _ = close_window.hide();
+                            } else {
+                                api.prevent_close();
+                                if !close_started.swap(true, Ordering::AcqRel) {
+                                    desktop::quit(&app_handle);
+                                }
                             }
-                        });
-                    }
-                }
-                Err(error) => {
-                    log::warn!("System tray unavailable; window close exits normally: {error}")
+                        }
+                    });
                 }
             }
 

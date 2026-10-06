@@ -26,17 +26,7 @@ pub fn install_tray(app: &mut tauri::App) -> tauri::Result<()> {
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => show_main_window(app),
-            "quit" => {
-                let app = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    let _ = tokio::time::timeout(
-                        Duration::from_secs(4),
-                        ble::commands::shutdown(app.clone()),
-                    )
-                    .await;
-                    app.exit(0);
-                });
-            }
+            "quit" => quit(app),
             _ => {}
         });
     if let Some(icon) = app.default_window_icon() {
@@ -44,6 +34,15 @@ pub fn install_tray(app: &mut tauri::App) -> tauri::Result<()> {
     }
     tray.build(app)?;
     Ok(())
+}
+
+pub fn quit(app: &AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let _ = tokio::time::timeout(Duration::from_secs(4), ble::commands::shutdown(app.clone()))
+            .await;
+        app.exit(0);
+    });
 }
 
 pub fn update_tray_status(app: &AppHandle, state: &ConnectionState) {
