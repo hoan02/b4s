@@ -581,7 +581,7 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 ## Increment 81 — gate reviewed experimental controls
 
 - Added an off-by-default Experimental preference with v1-to-v2 desktop preference migration that preserves auto-reconnect. The app applies it to the backend before reading the current connection or subscribing to device events; failed initialization resets the saved preference and leaves the control disabled. Settings writes serialize through a pending state and roll back on backend failure.
-- Backend authorization requires both the explicit preference and a reviewed catalog profile marked `experimental`, plus an exact reviewed BLE transport and matching firmware scope. Scan-only and unreviewed profiles remain denied. No current profile is promoted by this switch. Added a direct capability regression test and translated the setting in all five locales. Accessibility/hardware acceptance and experimental evidence for any future profile remain open.
+- Backend authorization requires both the explicit preference and a reviewed catalog profile marked `experimental`, plus an exact reviewed BLE transport and matching firmware scope. Physical dispatch rechecks control eligibility after serialized command admission, so a queued command cannot rely only on an earlier UI-time authorization. Scan-only and unreviewed profiles remain denied. No current profile is promoted by this switch. Added a direct capability regression test and translated the setting in all five locales. Accessibility/hardware acceptance and experimental evidence for any future profile remain open.
 
 ## Increment 82 — version API failures
 

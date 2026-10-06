@@ -129,13 +129,21 @@ where
     }
     let id = state.connected_id.as_ref().ok_or("Not connected")?.clone();
     let p = state.peripherals.get(&id).ok_or("Peripheral gone")?.clone();
+    let profile = state
+        .devices
+        .get(&id)
+        .map(|device| device.device_profile.clone())
+        .ok_or("Connected device profile is missing")?;
     let token = state.session.token();
     let mut lease = state.session.lease(token);
     drop(state);
     let result = tokio::select! {
         biased;
         _ = lease.cancelled() => Err("Device session was cancelled".into()),
-        result = COMMAND_EXECUTOR.run(f(p)) => result.map_err(|error| error.to_string()),
+        result = COMMAND_EXECUTOR.run(async move {
+            crate::device::capability::authorize_control(&profile)?;
+            f(p).await
+        }) => result.map_err(|error| error.to_string()),
     };
     ensure_session(token).await?;
     result
