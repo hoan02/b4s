@@ -51,6 +51,11 @@ impl Bp1ProAnc {
                 _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
             },
 
+            0x42 => match frame.payload.as_slice() {
+                [0] => Ok(DeviceEvent::SpatialEnabled(false)),
+                [1] => Ok(DeviceEvent::SpatialEnabled(true)),
+                _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
+            },
             0x53 => Self::bass_level_from_payload(&frame.payload)
                 .map(DeviceEvent::BassBoost).ok_or(DecodeError::UnknownOpcode(frame.cmd)),
             0x74 => match frame.payload.as_slice() {
@@ -78,7 +83,7 @@ impl Bp1ProAnc {
             }
 
             // Keepalive / identity / case event — ignore or unknown
-            0x12 | 0x24 | 0x42 | 0x43 | 0x80 => Err(DecodeError::UnknownOpcode(frame.cmd)),
+            0x12 | 0x24 | 0x43 | 0x80 => Err(DecodeError::UnknownOpcode(frame.cmd)),
 
             other => Err(DecodeError::UnknownOpcode(other)),
         }
@@ -439,7 +444,7 @@ mod tests {
     #[test]
     fn eq_readback_preserves_wire_index_and_ignores_spatial_and_ack() {
         assert_eq!(dec(&[0xAA, 0x30, 101]).unwrap(), DeviceEvent::EqIndex(101));
-        assert!(dec(&[0xAA, 0x42, 1]).is_err());
+        assert_eq!(dec(&[0xAA, 0x42, 1]).unwrap(), DeviceEvent::SpatialEnabled(true));
         assert!(dec(&[0xAA, 0x43, 1]).is_err());
         assert!(dec(&[0xAA, 0x30, 1, 2]).is_err());
     }

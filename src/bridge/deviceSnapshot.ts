@@ -23,6 +23,7 @@ export interface DeviceSnapshot {
   eqIndex: number | null;
   game: boolean | null;
   ldac: boolean | null;
+  spatialEnabled: boolean | null;
   bassBoost: number | null;
   hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
 }

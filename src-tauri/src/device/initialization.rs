@@ -5,6 +5,7 @@ pub enum StartupQuery {
     Battery,
     Eq,
     Bass,
+    Spatial,
     Ldac,
     HearingProtection,
 }
@@ -20,7 +21,7 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
     use super::capability::{authorize, Feature};
     plan.push(StartupQuery::Battery);
     for (feature, query) in [(Feature::Eq, StartupQuery::Eq),
-        (Feature::Bass, StartupQuery::Bass), (Feature::Ldac, StartupQuery::Ldac),
+        (Feature::Bass, StartupQuery::Bass), (Feature::Spatial, StartupQuery::Spatial), (Feature::Ldac, StartupQuery::Ldac),
         (Feature::Hearing, StartupQuery::HearingProtection)] {
         if authorize(profile, feature).is_ok() { plan.push(query); }
     }
@@ -32,6 +33,7 @@ pub fn command_for(query: StartupQuery) -> Option<Command> {
         StartupQuery::Battery => Some(Command::QueryBattery),
         StartupQuery::Eq => Some(Command::QueryEq),
         StartupQuery::Bass => Some(Command::QueryBassBoost),
+        StartupQuery::Spatial => Some(Command::QuerySpatial),
         StartupQuery::Ldac => Some(Command::QueryLdac),
         StartupQuery::HearingProtection => Some(Command::QueryHearingProtection),
     }
@@ -46,7 +48,7 @@ mod tests {
     fn verified_bp1_queries_declared_capabilities() {
         let model = catalog_json().into_iter().find(|m| m.id == "bass-bp1-pro").unwrap();
         let profile = profile_for(Some(&model.id), None, None);
-        assert_eq!(plan_for(Some(&model), &profile), vec![StartupQuery::Battery, StartupQuery::Eq, StartupQuery::Bass]);
+        assert_eq!(plan_for(Some(&model), &profile), vec![StartupQuery::Battery, StartupQuery::Eq, StartupQuery::Bass, StartupQuery::Spatial]);
     }
 
     #[test]

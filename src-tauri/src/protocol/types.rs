@@ -193,6 +193,7 @@ pub enum Command {
     SetGameMode(bool),
     /// Spatial on → BA43 + mode; off → BA43 00 (common mode)
     SetSpatial(SpatialMode),
+    QuerySpatial,
     /// Bass boost electronic: 0–3 (best-effort BA opcode)
     SetBassBoost(u8),
     QueryBassBoost,
@@ -216,6 +217,7 @@ pub enum DeviceEvent {
     EqIndex(u8),
     GameMode(bool),
     BassBoost(u8),
+    SpatialEnabled(bool),
     Ldac(bool),
     HearingProtection { enabled: bool, level: u8 },
     /// Raw / unknown — forwarded for debug

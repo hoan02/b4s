@@ -143,6 +143,7 @@ const App: Component = () => {
     }
     if (snapshot.anc !== null) setAncModeUi(snapshot.anc);
     if (snapshot.game !== null) setGameOn(snapshot.game);
+    if (snapshot.spatialEnabled != null) setSpatialOn(snapshot.spatialEnabled);
     setLdac(snapshot.ldac ?? null);
     setBassBoostUi(snapshot.bassBoost ?? null);
     setHearingProtect(snapshot.hearing?.enabled ?? null);

@@ -59,6 +59,7 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
         Command::SetGameMode(on) => {
             Frame::write(0x24, &[if on { 0x01 } else { 0x00 }]).encode_write()
         }
+        Command::QuerySpatial => Frame::write(0x42, &[]).encode_write(),
         Command::SetSpatial(mode) => {
             // PanoramicSoundViewModel.u: "BA43" + "00"|"01"|"02"|…
             Frame::write(0x43, &[mode.to_byte()]).encode_write()

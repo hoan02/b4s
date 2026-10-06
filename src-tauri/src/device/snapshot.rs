@@ -40,6 +40,7 @@ pub struct DeviceSnapshot {
     pub eq_index: Option<u8>,
     pub game: Option<bool>,
     pub ldac: Option<bool>,
+    pub spatial_enabled: Option<bool>,
     pub bass_boost: Option<u8>,
     pub hearing: Option<HearingReading>,
 }
@@ -59,6 +60,7 @@ impl DeviceSnapshot {
             eq_index: None,
             game: None,
             ldac: None,
+            spatial_enabled: None,
             bass_boost: None,
             hearing: None,
         }
@@ -90,6 +92,7 @@ impl DeviceSnapshot {
             DeviceEvent::EqIndex(value) => self.eq_index = Some(*value),
             DeviceEvent::GameMode(value) => self.game = Some(*value),
             DeviceEvent::Ldac(value) => self.ldac = Some(*value),
+            DeviceEvent::SpatialEnabled(value) => self.spatial_enabled = Some(*value),
             DeviceEvent::BassBoost(value) => self.bass_boost = Some(*value),
             DeviceEvent::HearingProtection { enabled, level } => self.hearing = Some(HearingReading {
                 enabled: *enabled, level: *level, observed_at_ms: at_ms,

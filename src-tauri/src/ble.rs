@@ -1207,6 +1207,7 @@ async fn apply_event(app: &AppHandle, event: DeviceEvent, token: crate::device::
             };
             let _ = app.emit("device://anc", s);
         }
+        DeviceEvent::SpatialEnabled(_) => {},
         DeviceEvent::EqIndex(index) => {
             let _ = app.emit("device://eq-index", index);
         }
