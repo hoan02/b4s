@@ -164,19 +164,24 @@ that a given firmware accepts every value over the wire.
 
 Some models advertise a second gesture protocol through `AA8B` (`01` = supported);
 `GestureSettingViewModel.j0` stores that as `mIsGestureV2` and routes later work to the
-v2 path.
+v2 path. Wire `buttonId` is the same id space as v1's `GestureDataResolveManager.a`
+(0 left, 1 right, 2 MFB, …); the v2 functions use the same function IDs as v1.
 
-- Query: `BA8C <buttonId:2hex> <layoutType:2hex>` (`FF` when no layout).
-- Set: `BA8D <buttonId> <layoutType> <functionId>`.
-- Child query: `BA8E <buttonId> <layoutType> <functionId>`.
-- Child set: `BA8F <buttonId> <layoutType> <functionId> <count> [childId…]` (`00` when empty).
-- Replies: `AA8C` (state, length ≥ 10), `AA8D` (setting result), `AA8E` (child state, length ≥ 12 with a trailing count), `AA8F` (child result).
+- Support negotiation: device pushes `AA8B <00|01>`.
+- Query: `BA8C <buttonId:1> <layoutType:1|FF>`; reply `AA8C <buttonId> (<layoutType> <functionId>)*`,
+  i.e. one button id followed by pairs.
+- Set: `BA8D <buttonId> <layoutType> <functionId>`; reply `AA8D <code>`.
+- Child query: `BA8E <buttonId> <layoutType> <functionId>`; reply
+  `AA8E <buttonId> <layoutType> <functionId> <count> (<childId>)*`.
+- Child set: `BA8F <buttonId> <layoutType> <functionId> <count> (<childId>)*`; reply `AA8F <code>`.
 - `gesture_config_layout_v2.json` / `gesture_config_function_list_v2.json` and
   `gesture_config_mutex_rules.json` describe v2 layouts, function sets and mutually
   exclusive actions.
 
-The v2 payload details (child-list encoding and mutex semantics) are only partially
-traced and are not implemented.
+The v2 codec is now fully traced at the frame level, but B4S does not implement it.
+A model's v1-vs-v2 choice is announced at runtime by `AA8B`, so it cannot be decided
+from the static catalog alone; enabling v2 requires capture of that negotiation plus
+the rendered layout/child lists for a specific model/firmware.
 
 ## 5. B4S gap and next steps
 
@@ -196,5 +201,5 @@ feature. To add them without hardware verification:
 
 Remaining unknowns: whether BP1 Pro firmware negotiates v1 or v2; whether function 6
 is a toggle or a cycle and its exact payload value; `AA22` success/error bytes; whether
-`AA25`/`AA26` are pushed unsolicited; the v2 child encoding; and how the app reconciles
-a value changed from another controller.
+`AA25`/`AA26` are pushed unsolicited; the v2 mutex/child semantics in the UI; and how the
+app reconciles a value changed from another controller.

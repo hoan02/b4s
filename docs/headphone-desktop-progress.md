@@ -790,3 +790,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Added a `features/gestures` controller (shared confirmed-operation admission) plus a `GesturePanel` reachable from Home: an in-ear toggle and per-layout action selects (left/right for dual-button models) built from the reviewed function allowlist, with an experimental notice. The Home entry and in-ear row only render when the capability, schema and Experimental opt-in are all present.
 - Startup now queries the reviewed gesture layouts and the in-ear switch once the Experimental gate allows it, so the panel receives state after connect. Added the `Gesture` startup query and updated the planner test.
 - `npx tsc --noEmit`, five-locale parity (284/284), `npm run build` and the Rust suite pass. Hardware acceptance and actual firmware v1-vs-v2 confirmation remain open.
+
+## Increment 122 — complete the gesture v2 frame trace
+
+- Resolved the remaining gesture v2 payloads from the local 2.17.0.1 dump and recorded them in the dossier: `AA8B` support negotiation, `BA8C`/`AA8C` layout/action pairs, `BA8D`/`AA8D` set, and `BA8E`/`AA8E` + `BA8F`/`AA8F` child query/set with the count-prefixed child list. The v2 codec is now traced at frame level but intentionally not implemented because a model's v1-vs-v2 choice is only announced at runtime by `AA8B`.
+- Documentation-only; `git diff --check` passed. Enabling v2 still requires a capture of that negotiation and the rendered lists for a specific firmware.
