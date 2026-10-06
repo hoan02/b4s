@@ -307,3 +307,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Added a pipeline replay through connection-local receiver, CRC/framing, BP1 decoder and session-scoped expected state. Every split point of a synthetic wrapped bass observation is exercised after a corrupt frame and bare set ACK.
 - Correct readback confirms only the matching desired state; ACK cannot decode as bass, corrupt input cannot reach confirmation and reconnect invalidates the old observation. Focused replay test passed and runs with the existing CI library suite.
 - This is synthetic pipeline evidence only. Fake transport write/queue/deadline scripting, late-response quarantine and capture-based replay remain open under P2.3/P3.4; no hardware promotion.
+
+
+## Increment 36 — transport-independent readback awaiter
+
+- Extracted shared asynchronous state awaiter into device/confirmation. BLE feature/battery transactions subscribe before TX and delegate matching to it; executor retains deadline/cancellation ownership.
+- Scripted broadcast tests cover wrong state, ACK opcode, old session, eventual matching readback, channel close and lag overflow. Readback loss returns an error rather than accepting later residual messages. Five confirmation tests passed, whitespace clean.
+- Full fake write transport/deadline harness, late-response causality policy and captured replay remain open. The helper confirms observations within session only; it does not add request IDs to AA/BA.

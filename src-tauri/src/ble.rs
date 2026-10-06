@@ -1373,10 +1373,8 @@ async fn write_and_readback(
     let mut replies = OBSERVATIONS.subscribe();
     write_bytes(peripheral, data).await?;
     write_bytes(peripheral, query).await?;
-    loop {
-        let observation = replies.recv().await.map_err(|error| format!("State readback lost: {error}"))?;
-        if expected.matches(token, &observation) { return Ok(()); }
-    }
+    crate::device::confirmation::await_state(&mut replies, token, expected).await?;
+    Ok(())
 }
 
 pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
@@ -1651,16 +1649,16 @@ pub async fn query_battery() -> Result<BatteryState, String> {
         let token = BLE.lock().await.session.token();
         let mut replies = OBSERVATIONS.subscribe();
         send_battery_queries(&peripheral).await?;
-        loop {
-            let observation = replies.recv().await.map_err(|error| format!("Battery readback lost: {error}"))?;
-            if crate::device::confirmation::ExpectedState::Battery.matches(token, &observation) {
-                if let DeviceEvent::Battery(mut battery) = observation.event {
-                    let state = BLE.lock().await;
-                    battery.case = state.battery.case;
-                    battery.case_charging = state.battery.case_charging;
-                    return Ok(battery);
-                }
-            }
+        let observation = crate::device::confirmation::await_state(
+            &mut replies, token, crate::device::confirmation::ExpectedState::Battery,
+        ).await?;
+        if let DeviceEvent::Battery(mut battery) = observation.event {
+            let state = BLE.lock().await;
+            battery.case = state.battery.case;
+            battery.case_charging = state.battery.case_charging;
+            Ok(battery)
+        } else {
+            Err("Battery readback did not contain battery state".into())
         }
     })).await
 }

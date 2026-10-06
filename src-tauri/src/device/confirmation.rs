@@ -49,6 +49,19 @@ impl ExpectedState {
     }
 }
 
+/// Caller owns the transaction deadline/cancellation and subscribes before TX.
+pub async fn await_state(
+    replies: &mut tokio::sync::broadcast::Receiver<StateObservation>,
+    session: SessionToken,
+    expected: ExpectedState,
+) -> Result<StateObservation, String> {
+    loop {
+        let observation = replies.recv().await
+            .map_err(|error| format!("State readback lost: {error}"))?;
+        if expected.matches(session, &observation) { return Ok(observation); }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -98,6 +111,33 @@ mod tests {
         observation.opcode = 0x42;
         epoch.invalidate();
         assert!(!ExpectedState::SpatialEnabled(true).matches(epoch.token(), &observation));
+    }
+
+    #[tokio::test]
+    async fn scripted_observations_skip_wrong_state_and_session_and_fail_on_loss() {
+        let mut epoch = SessionEpoch::default();
+        let old = epoch.token();
+        epoch.invalidate();
+        let session = epoch.token();
+        let (tx, mut rx) = tokio::sync::broadcast::channel(8);
+        for (token, opcode, value) in [(old, 0x53, 1), (session, 0x54, 1),
+            (session, 0x53, 0), (session, 0x53, 1)] {
+            tx.send(StateObservation { session: token, opcode, event: DeviceEvent::BassBoost(value) }).unwrap();
+        }
+        let found = await_state(&mut rx, session, ExpectedState::Bass(1)).await.unwrap();
+        assert_eq!(found.opcode, 0x53);
+        drop(tx);
+        assert!(await_state(&mut rx, session, ExpectedState::Bass(1)).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn lagged_readback_fails_instead_of_confirming_from_remaining_messages() {
+        let session = SessionEpoch::default().token();
+        let (tx, mut rx) = tokio::sync::broadcast::channel(1);
+        for _ in 0..3 {
+            tx.send(StateObservation { session, opcode: 0x53, event: DeviceEvent::BassBoost(1) }).unwrap();
+        }
+        assert!(await_state(&mut rx, session, ExpectedState::Bass(1)).await.is_err());
     }
 
 }
