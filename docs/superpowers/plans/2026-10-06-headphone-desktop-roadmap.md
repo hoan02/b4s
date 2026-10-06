@@ -405,7 +405,7 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | ADR + nhỏ gọn prototype | P0.2/P1.3/U01 | Xác minh API Windows, RFCOMM/channel/pairing thật; BLE/SPP cùng profile có quy tắc explicit |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | Typed profiles + migration | P1.3/P1.4 | Không substring framing; firmware/UUID có provenance |
 | P4.2 | Capability resolver/readiness/query planner | Resolved device schema | P4.1/P3.4 | Unknown không gửi queries đoán; backend reject unsupported intent |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | DTOs/API v2 | P3.3/P4.2 | Contract typed/versioned; không compatibility bridge; invalid enum không tạo packet |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | DTOs/API v2 | P3.3/P4.2 | In progress: BLE scan/device/link DTOs are grouped in `src-tauri/src/ble/contracts.rs`; existing wire shapes are preserved. BLE error typing and event ownership remain open. |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | Device/preferences storage | P4.3 | A/B không lẫn state; corrupt/old prefs có recovery |
 | P5.1 | App shell/navigation/session store | Solid feature structure | P4.3 | Mount/unmount/reconnect không nhân đôi listener |
 | P5.2 | Devices/overview + accurate battery/connect feedback | First complete vertical slice | P5.1 | Scan→connect→identity→state→disconnect đúng trên BP1 |

@@ -32,7 +32,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — lifecycle envelopes/reducers reject stale updates; device snapshot v2 now retains exact ANC parameter and receipt time; Tauri APIs are domain-grouped and device mutations use closed versioned intents with explicit observed/transport/simulated dispositions; versioned typed failures cover app-boundary APIs; BLE-internal error taxonomy and event ownership remain open |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — lifecycle envelopes/reducers reject stale updates; device snapshot v2 now retains exact ANC parameter and receipt time; Tauri APIs are domain-grouped and device mutations use closed versioned intents with explicit observed/transport/simulated dispositions; BLE scan/link/device DTOs now live in `ble/contracts.rs`; versioned typed failures cover app-boundary APIs; BLE-internal error taxonomy and event ownership remain open |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions, find-buds, listening, EQ, game, spatial and advanced-sound workflows have dedicated owners; removed an unreferenced legacy Listening panel/slider; navigation/accessibility acceptance remains open |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
@@ -632,3 +632,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Moved mock scan/connect state transitions and mock model resolution into `src-tauri/src/ble/mock.rs`; the BLE root keeps the existing API re-exports while demo behavior has a named module boundary.
 - No runtime behavior was intentionally changed. Selected-file rustfmt and whitespace checks passed; current-head CI is the compile/test gate. P3.1 remains open for a session actor, injected transport, cancellation ownership and central-event lifecycle.
+
+## Increment 92 — group BLE boundary contracts
+
+- Moved scan, connection, device and link-health DTOs plus their serialization/default behavior into `src-tauri/src/ble/contracts.rs`; `ble.rs` re-exports the same public types, preserving API paths and wire shapes.
+- No runtime or contract shape change was intended. Selected-file rustfmt and whitespace checks are the local validation; CI remains responsible for compilation/tests. P4.3 stays open for the BLE error taxonomy, event ownership and cancellation lifecycle.
