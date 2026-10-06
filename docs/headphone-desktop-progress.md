@@ -25,7 +25,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
-| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan and connection preserve/select exact OS entry IDs even when entries share an address; actor lifecycle, injected transport interface, and event ownership remain open |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan and connection preserve/select exact OS entry IDs even when entries share an address; demo-only scan/connect logic now lives in `ble/mock.rs`; actor lifecycle, injected transport interface, and event ownership remain open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards, connect-attempt cancellation lease, and session/entry-guarded OS disconnect events integrated; session actor and full event-lifecycle ownership outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
@@ -627,3 +627,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added a source/replay/hardware distinction for ten BP1 Pro features, including ANC parameter readback, EQ wire index, game/bass confirmation, spatial mode limits and transport-only find-buds behavior. In-ear/gesture remain planned; LDAC is unresolved and hearing protection remains disabled pending profile evidence.
 - The table explicitly excludes scan-only BP1 Ultra from the control matrix and does not promote source-derived tests to hardware acceptance. Broader source/native inventory and hardware reports remain open under P1/P8.
+
+## Increment 91 — isolate explicit BLE demo behavior
+
+- Moved mock scan/connect state transitions and mock model resolution into `src-tauri/src/ble/mock.rs`; the BLE root keeps the existing API re-exports while demo behavior has a named module boundary.
+- No runtime behavior was intentionally changed. Selected-file rustfmt and whitespace checks passed; current-head CI is the compile/test gate. P3.1 remains open for a session actor, injected transport, cancellation ownership and central-event lifecycle.
