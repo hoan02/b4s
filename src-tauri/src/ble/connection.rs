@@ -469,9 +469,7 @@ async fn handle_notification(
         if !state.session.accepts(token) {
             return;
         }
-        state.notify_count = state.notify_count.saturating_add(1);
-        state.last_notify_ms = Some(now_ms());
-        state.last_rx_hex = Some(hex_encode(data));
+        state.diagnostics.record_rx(data, now_ms());
         state.touch_link();
     }
     let _ = app.emit("ble://link", &get_connection_state().await.link);

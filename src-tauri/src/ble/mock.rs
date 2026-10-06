@@ -100,8 +100,7 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
     state.has_write_uuid = false;
     state.has_notify_uuid = false;
     state.handshake_ok = false;
-    state.notify_count = 0;
-    state.tx_count = 0;
+    state.diagnostics = Default::default();
     let mut device = state
         .devices
         .get_mut(&device_id)

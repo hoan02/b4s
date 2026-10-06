@@ -20,6 +20,7 @@ pub(super) struct BleInner {
     /// Live battery merged from 0x02 + 0x27 notifies.
     pub(super) battery: BatteryState,
     pub(super) last_anc: Option<AncMode>,
+    pub(super) diagnostics: super::diagnostics::LinkDiagnostics,
     /// Best-effort record that a find-start write was accepted by the OS.
     pub(super) find_requested: bool,
     /// True when using mock scan/devices (no real GATT).
@@ -29,12 +30,6 @@ pub(super) struct BleInner {
     pub(super) has_notify_uuid: bool,
     pub(super) link_revision: u64,
     pub(super) handshake_ok: bool,
-    pub(super) notify_count: u64,
-    pub(super) tx_count: u64,
-    pub(super) last_notify_ms: Option<u64>,
-    pub(super) last_tx_ms: Option<u64>,
-    pub(super) last_rx_hex: Option<String>,
-    pub(super) last_tx_hex: Option<String>,
     pub(super) write_char: Option<String>,
     pub(super) notify_char: Option<String>,
 }
@@ -55,18 +50,13 @@ impl BleInner {
             devices: HashMap::new(),
             battery: BatteryState::default(),
             last_anc: None,
+            diagnostics: Default::default(),
             find_requested: false,
             mock: false,
             has_write_uuid: false,
             has_notify_uuid: false,
             link_revision: 0,
             handshake_ok: false,
-            notify_count: 0,
-            tx_count: 0,
-            last_notify_ms: None,
-            last_tx_ms: None,
-            last_rx_hex: None,
-            last_tx_hex: None,
             write_char: None,
             notify_char: None,
         }
@@ -82,12 +72,7 @@ impl BleInner {
         self.has_write_uuid = false;
         self.has_notify_uuid = false;
         self.handshake_ok = false;
-        self.notify_count = 0;
-        self.tx_count = 0;
-        self.last_notify_ms = None;
-        self.last_tx_ms = None;
-        self.last_rx_hex = None;
-        self.last_tx_hex = None;
+        self.diagnostics = Default::default();
         self.write_char = None;
         self.notify_char = None;
         self.find_requested = false;

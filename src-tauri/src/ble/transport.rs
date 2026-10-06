@@ -102,9 +102,7 @@ pub(super) async fn write_raw(peripheral: &Peripheral, data: &[u8]) -> Result<()
         if !state.session.accepts(token) {
             return Err("Device session was cancelled during write".into());
         }
-        state.tx_count = state.tx_count.saturating_add(1);
-        state.last_tx_ms = Some(now_ms());
-        state.last_tx_hex = Some(hex_encode(data));
+        state.diagnostics.record_tx(data, now_ms());
         state.write_char = Some(ch.uuid.to_string());
         state.has_write_uuid = true;
         state.touch_link();

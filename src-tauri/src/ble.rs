@@ -3,6 +3,7 @@
 pub mod commands;
 pub mod connection;
 mod contracts;
+mod diagnostics;
 #[path = "ble/discovery.rs"]
 mod discovery;
 mod mock;
@@ -180,13 +181,6 @@ async fn ensure_session(token: crate::device::session::SessionToken) -> Result<(
     }
 }
 
-fn hex_encode(data: &[u8]) -> String {
-    data.iter()
-        .map(|b| format!("{b:02X}"))
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
 // ---------------------------------------------------------------------------
 // Write helpers
 // ---------------------------------------------------------------------------
@@ -345,12 +339,12 @@ pub async fn get_connection_state() -> ConnectionState {
             has_write_uuid: state.has_write_uuid,
             has_notify_uuid: state.has_notify_uuid,
             handshake_ok: state.handshake_ok,
-            notify_count: state.notify_count,
-            tx_count: state.tx_count,
-            last_notify_ms: state.last_notify_ms,
-            last_tx_ms: state.last_tx_ms,
-            last_rx_hex: state.last_rx_hex.clone(),
-            last_tx_hex: state.last_tx_hex.clone(),
+            notify_count: state.diagnostics.notify_count,
+            tx_count: state.diagnostics.tx_count,
+            last_notify_ms: state.diagnostics.last_notify_ms,
+            last_tx_ms: state.diagnostics.last_tx_ms,
+            last_rx_hex: state.diagnostics.last_rx_hex.clone(),
+            last_tx_hex: state.diagnostics.last_tx_hex.clone(),
             write_char: state.write_char.clone(),
             notify_char: state.notify_char.clone(),
             level: LinkLevel::Offline,
