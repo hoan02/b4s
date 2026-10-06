@@ -290,7 +290,7 @@ async fn connect_one(
     let app_h = app.clone();
     let poll_id = device_id.clone();
     let mut lease = BLE.lock().await.session.lease(token);
-    let task = tauri::async_runtime::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         for i in 0..40 {
             tokio::select! {
                 biased;
@@ -407,7 +407,7 @@ async fn subscribe_notifications(
         .map_err(|e| format!("notifications stream: {e}"))?;
 
     let mut lease = BLE.lock().await.session.lease(token);
-    tauri::async_runtime::spawn(async move {
+    let task = tauri::async_runtime::spawn(async move {
         let mut receivers = HashMap::<uuid::Uuid, protocol::receiver::NotificationReceiver>::new();
         loop {
             let n = tokio::select! {
