@@ -286,3 +286,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Spatial enabled state is nullable in the UI, resets to unknown and adopts nullable snapshots. Unknown is displayed with localized text and mixed checkbox state instead of confirmed off.
 - EQ conflict handling treats an unknown spatial state as unresolved when spatial capability exists; disable/readback completes before proceeding. Models without spatial capability are exempt from this conflict route.
 - Fixed mutable epoch declaration in the new confirmation test. Three confirmation tests and frontend typecheck passed; whitespace clean. Latest inspected CI run 37394930493 was pending. Selected-mode evidence, backend conflict policy and accessibility/hardware acceptance remain open.
+
+
+## Increment 33 — overview capability visibility
+
+- Overview spatial/game/EQ/find controls now require resolved backend profile capabilities. Advanced audio navigation appears only when bass/LDAC/hearing is available; unknown profiles no longer expose actions that the backend necessarily rejects.
+- Existing backend authorization remains authoritative. This is capability visibility, not readiness/conflict/firmware evidence completion or Experimental enablement.
+- Frontend typecheck and whitespace checks passed; no repeated local build/tests for this reversible view gating. Visual/device acceptance and remaining unavailable/planned feature presentation remain open.

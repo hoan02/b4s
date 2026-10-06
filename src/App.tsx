@@ -743,6 +743,11 @@ const App: Component = () => {
                 gamePending={gamePending()}
                 gameError={gameError()}
                 findActive={findActive()}
+                spatialSupported={device()?.deviceProfile?.capabilities.spatial ?? false}
+                gameSupported={device()?.deviceProfile?.capabilities.gameMode ?? false}
+                eqSupported={device()?.deviceProfile?.capabilities.eq ?? false}
+                findSupported={device()?.deviceProfile?.capabilities.findBuds ?? false}
+                moreSupported={Boolean(device()?.deviceProfile?.capabilities.bassBoost || device()?.deviceProfile?.capabilities.ldac || device()?.deviceProfile?.capabilities.hearingProtection)}
                 spatialPending={spatialPending()}
                 spatialError={spatialError()}
                 spatialOn={spatialOn()}

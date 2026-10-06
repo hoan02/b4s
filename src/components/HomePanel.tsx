@@ -41,6 +41,11 @@ interface Props {
   noiseSupported: boolean;
   adaptiveSupported: boolean;
   transparencyVoiceSupported: boolean;
+  gameSupported: boolean;
+  eqSupported: boolean;
+  findSupported: boolean;
+  spatialSupported: boolean;
+  moreSupported: boolean;
   gameMode: boolean;
   gamePending?: boolean;
   gameError?: string | null;
@@ -236,6 +241,7 @@ const HomePanel: Component<Props> = (props) => {
       </div>
 
       {/* Spatial on home root */}
+      <Show when={props.spatialSupported}>
       <div class="home-feature-card">
         <div class="list-row">
           <span class="list-ico">
@@ -282,9 +288,12 @@ const HomePanel: Component<Props> = (props) => {
         </Show>
       </div>
 
+      </Show>
+
       {/* Main list */}
       <div class="home-list">
         <div class="home-list-card">
+          <Show when={props.gameSupported}>
           <div class="list-row">
             <span class="list-ico">
               <IconGame size={22} />
@@ -309,6 +318,9 @@ const HomePanel: Component<Props> = (props) => {
             </label>
           </div>
 
+          </Show>
+
+          <Show when={props.eqSupported}>
           <button type="button" class="list-row action" onClick={() => props.onOpenEq()}>
             <span class="list-ico">
               <IconEq size={22} />
@@ -319,6 +331,7 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          </Show>
 
           <button
             type="button"
@@ -333,6 +346,7 @@ const HomePanel: Component<Props> = (props) => {
             <span class="list-chev">›</span>
           </button>
 
+          <Show when={props.moreSupported}>
           <button type="button" class="list-row action" onClick={() => props.onOpenMore()}>
             <span class="list-ico">
               <IconMore size={22} />
@@ -343,9 +357,11 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          </Show>
         </div>
 
         <div class="home-list-card">
+          <Show when={props.findSupported}>
           <button type="button" class={`list-row action find-row ${props.findActive ? "active" : ""}`} onClick={() => props.onFindBuds()} aria-pressed={props.findActive}>
             <span class="list-ico"><IconFind size={22} /></span>
             <div class="list-text">
@@ -354,6 +370,7 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          </Show>
           <button
             type="button"
             class="list-row action"
