@@ -289,10 +289,7 @@ async fn connect_one(
         }
     });
     let mut state = BLE.lock().await;
-    if !state
-        .session_tasks
-        .register_battery_poller(token.id(), poller)
-    {
+    if !state.session.register_battery_poller(token, poller) {
         return Err("Connection session changed before battery polling started".into());
     }
     Ok(device)
@@ -447,7 +444,7 @@ async fn subscribe_notifications(
     });
 
     let mut state = BLE.lock().await;
-    if !state.session_tasks.register_notification(token.id(), task) {
+    if !state.session.register_notification(token, task) {
         return Err(
             "Device session was cancelled before notification ownership was registered".into(),
         );

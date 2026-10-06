@@ -134,7 +134,7 @@ where
         .ok_or("Connected device profile is missing")?;
     let token = state.session.token();
     let mut lease = state.session.lease(token);
-    let executor = state.session_executor.clone();
+    let executor = state.session.command_executor();
     drop(state);
     let result = tokio::select! {
         biased;
