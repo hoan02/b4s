@@ -21,7 +21,7 @@ export function createFindBudsController(notify: Notify) {
     }
   };
 
-  const stop = async () => {
+  const stop = async (errorTitle?: string) => {
     try {
       await findBuds(false);
       setActive(false);
@@ -29,7 +29,7 @@ export function createFindBudsController(notify: Notify) {
       setDialogMode("confirm");
       notify(t("toast.findStopped"), "info", t("toast.stopped"));
     } catch (error) {
-      notify(formatError(error), "error");
+      notify(formatError(error), "error", errorTitle);
     }
   };
 
@@ -39,15 +39,7 @@ export function createFindBudsController(notify: Notify) {
       setConfirmationOpen(true);
       return;
     }
-    try {
-      await findBuds(false);
-      setActive(false);
-      setConfirmationOpen(false);
-      setDialogMode("confirm");
-      notify(t("toast.findStopped"), "info", t("toast.stopped"));
-    } catch (error) {
-      notify(formatError(error), "error", t("home.find"));
-    }
+    await stop(t("home.find"));
   };
 
   const reset = () => {
