@@ -34,7 +34,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
 | P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — feature observations use a typed snapshot; scan/connection/link DTOs now carry contract version 1 and link levels are closed enums; remaining Tauri command types and lifecycle envelopes still need consolidation |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
-| P5.1 | App shell/navigation/session store | In progress — ordered session store and listener cleanup; feature controller extraction outstanding |
+| P5.1 | App shell/navigation/session store | In progress — ordered session store and runtime subscriptions now have a dedicated async owner with unmount cleanup; feature controller extraction remains outstanding |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; device inventory/visual acceptance outstanding |
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
 | P6.1 | ANC/transparency/game, constraints/readback | Open |
@@ -427,3 +427,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Moved the mutable BLE state aggregate, initialization/reset logic, and synchronized singleton into `ble/runtime.rs`. The root `ble.rs` now consumes the owner while discovery, scanning, connection, command, and transport modules share the same state without an alternate runtime.
 - `ble.rs` is now about 600 lines. `cargo check` and whitespace validation passed; no local test suite was run. P3.1 remains open for session actor/cancellation ownership, injected transport, and event stream lifecycle.
+
+
+## Increment 53 — frontend runtime subscription ownership
+
+- Moved scan-independent connection/link/snapshot listener registration and disposal into `features/devices/runtimeSubscriptions.ts`. Registration is sequential, aborts when the owner is disposed, and immediately unregisters listeners that resolve after unmount.
+- `App.tsx` now supplies state handlers and owns only the returned disposer; ordering/session behavior is unchanged. `npx tsc --noEmit` passed before the final disposal-race guard adjustment; no local test suite was run. CI will validate the final change.
+- P5.1 remains open for extracting feature controllers and verifying navigation/accessibility behavior.

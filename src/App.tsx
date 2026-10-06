@@ -7,16 +7,15 @@ import EqPanel from "./components/EqPanel";
 import Settings from "./components/Settings";
 import ToastHost from "./components/ToastHost";
 import ConfirmDialog from "./components/ConfirmDialog";
-import { getDeviceSnapshot, onDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot";
+import { getDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot";
 import { createConfirmedOperation } from "./features/shared/confirmedOperation";
 import { resolveEqSelection } from "./features/equalizer/selection";
+import { subscribeDeviceRuntime } from "./features/devices/runtimeSubscriptions";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
 import {
   disconnect as bleDisconnect,
-  onConnection,
-  onLinkHealth,
   getConnection,
   getLinkHealth,
   emptyLink,
@@ -185,12 +184,7 @@ const App: Component = () => {
     session, refresh: refreshSnapshot, pending: setGamePending, error: setGameError, formatError,
   });
   let disposed = false;
-  const track = (unsubscribe: () => void) => {
-    if (disposed) unsubscribe();
-    else unsubs.push(unsubscribe);
-  };
-
-  let unsubs: Array<() => void> = [];
+  let stopRuntimeSubscriptions: (() => void) | undefined;
   let linkPoll: number | undefined;
   let toastTimers = new Map<number, number>();
 
@@ -267,8 +261,8 @@ const App: Component = () => {
     }
 
     try {
-      track(
-        await onConnection((state) => {
+      stopRuntimeSubscriptions = await subscribeDeviceRuntime({
+        connection: (state) => {
           session.selectDevice(state.connected ? state.device?.id ?? null : null);
           if (state.connected) void refreshSnapshot().catch(() => {});
           setConnected(state.connected);
@@ -282,10 +276,10 @@ const App: Component = () => {
             stopLinkPoll();
             notify(t("toast.disconnected"), "info");
           } else startLinkPoll();
-        })
-      );
-      track(await onLinkHealth((l) => applyLink(l)));
-      track(await onDeviceSnapshot((snapshot) => session.accept(snapshot)));
+        },
+        link: applyLink,
+        snapshot: (snapshot) => session.accept(snapshot),
+      }, () => !disposed);
       await refreshSnapshot();
     } catch (e) {
       console.warn("[App] events", e);
@@ -296,7 +290,7 @@ const App: Component = () => {
   onCleanup(() => {
     disposed = true;
     session.selectDevice(null);
-    unsubs.forEach((u) => u());
+    stopRuntimeSubscriptions?.();
     stopLinkPoll();
     toastTimers.forEach((id) => window.clearTimeout(id));
   });
