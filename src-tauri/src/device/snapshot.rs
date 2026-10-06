@@ -76,6 +76,7 @@ pub struct DeviceSnapshot {
     pub hearing: Option<HearingReading>,
     pub in_ear: Option<InEarReading>,
     pub multipoint: Option<MultipointReading>,
+    pub restore_available: Option<bool>,
     pub gesture: Vec<GestureReading>,
 }
 
@@ -99,6 +100,7 @@ impl DeviceSnapshot {
             hearing: None,
             in_ear: None,
             multipoint: None,
+            restore_available: None,
             gesture: Vec::new(),
         }
     }
@@ -156,6 +158,7 @@ impl DeviceSnapshot {
                     observed_at_ms: at_ms,
                 })
             }
+            DeviceEvent::RestoreAvailable(available) => self.restore_available = Some(*available),
             DeviceEvent::GestureConfig {
                 layout,
                 left,
@@ -331,5 +334,16 @@ mod tests {
         assert!(!snapshot.multipoint.as_ref().unwrap().enabled);
         assert_eq!(snapshot.multipoint.as_ref().unwrap().observed_at_ms, 22);
         assert!(DeviceSnapshot::new(7).multipoint.is_none());
+    }
+
+    #[test]
+    fn restore_availability_is_observed_and_resets_with_session() {
+        let mut snapshot = DeviceSnapshot::new(8);
+        assert!(snapshot.restore_available.is_none());
+        snapshot.observe(0x36, &DeviceEvent::RestoreAvailable(true), 30);
+        assert_eq!(snapshot.restore_available, Some(true));
+        snapshot.observe(0x36, &DeviceEvent::RestoreAvailable(false), 31);
+        assert_eq!(snapshot.restore_available, Some(false));
+        assert!(DeviceSnapshot::new(9).restore_available.is_none());
     }
 }

@@ -63,6 +63,7 @@ enum DeviceCommand {
     SetMultipoint {
         enabled: bool,
     },
+    RestoreDefaults,
 }
 
 #[derive(Debug, Deserialize)]
@@ -224,6 +225,10 @@ pub(crate) async fn apply_device_command(
         DeviceCommand::SetMultipoint { enabled } => {
             ble::commands::send_multipoint(enabled).await?;
             DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::RestoreDefaults => {
+            ble::commands::send_restore_defaults().await?;
+            DeviceCommandDisposition::TransportAccepted
         }
     };
     let link = ble::get_link_health().await;

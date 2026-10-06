@@ -71,6 +71,17 @@ impl Bp1ProAnc {
                 [1] => Ok(DeviceEvent::Multipoint(true)),
                 _ => Err(DecodeError::UnknownOpcode(0x57)),
             },
+            // Restore-defaults availability: AA 36 [00|01] (BleCommandUtil.e == 1).
+            0x36 => match frame.payload.as_slice() {
+                [0] => Ok(DeviceEvent::RestoreAvailable(false)),
+                [1] => Ok(DeviceEvent::RestoreAvailable(true)),
+                _ => Err(DecodeError::UnknownOpcode(0x36)),
+            },
+            // Restore-defaults result: AA 37 [code]; 00 success, 0C/0D conflict.
+            0x37 => match frame.payload.as_slice() {
+                [code, ..] => Ok(DeviceEvent::RestoreResult(*code)),
+                _ => Err(DecodeError::UnknownOpcode(0x37)),
+            },
             // Gesture v1 configuration: AA 21 [layout] [left] [right].
             0x21 => match frame.payload.as_slice() {
                 [layout, left, right] if *layout <= 5 => Ok(DeviceEvent::GestureConfig {
@@ -609,6 +620,33 @@ mod tests {
             encode_command(Command::SetMultipoint(false)),
             vec![0xBA, 0x58, 0x00]
         );
+    }
+
+    #[test]
+    fn restore_availability_and_result_decode() {
+        assert_eq!(
+            dec(&[0xAA, 0x36, 0x01]).unwrap(),
+            DeviceEvent::RestoreAvailable(true)
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x36, 0x00]).unwrap(),
+            DeviceEvent::RestoreAvailable(false)
+        );
+        assert!(dec(&[0xAA, 0x36, 0x02]).is_err());
+        assert_eq!(
+            dec(&[0xAA, 0x37, 0x00]).unwrap(),
+            DeviceEvent::RestoreResult(0)
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x37, 0x0C]).unwrap(),
+            DeviceEvent::RestoreResult(0x0C)
+        );
+        assert!(dec(&[0xAA, 0x37]).is_err());
+        assert_eq!(
+            encode_command(Command::QueryRestoreSupport),
+            vec![0xBA, 0x36]
+        );
+        assert_eq!(encode_command(Command::RestoreDefaults), vec![0xBA, 0x37]);
     }
 
     #[test]

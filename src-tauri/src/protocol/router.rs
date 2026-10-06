@@ -50,6 +50,7 @@ pub enum FeatureCommand {
     },
     SetInEar(bool),
     SetMultipoint(bool),
+    RestoreDefaults,
 }
 
 pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Result<Vec<u8>, String> {
@@ -69,6 +70,7 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::SetGesture { .. } => Feature::Gesture,
         FeatureCommand::SetInEar(_) => Feature::InEar,
         FeatureCommand::SetMultipoint(_) => Feature::Multipoint,
+        FeatureCommand::RestoreDefaults => Feature::RestoreDefaults,
     };
     authorize(profile, feature)?;
     if let FeatureCommand::SetCustomEq {
@@ -162,6 +164,14 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
                 .and_then(|model| model.multipoint)
                 .ok_or("No reviewed multipoint schema")?;
         }
+        FeatureCommand::RestoreDefaults => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.restore_defaults)
+                .ok_or("No reviewed restore-defaults schema")?;
+        }
         _ => {}
     }
 
@@ -218,6 +228,9 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         }
         (ProtocolFamily::Bp1Pro, FeatureCommand::SetMultipoint(enabled)) => {
             Ok(encode_command(Command::SetMultipoint(enabled)))
+        }
+        (ProtocolFamily::Bp1Pro, FeatureCommand::RestoreDefaults) => {
+            Ok(encode_command(Command::RestoreDefaults))
         }
         (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
@@ -470,6 +483,7 @@ mod tests {
         .is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetMultipoint(true)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::RestoreDefaults).is_err());
 
         // Isolate the schema/allowlist behaviour from the Experimental gate.
         profile.experimental_features.clear();
@@ -512,6 +526,10 @@ mod tests {
         assert_eq!(
             encode_feature(&profile, FeatureCommand::SetMultipoint(true)).unwrap(),
             vec![0xBA, 0x58, 0x01]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::RestoreDefaults).unwrap(),
+            vec![0xBA, 0x37]
         );
     }
 }

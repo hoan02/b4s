@@ -46,6 +46,14 @@ The restore and call settings share the same conflict vocabulary already seen el
 - `BA3F`, `BA49`, `BA55`, `BA90`, `BA9A`, `BA56`, `BA77`, `BA70`–`BA7D` remain unlabeled.
 - Prompt language/volume and indicator-light opcodes were not located in this pass.
 
-No B4S capability or command is added from this map yet: the destructive restore path and
-the phone-side call settings stay unimplemented until they are traced to a specific
-model/firmware and reviewed.
+The restore path is implemented behind the Experimental opt-in (section 6). The
+phone-side call settings, touch lock, firmware parsing and auto-off remain unimplemented
+until they are traced to a specific model/firmware and reviewed.
+
+## 6. B4S implementation
+
+`BA36`/`AA36` (availability) and `BA37`/`AA37` (restore) are implemented behind the
+reviewed `restoreDefaults` capability and the Experimental opt-in, with an explicit
+confirmation dialog. Restore is treated as a transport-accepted action that waits for an
+`AA37 00` result and never becomes "confirmed device state". The touch-lock, firmware,
+auto-off and phone-side call settings remain unimplemented.

@@ -191,5 +191,9 @@
   "gesture.fn.switchConnection": "切换连接模式",
   "gesture.fn.microphone": "麦克风开/关",
   "multipoint.title": "双设备连接",
-  "multipoint.hint": "同时连接两台设备"
+  "multipoint.hint": "同时连接两台设备",
+  "restore.title": "恢复默认设置",
+  "restore.hint": "重置耳机上的操作设置",
+  "restore.message": "将耳机操作设置恢复为出厂默认？此操作无法撤销。",
+  "restore.confirm": "恢复"
 }

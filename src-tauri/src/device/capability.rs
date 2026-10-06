@@ -24,6 +24,7 @@ pub enum Feature {
     Gesture,
     InEar,
     Multipoint,
+    RestoreDefaults,
 }
 
 impl Feature {
@@ -33,6 +34,7 @@ impl Feature {
             Feature::Gesture => "gesture",
             Feature::InEar => "inEar",
             Feature::Multipoint => "multipoint",
+            Feature::RestoreDefaults => "restoreDefaults",
             _ => "",
         }
     }
@@ -83,6 +85,7 @@ pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String
         Feature::Gesture => capability.gesture,
         Feature::InEar => capability.in_ear,
         Feature::Multipoint => capability.multipoint,
+        Feature::RestoreDefaults => capability.restore_defaults,
     };
     if enabled {
         let key = feature.key();

@@ -195,6 +195,8 @@ pub enum Command {
     SetInEar(bool),
     QueryMultipoint,
     SetMultipoint(bool),
+    QueryRestoreSupport,
+    RestoreDefaults,
     QueryGesture(u8),
     SetGesture {
         layout: u8,
@@ -232,6 +234,8 @@ pub enum DeviceEvent {
     },
     InEar(bool),
     Multipoint(bool),
+    RestoreAvailable(bool),
+    RestoreResult(u8),
     /// Raw / unknown — forwarded for debug
     Unknown {
         cmd: u8,

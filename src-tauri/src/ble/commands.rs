@@ -363,6 +363,24 @@ pub async fn send_multipoint(enabled: bool) -> Result<(), CommandError> {
     .await
 }
 
+pub async fn send_restore_defaults() -> Result<(), CommandError> {
+    let data = encode_connected_feature(protocol::FeatureCommand::RestoreDefaults).await?;
+    if BLE.lock().await.mock {
+        return observe_mock_state(DeviceEvent::RestoreResult(0), 0x37).await;
+    }
+    with_connected_peripheral(|p| {
+        Box::pin(async move {
+            write_and_observe(
+                &p,
+                &data,
+                crate::device::confirmation::ExpectedState::RestoreResult(0),
+            )
+            .await
+        })
+    })
+    .await
+}
+
 async fn encode_connected_feature(command: protocol::FeatureCommand) -> Result<Vec<u8>, String> {
     let state = BLE.lock().await;
     let id = state.connected_id.as_ref().ok_or("Not connected")?;

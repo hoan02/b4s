@@ -90,6 +90,11 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             // EarphoneFunctionShowFragmentNewUI.Setting.n: BA58 01 on / 00 off.
             Frame::write(0x58, &[if enabled { 0x01 } else { 0x00 }]).encode_write()
         }
+        Command::QueryRestoreSupport => Frame::write(0x36, &[]).encode_write(),
+        Command::RestoreDefaults => {
+            // EarPhoneSettingV2Activity.u2: BA37 after the user confirms; AA37 is the result.
+            Frame::write(0x37, &[]).encode_write()
+        }
         Command::QueryGesture(layout) => Frame::write(0x21, &[layout]).encode_write(),
         Command::SetGesture {
             layout,

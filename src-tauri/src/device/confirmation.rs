@@ -31,6 +31,7 @@ pub enum ExpectedState {
     },
     InEar(bool),
     Multipoint(bool),
+    RestoreResult(u8),
     Gesture {
         layout: u8,
         left: Option<u8>,
@@ -117,6 +118,9 @@ impl ExpectedState {
             ) => enabled == actual && level == actual_level,
             (Self::InEar(expected), 0x25, DeviceEvent::InEar(actual)) => expected == actual,
             (Self::Multipoint(expected), 0x57, DeviceEvent::Multipoint(actual)) => {
+                expected == actual
+            }
+            (Self::RestoreResult(expected), 0x37, DeviceEvent::RestoreResult(actual)) => {
                 expected == actual
             }
             (
@@ -487,6 +491,18 @@ mod tests {
         assert!(!ExpectedState::Multipoint(false).matches(session, &multipoint));
         multipoint.opcode = 0x58;
         assert!(!ExpectedState::Multipoint(true).matches(session, &multipoint));
+
+        let mut restore = StateObservation {
+            session,
+            opcode: 0x37,
+            event: DeviceEvent::RestoreResult(0),
+        };
+        assert!(ExpectedState::RestoreResult(0).matches(session, &restore));
+        restore.event = DeviceEvent::RestoreResult(0x0C);
+        assert!(!ExpectedState::RestoreResult(0).matches(session, &restore));
+        restore.event = DeviceEvent::RestoreResult(0);
+        restore.opcode = 0x36;
+        assert!(!ExpectedState::RestoreResult(0).matches(session, &restore));
 
         let mut observation = StateObservation {
             session,

@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { setGesture, setInEar, setMultipoint } from "../../lib/device";
+import { restoreDefaults, setGesture, setInEar, setMultipoint } from "../../lib/device";
 import { createConfirmedOperation } from "../shared/confirmedOperation";
 import type { createDeviceSession } from "../../stores/deviceSession";
 
@@ -41,6 +41,13 @@ export function createGestureController(dependencies: Dependencies) {
     setMultipoint(enabled: boolean) {
       return operation.run(
         () => setMultipoint(enabled),
+        () => {},
+        dependencies.notifyError
+      );
+    },
+    restoreDefaults() {
+      return operation.run(
+        () => restoreDefaults(),
         () => {},
         dependencies.notifyError
       );

@@ -57,6 +57,9 @@ interface Props {
   multipointOn: boolean | null;
   multipointPending?: boolean;
   multipointError?: string | null;
+  restoreSupported: boolean;
+  restorePending?: boolean;
+  restoreError?: string | null;
   gameMode: boolean | null;
   gamePending?: boolean;
   gameError?: string | null;
@@ -80,6 +83,7 @@ interface Props {
   onOpenGestures: () => void;
   onInEar: (enabled: boolean) => void;
   onMultipoint: (enabled: boolean) => void;
+  onRestore: () => void;
   onSpatialOn: (on: boolean) => void;
   onSpatialMode: (m: SpatialMode) => void;
   onSoundFit: () => void;
@@ -445,6 +449,23 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          <Show when={props.restoreSupported}>
+          <button
+            type="button"
+            class="list-row action danger"
+            disabled={props.restorePending}
+            onClick={() => props.onRestore()}
+          >
+            <span class="list-ico list-ico-text">R</span>
+            <div class="list-text">
+              <span class="list-title">{t("restore.title")}</span>
+              <span class="list-sub">{t("restore.hint")}</span>
+              <OperationStatus pending={props.restorePending} error={props.restoreError} />
+            </div>
+            <span class="list-chev">›</span>
+          </button>
+          </Show>
+
           <button
             type="button"
             class="list-row action danger"

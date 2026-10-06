@@ -191,5 +191,9 @@
   "gesture.fn.switchConnection": "Alternar modo de conexão",
   "gesture.fn.microphone": "Microfone ligado/desligado",
   "multipoint.title": "Multiponto",
-  "multipoint.hint": "Manter conectado a dois dispositivos"
+  "multipoint.hint": "Manter conectado a dois dispositivos",
+  "restore.title": "Restaurar configurações padrão",
+  "restore.hint": "Redefinir as configurações de operação do fone",
+  "restore.message": "Restaurar as configurações de operação do fone para o padrão de fábrica? Isso não pode ser desfeito.",
+  "restore.confirm": "Restaurar"
 }

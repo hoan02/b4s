@@ -51,6 +51,7 @@ export interface DeviceSnapshot {
   hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
   inEar: InEarReading | null;
   multipoint: MultipointReading | null;
+  restoreAvailable: boolean | null;
   gesture: GestureReading[];
 }
 
@@ -117,7 +118,8 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
     ["game", "ldac", "spatialEnabled"].every((key) =>
       isNullable(value[key], (item) => typeof item === "boolean")) &&
     isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing &&
-    validInEar && validMultipoint && validGesture;
+    validInEar && validMultipoint && validGesture &&
+    isNullable(value.restoreAvailable, (item) => typeof item === "boolean");
 }
 
 function decodeSnapshotV2(payload: unknown): DeviceSnapshot {

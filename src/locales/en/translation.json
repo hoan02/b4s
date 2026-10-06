@@ -284,5 +284,9 @@
   "gesture.fn.switchConnection": "Switch connection mode",
   "gesture.fn.microphone": "Microphone on/off",
   "multipoint.title": "Multipoint",
-  "multipoint.hint": "Stay connected to two devices"
+  "multipoint.hint": "Stay connected to two devices",
+  "restore.title": "Restore default settings",
+  "restore.hint": "Reset operation settings on the earbuds",
+  "restore.message": "Restore the earbuds' operation settings to factory defaults? This cannot be undone.",
+  "restore.confirm": "Restore"
 }

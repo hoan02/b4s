@@ -21,7 +21,8 @@
     "findBuds": true,
     "gesture": true,
     "inEar": true,
-    "multipoint": true
+    "multipoint": true,
+    "restoreDefaults": true
   },
   "noise": {
     "supportsAdaptive": true,
@@ -431,10 +432,14 @@
   "multipoint": {
     "provenance": "EarphoneFunctionShowFragmentNewUI each-connect handlers and EarHeadSetViewModel.T (BA57/BA58); second-device/codec behavior not verified, experimental-only"
   },
+  "restoreDefaults": {
+    "provenance": "EarphoneSettingFragment/EarPhoneSettingV2Activity (BA36 availability, BA37 restore); destructive action not verified on hardware, experimental-only"
+  },
   "experimentalFeatures": [
     "gesture",
     "inEar",
-    "multipoint"
+    "multipoint",
+    "restoreDefaults"
   ],
   "schemaVersion": 2,
   "connection": {

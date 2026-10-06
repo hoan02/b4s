@@ -77,6 +77,8 @@ const App: Component = () => {
   const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
   const [inEarOn, setInEarOn] = createSignal<boolean | null>(null);
   const [multipointOn, setMultipointOn] = createSignal<boolean | null>(null);
+  const [restoreAvailable, setRestoreAvailable] = createSignal<boolean | null>(null);
+  const [restorePrompt, setRestorePrompt] = createSignal(false);
   const [gestureState, setGestureState] = createSignal<Array<{ layout: number; left: number; right: number }>>([]);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
@@ -104,6 +106,8 @@ const App: Component = () => {
       setHearingThreshold(null);
       setInEarOn(null);
       setMultipointOn(null);
+      setRestoreAvailable(null);
+      setRestorePrompt(false);
       setGestureState([]);
       setSpatialOn(null);
       setAncModeUi(null);
@@ -123,6 +127,7 @@ const App: Component = () => {
     setHearingThreshold(snapshot.hearing?.level ?? null);
     setInEarOn(snapshot.inEar?.enabled ?? null);
     setMultipointOn(snapshot.multipoint?.enabled ?? null);
+    setRestoreAvailable(snapshot.restoreAvailable ?? null);
     setGestureState(snapshot.gesture.map((value) => ({ layout: value.layout, left: value.left, right: value.right })));
   };
   const session = createDeviceSession(applySnapshot);
@@ -234,6 +239,10 @@ const App: Component = () => {
   const multipointSupported = () =>
     (device()?.deviceProfile.capabilities.multipoint ?? false) &&
     experimentalUnlocked("multipoint");
+  const restoreSupported = () =>
+    (device()?.deviceProfile.capabilities.restoreDefaults ?? false) &&
+    restoreAvailable() === true &&
+    experimentalUnlocked("restoreDefaults");
 
   const findController = createFindBudsController(notify);
 
@@ -569,6 +578,9 @@ const App: Component = () => {
                 multipointOn={multipointOn()}
                 multipointPending={gestures.pending()}
                 multipointError={gestures.error()}
+                restoreSupported={restoreSupported()}
+                restorePending={gestures.pending()}
+                restoreError={gestures.error()}
                 moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
                 spatialPending={spatialController.pending()}
                 spatialError={spatialController.error()}
@@ -593,6 +605,7 @@ const App: Component = () => {
                 onOpenGestures={() => setView("gestures")}
                 onInEar={gestures.setInEar}
                 onMultipoint={gestures.setMultipoint}
+                onRestore={() => setRestorePrompt(true)}
                 onSpatialOn={spatialController.setEnabled}
                 onSpatialMode={spatialController.selectMode}
                 onSoundFit={() =>
@@ -613,6 +626,19 @@ const App: Component = () => {
           message={t("dialog.turnOffSpatialMessage")}
           onCancel={equalizer.clearPendingAction}
           onConfirm={equalizer.confirmPendingAction}
+        />
+      </Show>
+      <Show when={restorePrompt()}>
+        <ConfirmDialog
+          title={t("restore.title")}
+          message={t("restore.message")}
+          confirmLabel={t("restore.confirm")}
+          onCancel={() => setRestorePrompt(false)}
+          onEscape={() => setRestorePrompt(false)}
+          onConfirm={() => {
+            setRestorePrompt(false);
+            void gestures.restoreDefaults();
+          }}
         />
       </Show>
       <Show when={findController.confirmationOpen() || findController.active()}>

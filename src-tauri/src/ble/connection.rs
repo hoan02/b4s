@@ -598,6 +598,8 @@ async fn apply_event(event: DeviceEvent, token: crate::device::session::SessionT
         | DeviceEvent::GestureConfig { .. }
         | DeviceEvent::InEar(_)
         | DeviceEvent::Multipoint(_)
+        | DeviceEvent::RestoreAvailable(_)
+        | DeviceEvent::RestoreResult(_)
         | DeviceEvent::Unknown { .. } => {}
     }
 }

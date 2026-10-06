@@ -247,5 +247,9 @@
   "gesture.fn.switchConnection": "Chuyển chế độ kết nối",
   "gesture.fn.microphone": "Bật/tắt micrô",
   "multipoint.title": "Kết nối hai thiết bị",
-  "multipoint.hint": "Giữ kết nối với hai thiết bị"
+  "multipoint.hint": "Giữ kết nối với hai thiết bị",
+  "restore.title": "Khôi phục cài đặt mặc định",
+  "restore.hint": "Đặt lại cài đặt vận hành trên tai nghe",
+  "restore.message": "Khôi phục cài đặt vận hành của tai nghe về mặc định nhà máy? Không thể hoàn tác.",
+  "restore.confirm": "Khôi phục"
 }
