@@ -19,7 +19,14 @@ export interface UpdateCheckResult {
   version?: string | null;
   body?: string | null;
   date?: string | null;
-  error?: string | null;
+  error?: ApiErrorPayload | null;
+}
+
+export interface ApiErrorPayload {
+  contractVersion: number;
+  code: string;
+  message: string;
+  retryable: boolean;
 }
 
 export async function getAppInfo(): Promise<AppInfo> {

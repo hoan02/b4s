@@ -22,7 +22,7 @@ pub(crate) struct UpdateCheckResult {
     version: Option<String>,
     body: Option<String>,
     date: Option<String>,
-    error: Option<String>,
+    error: Option<ApiError>,
 }
 
 #[tauri::command]
@@ -91,7 +91,7 @@ pub(crate) async fn check_for_updates(app: AppHandle) -> Result<UpdateCheckResul
             version: None,
             body: None,
             date: None,
-            error: Some(error),
+            error: Some(ApiError::new(ApiErrorCode::UpdateCheckFailed, error, false)),
         }),
     }
 }

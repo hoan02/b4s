@@ -67,9 +67,13 @@ export const t = (key: string, options?: Record<string, unknown>): string => {
 
 export function formatError(error: unknown): string {
   const payload = typeof error === "object" && error !== null ? error as Record<string, unknown> : null;
+  const isVersionedApiError = payload?.contractVersion === 1 &&
+    typeof payload.code === "string" &&
+    typeof payload.retryable === "boolean" &&
+    typeof payload.message === "string";
   const details = error instanceof Error
     ? error.message
-    : typeof payload?.message === "string"
+    : isVersionedApiError
       ? payload.message
       : String(error);
   return `${t("error.operationFailed")}: ${details}`;

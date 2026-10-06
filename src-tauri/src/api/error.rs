@@ -11,6 +11,7 @@ pub(crate) enum ApiErrorCode {
     BatteryReadFailed,
     DeviceCommandFailed,
     PreferenceFailed,
+    UpdateCheckFailed,
     UpdateInstallFailed,
 }
 
