@@ -27,6 +27,14 @@ pub struct HearingReading {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AncReading {
+    pub mode: AncMode,
+    pub parameter: u8,
+    pub observed_at_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DeviceSnapshot {
     pub schema_version: u8,
     pub session_id: u64,
@@ -35,7 +43,7 @@ pub struct DeviceSnapshot {
     pub device_id: Option<String>,
     pub mock: bool,
     pub battery: BatterySnapshot,
-    pub anc: Option<AncMode>,
+    pub anc: Option<AncReading>,
     pub eq: Option<EqPreset>,
     pub eq_index: Option<u8>,
     pub game: Option<bool>,
@@ -48,7 +56,7 @@ pub struct DeviceSnapshot {
 impl DeviceSnapshot {
     pub fn new(session_id: u64) -> Self {
         Self {
-            schema_version: 1,
+            schema_version: 2,
             session_id,
             revision: 0,
             model_id: None,
@@ -87,7 +95,13 @@ impl DeviceSnapshot {
                     observed_at_ms: at_ms,
                 });
             }
-            DeviceEvent::Anc { mode, .. } => self.anc = Some(*mode),
+            DeviceEvent::Anc { mode, parameter } => {
+                self.anc = Some(AncReading {
+                    mode: *mode,
+                    parameter: *parameter,
+                    observed_at_ms: at_ms,
+                })
+            }
             DeviceEvent::Eq(value) => self.eq = Some(*value),
             DeviceEvent::EqIndex(value) => self.eq_index = Some(*value),
             DeviceEvent::GameMode(value) => self.game = Some(*value),
@@ -160,5 +174,31 @@ mod tests {
         assert_eq!(snapshot.hearing.as_ref().unwrap().observed_at_ms, 30);
         let next = DeviceSnapshot::new(2);
         assert!(next.bass_boost.is_none() && next.hearing.is_none());
+    }
+
+    #[test]
+    fn anc_snapshot_keeps_confirmed_parameter_and_observation_time() {
+        let mut snapshot = DeviceSnapshot::new(4);
+        assert!(snapshot.anc.is_none());
+
+        snapshot.observe(
+            0x34,
+            &DeviceEvent::Anc {
+                mode: AncMode::Anc,
+                parameter: 103,
+            },
+            42,
+        );
+
+        let reading = snapshot.anc.as_ref().unwrap();
+        assert_eq!(reading.mode, AncMode::Anc);
+        assert_eq!(reading.parameter, 103);
+        assert_eq!(reading.observed_at_ms, 42);
+
+        let encoded = serde_json::to_value(snapshot).unwrap();
+        assert_eq!(encoded["schemaVersion"], 2);
+        assert_eq!(encoded["anc"]["mode"], "anc");
+        assert_eq!(encoded["anc"]["parameter"], 103);
+        assert_eq!(encoded["anc"]["observedAtMs"], 42);
     }
 }

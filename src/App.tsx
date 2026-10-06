@@ -97,11 +97,13 @@ const App: Component = () => {
       setHearingThreshold(null);
       setSpatialOn(null);
       setAncModeUi(null);
+      listening.reset();
       setGameOn(null);
       setLdac(null);
       return;
     }
-    if (snapshot.anc !== null) setAncModeUi(snapshot.anc);
+    setAncModeUi(snapshot.anc?.mode ?? null);
+    listening.observeSnapshot(snapshot.anc);
     setGameOn(snapshot.game ?? null);
     setSpatialOn(snapshot.spatialEnabled ?? null);
     setLdac(snapshot.ldac ?? null);

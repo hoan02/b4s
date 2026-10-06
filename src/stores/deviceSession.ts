@@ -17,7 +17,7 @@ export function createDeviceSession(onSnapshot: (snapshot: DeviceSnapshot | null
       onSnapshot(null);
     },
     accept(next: DeviceSnapshot) {
-      if (!deviceId || next.deviceId !== deviceId || next.schemaVersion !== 1 || next.sessionId < minimumSession) return;
+      if (!deviceId || next.deviceId !== deviceId || next.schemaVersion !== 2 || next.sessionId < minimumSession) return;
       if (snapshot && (next.sessionId < snapshot.sessionId ||
         (next.sessionId === snapshot.sessionId && next.revision <= snapshot.revision))) return;
       if (snapshot && next.sessionId !== snapshot.sessionId) {

@@ -6,8 +6,14 @@ export interface BatteryReading {
   observedAtMs: number;
 }
 
+export interface AncReading {
+  mode: "off" | "anc" | "transparency";
+  parameter: number;
+  observedAtMs: number;
+}
+
 export interface DeviceSnapshot {
-  schemaVersion: 1;
+  schemaVersion: 2;
   sessionId: number;
   revision: number;
   modelId: string | null;
@@ -18,7 +24,7 @@ export interface DeviceSnapshot {
     right: BatteryReading | null;
     case: BatteryReading | null;
   };
-  anc: "off" | "anc" | "transparency" | null;
+  anc: AncReading | null;
   eq: "balanced" | "bassBoost" | "voice" | "clear" | "hifiLive" | "pop" | "jazzRock" | "classical" | "acoustic" | "bassReduce" | "trebleReduce" | null;
   eqIndex: number | null;
   game: boolean | null;
@@ -46,8 +52,15 @@ function isBatteryReading(value: unknown): boolean {
     typeof value.charging === "boolean" && isCounter(value.observedAtMs);
 }
 
+function isAncReading(value: unknown): boolean {
+  return isRecord(value) &&
+    ["off", "anc", "transparency"].includes(value.mode as string) &&
+    Number.isInteger(value.parameter) && (value.parameter as number) >= 0 &&
+    (value.parameter as number) <= 255 && isCounter(value.observedAtMs);
+}
+
 function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
-  if (!isRecord(value) || value.schemaVersion !== 1 ||
+  if (!isRecord(value) || value.schemaVersion !== 2 ||
     !isCounter(value.sessionId) || !isCounter(value.revision) ||
     !isNullable(value.modelId, (item) => typeof item === "string") ||
     !isNullable(value.deviceId, (item) => typeof item === "string") ||
@@ -61,7 +74,7 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
     isCounter(hearing.observedAtMs));
   return ["left", "right", "case"].every((key) =>
     isNullable(battery[key], isBatteryReading)) &&
-    isNullable(value.anc, (item) => ["off", "anc", "transparency"].includes(item as string)) &&
+    isNullable(value.anc, isAncReading) &&
     isNullable(value.eq, (item) => [
       "balanced", "bassBoost", "voice", "clear", "hifiLive", "pop", "jazzRock",
       "classical", "acoustic", "bassReduce", "trebleReduce",
@@ -72,8 +85,8 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
     isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing;
 }
 
-function decodeSnapshotV1(payload: unknown): DeviceSnapshot {
-  if (!isRecord(payload) || payload.schemaVersion !== 1) {
+function decodeSnapshotV2(payload: unknown): DeviceSnapshot {
+  if (!isRecord(payload) || payload.schemaVersion !== 2) {
     throw new Error("Unsupported device snapshot schema version");
   }
   if (!isDeviceSnapshot(payload)) throw new Error("Invalid device snapshot payload");
@@ -81,13 +94,13 @@ function decodeSnapshotV1(payload: unknown): DeviceSnapshot {
 }
 
 export async function getDeviceSnapshot(): Promise<DeviceSnapshot> {
-  return decodeSnapshotV1(await invoke<unknown>("get_device_snapshot"));
+  return decodeSnapshotV2(await invoke<unknown>("get_device_snapshot"));
 }
 
 export function onDeviceSnapshot(callback: (snapshot: DeviceSnapshot) => void): Promise<UnlistenFn> {
   return listen<unknown>("device://snapshot", (event) => {
     try {
-      callback(decodeSnapshotV1(event.payload));
+      callback(decodeSnapshotV2(event.payload));
     } catch (error) {
       console.error("[Device] rejected snapshot event", error);
     }

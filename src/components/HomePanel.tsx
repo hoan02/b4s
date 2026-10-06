@@ -34,10 +34,10 @@ interface Props {
   ancMode: AncMode | null;
   ancPending?: boolean;
   ancError?: string | null;
-  transparencyMode: TransparencyMode;
-  adaptiveNoise: boolean;
-  noiseEnvironment: NoiseEnvironment;
-  noiseLevel: number;
+  transparencyMode: TransparencyMode | null;
+  adaptiveNoise: boolean | null;
+  noiseEnvironment: NoiseEnvironment | null;
+  noiseLevel: number | null;
   listeningSupported: boolean;
   noiseMaxLevel: number;
   noiseSupported: boolean;
@@ -74,7 +74,7 @@ interface Props {
 }
 
 const AdaptiveEnvironmentCards = (props: {
-  selected: NoiseEnvironment;
+  selected: NoiseEnvironment | null;
   disabled?: boolean;
   onSelect: (value: NoiseEnvironment) => void;
 }) => (
@@ -211,17 +211,19 @@ const HomePanel: Component<Props> = (props) => {
             <button type="button" disabled={props.ancPending} class={props.transparencyMode === "full" ? "active" : ""} aria-pressed={props.transparencyMode === "full"} onClick={() => props.onTransparencyMode("full")}><span>{t("home.fullTransparency")}</span><small>{t("home.default")}</small></button>
             <button type="button" disabled={props.ancPending} class={props.transparencyMode === "voice" ? "active" : ""} aria-pressed={props.transparencyMode === "voice"} onClick={() => props.onTransparencyMode("voice")}><span>{t("home.voiceMode")}</span><small>{t("home.prioritizeVoice")}</small></button>
           </div>
+          <Show when={props.transparencyMode === null}><span role="status">{t("control.unknown")}</span></Show>
         </Show>
         <Show when={props.ancMode === "anc"}>
           <div class="noise-options noise-reduction-panel">
-            <Show when={props.adaptiveNoise}>
-              <AdaptiveEnvironmentCards selected={props.noiseEnvironment} disabled={props.ancPending} onSelect={props.onNoiseEnvironment} />
+            <Show when={props.adaptiveNoise !== null} fallback={<span role="status">{t("control.unknown")}</span>}>
+              <div class="noise-adaptive-row"><div><strong>{t("home.adaptive")}</strong><small>{t("home.autoEnvironment")}</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported || props.ancPending} checked={props.adaptiveNoise === true} onChange={(e) => props.onAdaptiveNoise((e.currentTarget as HTMLInputElement).checked)} /><span class="slider" /></label></div>
             </Show>
-            <div class="noise-adaptive-row"><div><strong>{t("home.adaptive")}</strong><small>{t("home.autoEnvironment")}</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported || props.ancPending} checked={props.adaptiveNoise} onChange={(e) => props.onAdaptiveNoise((e.currentTarget as HTMLInputElement).checked)} /><span class="slider" /></label></div>
-            <Show when={props.adaptiveNoise} fallback={<div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel}/{props.noiseMaxLevel}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" disabled={props.ancPending} class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>}>
-              <div class="noise-environments" role="group" aria-label={t("home.adaptive")}>
-                {[[102, t("home.indoor"), t("home.homeOffice")], [103, t("home.outdoor"), t("home.streetPark")], [101, t("home.commuting"), t("home.subwayBus")], [108, t("home.inTransit"), t("home.planeTrain")]].map(([id, title, detail]) => <button type="button" disabled={props.ancPending} class={props.noiseEnvironment === id ? "active" : ""} aria-pressed={props.noiseEnvironment === id} onClick={() => props.onNoiseEnvironment(id as NoiseEnvironment)}><span>{title}</span><small>{detail}</small></button>)}
-              </div>
+            <Show when={props.adaptiveNoise === false}>
+              <div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel === null ? t("control.unknown") : `${props.noiseLevel}/${props.noiseMaxLevel}`}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" disabled={props.ancPending} class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>
+            </Show>
+            <Show when={props.adaptiveNoise === true && props.noiseEnvironment === null}><span role="status">{t("control.unknown")}</span></Show>
+            <Show when={props.adaptiveNoise === true}>
+              <AdaptiveEnvironmentCards selected={props.noiseEnvironment} disabled={props.ancPending} onSelect={props.onNoiseEnvironment} />
             </Show>
           </div>
         </Show>

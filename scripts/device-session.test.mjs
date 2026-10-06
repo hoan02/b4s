@@ -10,7 +10,7 @@ const compiled = ts.transpileModule(source, {
 const { createDeviceSession } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 
 function snapshot(deviceId, sessionId, revision) {
-  return { schemaVersion: 1, deviceId, sessionId, revision,
+  return { schemaVersion: 2, deviceId, sessionId, revision,
     battery: { left: { percentage: 0, charging: false, observedAtMs: revision }, right: null, case: null } };
 }
 
@@ -54,7 +54,7 @@ test("switching devices clears snapshot and rejects unknown schema", () => {
   session.accept(snapshot("A", 1, 1));
   session.selectDevice("B");
   assert.equal(seen.at(-1), null);
-  session.accept({ ...snapshot("B", 2, 1), schemaVersion: 2 });
+  session.accept({ ...snapshot("B", 2, 1), schemaVersion: 1 });
   assert.equal(seen.at(-1), null);
   session.accept(snapshot("B", 2, 1));
   assert.equal(seen.at(-1).deviceId, "B");

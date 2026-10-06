@@ -55,6 +55,10 @@ alone is not readback. Snapshot session IDs and revisions prevent stale updates
 from replacing observations after disconnect or reconnect. Scan, connection
 and link-health DTOs each carry a contract version; frontend adapters reject
 unsupported versions rather than interpreting them as the current shape.
+Snapshot schema v2 retains the observed ANC mode, parameter and receipt time so
+the UI can derive transparency submode and BP1 noise level/environment only
+from a same-session device report. Unknown or profile-incompatible parameters
+remain unselected.
 
 ## Extending a model or family
 

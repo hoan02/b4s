@@ -410,7 +410,7 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P5.1 | App shell/navigation/session store | Solid feature structure | P4.3 | Mount/unmount/reconnect không nhân đôi listener |
 | P5.2 | Devices/overview + accurate battery/connect feedback | First complete vertical slice | P5.1 | Scan→connect→identity→state→disconnect đúng trên BP1 |
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | UI primitives + backend eligibility | P5.1/P4.2 | Light/dark, keyboard, scaling, locale; mode không bypass validation |
-| P6.1 | ANC/transparency/game, constraints/readback | Listening feature slice | P4/P5, matching traces | Every value shown has confirmation/freshness semantics |
+| P6.1 | ANC/transparency/game, constraints/readback | Listening feature slice | P4/P5, matching traces | Partial: snapshot v2 preserves AA34 mode/parameter/time; UI only selects profile-valid values from accepted observations. Matching device captures and firmware/hardware acceptance remain open. |
 | P6.2 | EQ preset/custom/slot with model schema | Equalizer slice | P1.4/P6.1 | Wire index đúng; no invented filter curves; validate before write |
 | P6.3 | Bass/spatial/codec/hearing constraints | Advanced sound slice | P1 traces/P3.4 | ACK khác state; codec restart UX/recovery verified |
 | P6.4 | Gestures/in-ear, per-side mapping | Controls slice | Gesture evidence/P4 | Read current map, save, re-query, single-ear restrictions đúng |
