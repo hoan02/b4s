@@ -25,7 +25,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | In progress — repeatable U01–U09 guide and scrubbed trace schema exist; actual capture review/validation remains open |
 | P2.2 | BP1 capture core features/init/reconnect | External evidence required |
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
-| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan and connection preserve/select exact OS entry IDs even when entries share an address; demo-only scan/connect logic now lives in `ble/mock.rs`; actor lifecycle, injected transport interface, and event ownership remain open |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan and connection preserve/select exact OS entry IDs even when entries share an address; demo-only scan/connect logic now lives in `ble/mock.rs`; a disappearing scan entry now fails connection publication instead of fabricating an experimental device; actor lifecycle, injected transport interface, and event ownership remain open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards, connect-attempt cancellation lease, session/entry-guarded OS disconnect events, and an owned/aborted notification task on session reset integrated; CI regression covers reset abort; session actor and full event-lifecycle ownership outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
@@ -662,3 +662,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Current v2 preferences are decoded strictly. The v1 key is read only when v2 is absent, then migrated and removed after persistence; malformed current values recover to safe defaults without reviving stale v1 settings. Writes persist only v2 and best-effort remove the old key.
 - Added focused coverage for defaults, v1 migration, malformed v2 recovery, writes, and unavailable storage, and wired it into cross-platform CI. No local test suite was run; current-head CI is the compile/test gate. P4.4 remains open for the complete device-scoped storage and corruption-recovery matrix.
+
+## Increment 98 — reject vanished BLE entries without synthesis
+
+- Connection publication now requires the exact scanned entry to remain present in the registry and the owning session token to remain current. A missing entry returns an error before setting connected identity or snapshot state; the old synthetic generic device with an experimental profile has been removed.
+- Added a hardware-independent regression for the vanished-entry case. Selected-file formatting and whitespace checks are the local gates; no local Rust tests/build were run, so CI validates the change.

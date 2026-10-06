@@ -398,7 +398,7 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Capture guide + manifest schema | P0.2 | Có thể lặp lại cùng thao tác và so TX/RX |
 | P2.2 | BP1 capture core features/init/reconnect | BP1 golden traces local | P2.1, Android/log path | Model+firmware+state đầu+timeline rõ |
 | P2.3 | Replay harness và scripted fake transport | Offline test harness | P2.1 | Mô phỏng split/batched packet, timeout, late ACK, disconnect |
-| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | Transport interface + BLE adapter | P2.3 | In progress: demo behavior is isolated in `src-tauri/src/ble/mock.rs`; scan/connect still share the global runtime and need a session owner plus injected transport. |
+| P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | Transport interface + BLE adapter | P2.3 | In progress: demo behavior is isolated in `src-tauri/src/ble/mock.rs`; connection publication rejects vanished scan entries instead of synthesizing an experimental device; scan/connect still share the global runtime and need a session owner plus injected transport. |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | Frame codecs | P1.3, P2.3 | Captured/replay vectors đúng; malformed/CRC sai không đổi state |
 | P3.3 | Session lifecycle/generation/cancel/reconnect | Session actor/state machine | P3.1 | In progress: the per-device notification task is retained and aborted on session reset with token validation at registration; a Tokio regression covers reset abort; actor/event lifecycle and join ordering remain to complete. |
 | P3.4 | Queue/correlation/deadline/readback | Command executor | P3.2/P3.3 | Write success không bị báo là device-confirmed |

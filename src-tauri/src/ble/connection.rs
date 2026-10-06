@@ -249,40 +249,7 @@ async fn connect_one(
     }
     // Publish only if this attempt has not been cancelled or superseded.
     let mut state = BLE.lock().await;
-    if !state.session.accepts(token) {
-        return Err("Connection attempt was cancelled".into());
-    }
-    state.snapshot.device_id = Some(device_id.clone());
-    state.snapshot.model_id = state
-        .devices
-        .get(&device_id)
-        .and_then(|device| device.model_id.clone());
-    state.connected_id = Some(device_id.clone());
-    state.touch_link();
-    let device = if let Some(d) = state.devices.get_mut(&device_id) {
-        d.connected = true;
-        d.clone()
-    } else {
-        BleDevice {
-            id: device_id.clone(),
-            name: "Device".into(),
-            address: String::new(),
-            rssi: 0,
-            is_baseus: true,
-            connected: true,
-            headphone_candidate: true,
-            model_id: None,
-            model_name: None,
-            device_profile: protocol::profile_for(None, None, None),
-            support: Some("experimental".into()),
-            hint: None,
-            image_url: None,
-            image_provenance: "fallback".into(),
-            color_variants: Vec::new(),
-            serial: None,
-            advertised_services: Vec::new(),
-        }
-    };
+    let device = publish_connected_device(&mut state, &device_id, token)?;
     drop(state);
 
     emit_connection_state(&app).await;
@@ -314,6 +281,28 @@ async fn connect_one(
             emit_connection_state(&app_h).await;
         }
     });
+    Ok(device)
+}
+
+fn publish_connected_device(
+    state: &mut super::runtime::BleInner,
+    device_id: &str,
+    token: crate::device::session::SessionToken,
+) -> Result<BleDevice, String> {
+    if !state.session.accepts(token) {
+        return Err("Connection attempt was cancelled".into());
+    }
+    let device = state
+        .devices
+        .get_mut(device_id)
+        .ok_or_else(|| "Selected Bluetooth entry disappeared during connection".to_string())?;
+    device.connected = true;
+    let device = device.clone();
+
+    state.snapshot.device_id = Some(device_id.to_owned());
+    state.snapshot.model_id = device.model_id.clone();
+    state.connected_id = Some(device_id.to_owned());
+    state.touch_link();
     Ok(device)
 }
 
@@ -527,6 +516,23 @@ async fn handle_notification(
             "Notification did not produce a recognized device state: {:02X?}",
             data
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_scan_entry_cannot_be_published_as_a_synthetic_device() {
+        let mut runtime = super::super::runtime::BleInner::new();
+        let token = runtime.session.token();
+
+        let result = publish_connected_device(&mut runtime, "disappeared-entry", token);
+
+        assert!(result.is_err());
+        assert!(runtime.connected_id.is_none());
+        assert!(runtime.snapshot.device_id.is_none());
     }
 }
 
