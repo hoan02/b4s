@@ -272,3 +272,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Added BA42 query and exact AA42 boolean decoder, separate from EQ index and AA43 ACK. SpatialEnabled observations enter nullable session snapshots; startup queries require reviewed spatial capability. Frontend adopts observed enable state without inferring a mode.
 - Cargo check and frontend typecheck passed. Existing EQ spatial-reply test now asserts the separate spatial event; startup expected plan includes its authorized query. No local full-suite rerun; CI covers tests.
 - Source PanoramicSoundViewModel.E/H uses BA42 query and BA43 mode write. Its firmware-dependent mode list and exact selected-mode readback still need tracing. Setter confirmation, full nullable spatial UI and EQ/bass conflict handling remain open; boolean readback cannot prove Music/Cinema/Game selection.
+
+
+## Increment 31 — spatial enable confirmation
+
+- Spatial writes query BA42 and wait for exact AA42 enabled state in the current serialized session; AA43 ACK cannot complete them. This confirms enablement only, not selected mode.
+- UI uses shared operation admission/pending/error guards and retains observed enable state on failure. EQ conflict disable waits for readback and checks session before continuing; stale completion cannot apply EQ to a newly selected session.
+- Cargo check/frontend typecheck passed. Added query-versus-ACK/wrong-state/old-session confirmation test for CI. Mode selection remains a local requested choice until a model-specific mode readback is verified; nullable spatial UI, firmware mode constraints and hardware acceptance remain open.

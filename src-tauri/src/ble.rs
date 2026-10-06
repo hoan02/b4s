@@ -1484,7 +1484,7 @@ pub async fn send_find_buds(start: bool) -> Result<(), String> {
 
 pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetSpatial(mode)).await?;
-    with_connected_peripheral(|p| Box::pin(async move { write_bytes(&p, &data).await })).await
+    with_connected_peripheral(|p| Box::pin(async move { write_and_readback(&p, &data, &[0xBA, 0x42], crate::device::confirmation::ExpectedState::SpatialEnabled(mode != protocol::SpatialMode::Off)).await })).await
 }
 
 pub async fn send_eq_index(index: u8) -> Result<(), String> {

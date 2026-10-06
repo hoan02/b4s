@@ -100,6 +100,8 @@ const App: Component = () => {
   const [findActive, setFindActive] = createSignal(false);
   const [findConfirmOpen, setFindConfirmOpen] = createSignal(false);
   const [findDialogMode, setFindDialogMode] = createSignal<"confirm" | "active">("confirm");
+  const [spatialPending, setSpatialPending] = createSignal(false);
+  const [spatialError, setSpatialError] = createSignal<string | null>(null);
   const [spatialOn, setSpatialOn] = createSignal(false);
   const [spatialMode, setSpatialModeUi] = createSignal<SpatialMode>("music");
   const [bassBoost, setBassBoostUi] = createSignal<number | null>(null);
@@ -127,6 +129,7 @@ const App: Component = () => {
     if (!snapshot) {
       equalizer.reset();
       advancedSound.reset();
+      spatialOperation.reset();
       setGamePending(false);
       setGameError(null);
       setBassBoostUi(null);
@@ -179,6 +182,9 @@ const App: Component = () => {
   });
   const advancedSound = createConfirmedOperation({
     session, refresh: refreshSnapshot, pending: setSoundPending, error: setSoundError, formatError,
+  });
+  const spatialOperation = createConfirmedOperation({
+    session, refresh: refreshSnapshot, pending: setSpatialPending, error: setSpatialError, formatError,
   });
   let disposed = false;
   const track = (unsubscribe: () => void) => {
@@ -461,22 +467,17 @@ const App: Component = () => {
   };
 
   const handleSpatialOn = async (on: boolean) => {
-    setSpatialOn(on);
-    try {
-      await setSpatialMode(on ? spatialMode() : "off");
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
+    await spatialOperation.run(() => setSpatialMode(on ? spatialMode() : "off"), () => {
+      if (link().mock) setSpatialOn(on);
+    }, (message) => notify(message, "error"));
   };
 
-  const handleSpatialMode = async (m: SpatialMode) => {
-    setSpatialModeUi(m);
-    setSpatialOn(true);
-    try {
-      await setSpatialMode(m);
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
+  const handleSpatialMode = async (mode: SpatialMode) => {
+    await spatialOperation.run(() => setSpatialMode(mode), () => {
+      // Requested mode is a local choice; AA42 only confirms enabled state.
+      setSpatialModeUi(mode);
+      if (link().mock) setSpatialOn(mode !== "off");
+    }, (message) => notify(message, "error"));
   };
 
   const handleBassBoost = async (level: number) => {
@@ -551,8 +552,12 @@ const App: Component = () => {
     if (!action) return;
     try {
       if (spatialOn()) {
-        setSpatialOn(false);
+        const generation = session.capture();
         await setSpatialMode("off");
+        if (!session.isCurrent(generation)) return;
+        await refreshSnapshot();
+        if (!session.isCurrent(generation)) return;
+        if (link().mock) setSpatialOn(false);
       }
       if (action.kind === "preset") await applyEqPreset(action.preset);
       if (action.kind === "customBands") setEqCustomBands(action.bands);
@@ -738,6 +743,8 @@ const App: Component = () => {
                 gamePending={gamePending()}
                 gameError={gameError()}
                 findActive={findActive()}
+                spatialPending={spatialPending()}
+                spatialError={spatialError()}
                 spatialOn={spatialOn()}
                 spatialMode={spatialMode()}
                 eqLabel={

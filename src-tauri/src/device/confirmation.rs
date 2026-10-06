@@ -18,6 +18,7 @@ pub enum ExpectedState {
     EqIndex(u8),
     Game(bool),
     Bass(u8),
+    SpatialEnabled(bool),
     Ldac(bool),
     Hearing { enabled: bool, level: u8 },
 }
@@ -31,6 +32,7 @@ impl ExpectedState {
             (Self::Battery, 0x02, DeviceEvent::Battery(_)) => true,
             (Self::Eq(expected), 0x30, DeviceEvent::EqIndex(actual)) => expected.to_byte() == *actual,
             (Self::EqIndex(expected), 0x30, DeviceEvent::EqIndex(actual)) => expected == actual,
+            (Self::SpatialEnabled(expected), 0x42, DeviceEvent::SpatialEnabled(actual)) => expected == actual,
             (Self::Bass(expected), 0x53, DeviceEvent::BassBoost(actual)) => expected == actual,
             (Self::Game(expected), 0x23, DeviceEvent::GameMode(actual)) => expected == actual,
             (Self::Ldac(expected), 0x74, DeviceEvent::Ldac(actual)) => expected == actual,
@@ -83,4 +85,19 @@ mod tests {
         observation.opcode = 0x27;
         assert!(!ExpectedState::Battery.matches(epoch.token(), &observation));
     }
+    #[test]
+    fn spatial_enable_requires_query_state_not_ack_or_other_session() {
+        let epoch = SessionEpoch::default();
+        let session = epoch.token();
+        let mut observation = StateObservation { session, opcode: 0x42,
+            event: DeviceEvent::SpatialEnabled(true) };
+        assert!(ExpectedState::SpatialEnabled(true).matches(session, &observation));
+        assert!(!ExpectedState::SpatialEnabled(false).matches(session, &observation));
+        observation.opcode = 0x43;
+        assert!(!ExpectedState::SpatialEnabled(true).matches(session, &observation));
+        observation.opcode = 0x42;
+        epoch.invalidate();
+        assert!(!ExpectedState::SpatialEnabled(true).matches(epoch.token(), &observation));
+    }
+
 }

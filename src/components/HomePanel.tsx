@@ -45,6 +45,8 @@ interface Props {
   gamePending?: boolean;
   gameError?: string | null;
   findActive: boolean;
+  spatialPending?: boolean;
+  spatialError?: string | null;
   spatialOn: boolean;
   spatialMode: SpatialMode;
   eqLabel: string;
@@ -246,6 +248,7 @@ const HomePanel: Component<Props> = (props) => {
           <label class="toggle sm">
             <input
               type="checkbox"
+              disabled={props.spatialPending}
               checked={props.spatialOn}
               onChange={(e) =>
                 props.onSpatialOn((e.currentTarget as HTMLInputElement).checked)
@@ -254,10 +257,12 @@ const HomePanel: Component<Props> = (props) => {
             <span class="slider" />
           </label>
         </div>
+        <OperationStatus pending={props.spatialPending} error={props.spatialError} />
         <Show when={props.spatialOn}>
           <div class="home-seg">
             <button
               type="button"
+              disabled={props.spatialPending}
               class={props.spatialMode === "music" ? "active" : ""}
               onClick={() => props.onSpatialMode("music")}
             >
@@ -265,6 +270,7 @@ const HomePanel: Component<Props> = (props) => {
             </button>
             <button
               type="button"
+              disabled={props.spatialPending}
               class={props.spatialMode === "cinema" ? "active" : ""}
               onClick={() => props.onSpatialMode("cinema")}
             >
