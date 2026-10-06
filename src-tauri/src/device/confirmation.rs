@@ -336,12 +336,12 @@ mod tests {
         let transport = FakeTransport::new([
             ScriptedWrite::DelayedReply(
                 bass_observation(session, 0x54, 1),
-                Duration::from_millis(10),
+                Duration::from_millis(100),
             ),
             ScriptedWrite::NoReply,
         ]);
         let timed_out = tokio::time::timeout(
-            Duration::from_millis(1),
+            Duration::from_millis(50),
             write_and_confirm(
                 &transport,
                 session,
@@ -353,7 +353,7 @@ mod tests {
         .await;
         assert!(timed_out.is_err());
 
-        tokio::time::sleep(Duration::from_millis(15)).await;
+        tokio::time::sleep(Duration::from_millis(120)).await;
         transport.push([
             ScriptedWrite::NoReply,
             ScriptedWrite::DelayedReply(
