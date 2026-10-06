@@ -1,5 +1,5 @@
-import { Component, createEffect, createSignal, Show, onMount, onCleanup } from "solid-js";
-import type { AncMode, EqPresetId } from "./lib/device";
+import { Component, createSignal, Show, onMount, onCleanup } from "solid-js";
+import type { AncMode } from "./lib/device";
 import BlePairing from "./components/BlePairing";
 import HomePanel from "./components/HomePanel";
 import MorePanel from "./components/MorePanel";
@@ -8,8 +8,7 @@ import Settings from "./components/Settings";
 import ToastHost from "./components/ToastHost";
 import ConfirmDialog from "./components/ConfirmDialog";
 import { getDeviceSnapshot, type DeviceSnapshot } from "./bridge/deviceSnapshot";
-import { createConfirmedOperation } from "./features/shared/confirmedOperation";
-import { resolveEqSelection } from "./features/equalizer/selection";
+import { createEqualizerController } from "./features/equalizer/controller";
 import { subscribeDeviceRuntime } from "./features/devices/runtimeSubscriptions";
 import { createFindBudsController } from "./features/find-buds/controller";
 import { createListeningController } from "./features/listening/controller";
@@ -26,14 +25,7 @@ import {
   emptyLink,
   listModelProfiles,
 } from "./lib/ble";
-import {
-  queryBattery,
-  setEqIndex,
-  setEqPreset,
-  setCustomEq,
-  setSpatialMode,
-} from "./lib/device";
-import { defaultCustomBands } from "./lib/eq";
+import { queryBattery } from "./lib/device";
 import { readDesktopPreferences, writeAutoReconnect } from "./lib/desktopPreferences";
 import { migrateModelIdsOnce } from "./lib/modelIdMigration";
 import { getAppInfo } from "./lib/app";
@@ -48,12 +40,6 @@ import { IconBack } from "./components/Icons";
 import "./styles/main.scss";
 
 type View = "home" | "more" | "eq" | "settings";
-type PendingEqAction =
-  | { kind: "preset"; preset: EqPresetId }
-  | { kind: "customBands"; bands: number[] }
-  | { kind: "applyCustom" }
-  | { kind: "resetCustom" };
-
 const App: Component = () => {
   migrateModelIdsOnce();
   const savedDesktopPreferences = readDesktopPreferences();
@@ -75,20 +61,13 @@ const App: Component = () => {
   });
   const [ancMode, setAncModeUi] = createSignal<AncMode>("off");
   const [modelProfiles, setModelProfiles] = createSignal<ModelProfile[]>([]);
-  const [eqWireIndex, setEqWireIndex] = createSignal<number | null>(null);
   const modelEq = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.eq;
-  const [eqActive, setEqActive] = createSignal<EqPresetId>("classic");
-  const [eqCustomBands, setEqCustomBands] = createSignal<number[]>([]);
-  const [eqCustomActive, setEqCustomActive] = createSignal(false);
-  const [eqPending, setEqPending] = createSignal(false);
-  const [eqError, setEqError] = createSignal<string | null>(null);
   const [gameOn, setGameOn] = createSignal<boolean | null>(null);
   const [spatialOn, setSpatialOn] = createSignal<boolean | null>(null);
   const [bassBoost, setBassBoostUi] = createSignal<number | null>(null);
   const [ldac, setLdac] = createSignal<boolean | null>(null);
   const [hearingThreshold, setHearingThreshold] = createSignal<number | null>(null);
   const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
-  const [pendingEqAction, setPendingEqAction] = createSignal<PendingEqAction | null>(null);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
   const noiseCaps = () => device()?.deviceProfile.noise;
@@ -102,7 +81,7 @@ const App: Component = () => {
       rightCharging: snapshot?.battery.right?.charging,
       caseCharging: snapshot?.battery.case?.charging,
     });
-    setEqWireIndex(snapshot?.eqIndex ?? null);
+    equalizer.observeSnapshot(snapshot?.eqIndex ?? null, snapshot?.eq ?? null);
     if (!snapshot) {
       equalizer.reset();
       sound.reset();
@@ -112,10 +91,8 @@ const App: Component = () => {
       setHearingProtect(null);
       setHearingThreshold(null);
       setSpatialOn(null);
-      setEqCustomActive(false);
-      setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
+      equalizer.reset();
       setAncModeUi("off");
-      setEqActive("classic");
       setGameOn(null);
       setLdac(null);
       return;
@@ -127,35 +104,13 @@ const App: Component = () => {
     setBassBoostUi(snapshot.bassBoost ?? null);
     setHearingProtect(snapshot.hearing?.enabled ?? null);
     setHearingThreshold(snapshot.hearing?.level ?? null);
-    const eqIds: Record<string, string> = {
-      balanced: "classic", bassBoost: "bass", voice: "voice", clear: "clear",
-      hifiLive: "hifi", pop: "pop", jazzRock: "jazz", classical: "classical", acoustic: "acoustic",
-    };
-    if (snapshot.eq !== null && eqIds[snapshot.eq]) setEqActive(eqIds[snapshot.eq]);
   };
-  createEffect(() => {
-    if (link().mock) return;
-    const selection = resolveEqSelection(eqWireIndex(), modelEq()?.presets ?? [],
-      device()?.deviceProfile.capabilities.customEq ?? false);
-    setEqCustomActive(selection.kind === "custom");
-    setEqActive(selection.kind === "preset" ? selection.id : "");
-  });
-  let eqDraftLayout = "";
-  createEffect(() => {
-    const layout = `${device()?.id ?? ""}:${modelEq()?.bands.join(",") ?? ""}`;
-    if (layout === eqDraftLayout) return;
-    eqDraftLayout = layout;
-    setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
-  });
   const session = createDeviceSession(applySnapshot);
   const refreshSnapshot = async () => {
     const generation = session.capture();
     const snapshot = await getDeviceSnapshot();
     if (session.isCurrent(generation)) session.accept(snapshot);
   };
-  const equalizer = createConfirmedOperation({
-    session, refresh: refreshSnapshot, pending: setEqPending, error: setEqError, formatError,
-  });
   let disposed = false;
   let stopRuntimeSubscriptions: (() => void) | undefined;
   let linkPoll: number | undefined;
@@ -173,6 +128,20 @@ const App: Component = () => {
     const id = window.setTimeout(() => dismissToast(t.id), 2800);
     toastTimers.set(t.id, id);
   };
+
+  const equalizer = createEqualizerController({
+    session,
+    refreshSnapshot,
+    deviceId: () => device()?.id,
+    model: () => modelEq() ?? null,
+    customEqSupported: () => device()?.deviceProfile.capabilities.customEq ?? false,
+    isDemo: () => link().mock,
+    spatialOn,
+    spatialSupported: () => device()?.deviceProfile.capabilities.spatial ?? false,
+    setSpatialOffInDemo: () => setSpatialOn(false),
+    formatError,
+    notify,
+  });
 
   const listening = createListeningController({
     mode: ancMode,
@@ -332,79 +301,6 @@ const App: Component = () => {
     }
   };
 
-  const applyEqPreset = async (preset: EqPresetId) => {
-    await equalizer.run(() => setEqPreset(preset), () => {
-      if (link().mock) setEqCustomActive(false);
-      const label = modelEq()?.presets.find((item) => item.id === preset)?.label ?? preset;
-      notify(`EQ · ${label}`, "success");
-    }, (message) => notify(message, "error"));
-  };
-
-  const requestEqAction = (action: PendingEqAction): boolean => {
-    if (spatialOn() === false || !device()?.deviceProfile.capabilities.spatial) return true;
-    setPendingEqAction(action);
-    return false;
-  };
-
-  const handleEq = async (preset: EqPresetId) => {
-    if (!requestEqAction({ kind: "preset", preset })) return;
-    await applyEqPreset(preset);
-  };
-
-  const handleCustomBands = (bands: number[]) => {
-    if (!requestEqAction({ kind: "customBands", bands })) return false;
-    setEqCustomBands(bands);
-    return true;
-  };
-
-  const handleApplyCustomEq = async (bands = eqCustomBands(), label = t("eq.customize")) => {
-    if (!requestEqAction({ kind: "applyCustom" })) return;
-    const customLabel = label.trim() || t("eq.customize");
-    await equalizer.run(() => {
-      const schema = modelEq();
-      if (!schema || bands.length !== schema.bands.length) {
-        throw new Error("Custom EQ draft does not match the model schema");
-      }
-      return setCustomEq(bands.map((gain, index) => ({
-        frequency: schema.bands[index], qValue: 1, gain, filter: 1,
-      })), 101, false);
-    }, () => {
-      if (link().mock) setEqCustomActive(true);
-      notify(t("toast.customEqSaved"), "success", `EQ custom · ${customLabel}`);
-    }, (message) => notify(message, "error", customLabel));
-  };
-
-  const handleResetCustomEq = async () => {
-    if (!requestEqAction({ kind: "resetCustom" })) return;
-    await equalizer.run(() => setEqIndex(0), () => {
-      setEqCustomBands(defaultCustomBands(modelEq()?.bands.length ?? 0));
-      if (link().mock) setEqCustomActive(false);
-      notify(t("toast.resetEq"), "info");
-    }, (message) => notify(message, "error"));
-  };
-
-  const confirmEqAction = async () => {
-    const action = pendingEqAction();
-    setPendingEqAction(null);
-    if (!action) return;
-    try {
-      if (spatialOn() !== false && device()?.deviceProfile.capabilities.spatial) {
-        const generation = session.capture();
-        await setSpatialMode("off");
-        if (!session.isCurrent(generation)) return;
-        await refreshSnapshot();
-        if (!session.isCurrent(generation)) return;
-        if (link().mock) setSpatialOn(false);
-      }
-      if (action.kind === "preset") await applyEqPreset(action.preset);
-      if (action.kind === "customBands") setEqCustomBands(action.bands);
-      if (action.kind === "applyCustom") await handleApplyCustomEq();
-      if (action.kind === "resetCustom") await handleResetCustomEq();
-    } catch (e) {
-      notify(formatError(e), "error");
-    }
-  };
-
   const handleDisconnect = async () => {
     setAutoReconnectAvailable(false);
     try {
@@ -476,17 +372,17 @@ const App: Component = () => {
               maxGain={modelEq()?.maxGain ?? 12}
               customSupported={device()?.deviceProfile.capabilities.customEq ?? false}
               presets={(modelEq()?.presets ?? []).map((preset) => ({ ...preset, sub: preset.description }))}
-              eqActive={eqActive()}
-              pending={eqPending()}
-              error={eqError()}
-              customBands={eqCustomBands()}
-              customActive={eqCustomActive()}
+              eqActive={equalizer.active()}
+              pending={equalizer.pending()}
+              error={equalizer.error()}
+              customBands={equalizer.customBands()}
+              customActive={equalizer.customActive()}
               storageKey={`${device()?.address ?? "default"}.${device()?.modelId ?? "unknown"}.${modelEq()?.bands.join("-") ?? "none"}`}
               onBack={() => setView("home")}
-              onEq={handleEq}
-              onCustomBands={handleCustomBands}
-              onApplyCustom={handleApplyCustomEq}
-              onResetCustom={handleResetCustomEq}
+              onEq={equalizer.selectPreset}
+              onCustomBands={equalizer.updateCustomBands}
+              onApplyCustom={equalizer.applyCustom}
+              onResetCustom={equalizer.resetCustom}
             />
           </section>
         </Show>
@@ -564,9 +460,9 @@ const App: Component = () => {
                 spatialOn={spatialOn()}
                 spatialMode={spatialController.mode()}
                 eqLabel={
-                  eqCustomActive()
+                  equalizer.customActive()
                     ? t("eq.customize")
-                    : modelEq()?.presets.find((preset) => preset.id === eqActive())?.label ?? "—"
+                    : modelEq()?.presets.find((preset) => preset.id === equalizer.active())?.label ?? "—"
                 }
                 onAncMode={listening.setMode}
                 onTransparencyMode={listening.setTransparencyMode}
@@ -593,12 +489,12 @@ const App: Component = () => {
           </Show>
         </Show>
       </main>
-      <Show when={pendingEqAction()}>
+      <Show when={equalizer.pendingAction()}>
         <ConfirmDialog
           title={t("dialog.turnOffSpatialTitle")}
           message={t("dialog.turnOffSpatialMessage")}
-          onCancel={() => setPendingEqAction(null)}
-          onConfirm={confirmEqAction}
+          onCancel={equalizer.clearPendingAction}
+          onConfirm={equalizer.confirmPendingAction}
         />
       </Show>
       <Show when={findController.confirmationOpen() || findController.active()}>

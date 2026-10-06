@@ -502,3 +502,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Moved game-mode operation state/notifications and spatial mode intent/enable workflows into dedicated `features/game-mode` and `features/spatial` controllers. Snapshot-confirmed device values remain owned by the device session; controllers publish optimistic demo state only for demo links.
 - `App.tsx` now composes these feature controllers instead of owning their pending/error signals and command handlers. `npx tsc --noEmit` and `git diff --check` passed; no full local test/build run.
+
+## Increment 66 — extract equalizer workflow
+
+- Moved EQ profile selection, model-scoped draft layout, confirmed preset/custom/reset operations, and spatial-conflict confirmation into `features/equalizer/controller.ts`. The app shell now supplies the session/profile state and composes the controller with `EqPanel`.
+- Kept confirmed snapshot values separate from custom drafts and preserved model-specific preset resolution. The confirmation flow now executes its deferred action directly after disabling spatial mode, avoiding a second conflict prompt. `npx tsc --noEmit` and `git diff --check` passed; no full local test/build run.
