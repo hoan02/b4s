@@ -12,6 +12,10 @@ fn insert_scan_device(devices: &mut HashMap<String, BleDevice>, device: BleDevic
     true
 }
 
+fn scan_generation_is_current(scanning: bool, current: u64, event: u64) -> bool {
+    scanning && current == event
+}
+
 pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     init_adapter().await?;
     let adapter_state = {
@@ -77,14 +81,19 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-pub(super) async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, id: &PeripheralId) {
-    let scan_generation = {
+pub(super) async fn process_peripheral(
+    app: &AppHandle,
+    peripheral: Peripheral,
+    id: &PeripheralId,
+    scan_generation: u64,
+) {
+    let event_is_current = {
         let state = BLE.lock().await;
-        if !state.scanning {
-            return;
-        }
-        state.scan_generation
+        scan_generation_is_current(state.scanning, state.scan_generation, scan_generation)
     };
+    if !event_is_current {
+        return;
+    }
     let props = match peripheral.properties().await {
         Ok(Some(p)) => p,
         _ => return,
@@ -153,7 +162,7 @@ pub(super) async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, 
 
     {
         let mut state = BLE.lock().await;
-        if !state.scanning || state.scan_generation != scan_generation {
+        if !scan_generation_is_current(state.scanning, state.scan_generation, scan_generation) {
             return;
         }
         if !insert_scan_device(&mut state.devices, device) {
@@ -224,6 +233,13 @@ mod tests {
         ));
         assert_eq!(devices.len(), 2);
         assert_eq!(devices["control-entry"].rssi, -60);
+    }
+
+    #[test]
+    fn central_events_cannot_cross_scan_stop_or_restart_boundaries() {
+        assert!(scan_generation_is_current(true, 4, 4));
+        assert!(!scan_generation_is_current(false, 4, 4));
+        assert!(!scan_generation_is_current(true, 5, 4));
     }
 }
 

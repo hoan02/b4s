@@ -51,11 +51,15 @@ async fn listen_central_events(
     while let Some(event) = events.next().await {
         match event {
             CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
-                if !BLE.lock().await.scanning {
-                    continue;
-                }
+                let scan_generation = {
+                    let state = BLE.lock().await;
+                    if !state.scanning {
+                        continue;
+                    }
+                    state.scan_generation
+                };
                 if let Ok(p) = adapter.peripheral(&id).await {
-                    super::scanning::process_peripheral(&app, p, &id).await;
+                    super::scanning::process_peripheral(&app, p, &id, scan_generation).await;
                 }
             }
             CentralEvent::DeviceDisconnected(id) => {
