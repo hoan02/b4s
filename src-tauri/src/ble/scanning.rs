@@ -1,6 +1,8 @@
 use super::*;
 use crate::device::{DeviceIdentity, DeviceRegistry};
 
+static SCAN_OPERATION: Mutex<()> = Mutex::const_new(());
+
 fn insert_scan_device(devices: &mut HashMap<String, BleDevice>, device: BleDevice) -> bool {
     if devices
         .get(&device.id)
@@ -17,6 +19,7 @@ fn scan_generation_is_current(scanning: bool, current: u64, event: u64) -> bool 
 }
 
 pub async fn start_scan(app: AppHandle) -> Result<(), String> {
+    let _scan_operation = SCAN_OPERATION.lock().await;
     init_adapter().await?;
     let adapter_state = {
         let state = BLE.lock().await;
@@ -249,16 +252,24 @@ pub async fn stop_scan(app: AppHandle) -> Result<(), String> {
 
 // A previous scan's deadline must not stop a later manual or automatic scan.
 async fn stop_scan_session(app: AppHandle, generation: Option<u64>) -> Result<(), String> {
-    let mut state = BLE.lock().await;
-    if !state.scanning || generation.is_some_and(|value| value != state.scan_generation) {
-        return Ok(());
-    }
-    if let Some(a) = &state.adapter {
-        let _ = a.stop_scan().await;
-    }
-    state.scanning = false;
-    state.scan_revision = state.scan_revision.saturating_add(1);
-    drop(state);
+    let _scan_operation = SCAN_OPERATION.lock().await;
+    let adapter = {
+        let mut state = BLE.lock().await;
+        if !state.scanning || generation.is_some_and(|value| value != state.scan_generation) {
+            return Ok(());
+        }
+        state.scanning = false;
+        state.scan_revision = state.scan_revision.saturating_add(1);
+        state.adapter.clone()
+    };
+
+    let stop_result = match adapter {
+        Some(adapter) => adapter
+            .stop_scan()
+            .await
+            .map_err(|error| format!("stop_scan: {error}")),
+        None => Ok(()),
+    };
     emit_scan_status(&app).await;
-    Ok(())
+    stop_result
 }
