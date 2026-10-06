@@ -656,4 +656,4 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 ## Increment 96 — bound session BLE diagnostics
 
 - Moved RX/TX counts, timestamps and latest-frame previews into a dedicated link diagnostics owner that resets with the BLE session. Hex previews retain at most 64 frame bytes and state the omitted byte count; the existing link-health DTO is unchanged.
-- Added focused tests for short-frame fidelity, truncation, and latest-frame/counter semantics. Selected-file `rustfmt --check` and tracked-file `git diff --check` pass; no local Rust suite/build was run, so current-head CI is the compile/test gate. P4.4 remains open for the broader preference migration/corruption-recovery matrix.
+- Added focused tests for short-frame fidelity, truncation, and latest-frame/counter semantics. Selected-file `rustfmt --check` and tracked-file `git diff --check` pass; no local Rust suite/build was run. Full current-head CI on `2f690ef` passed on Windows and Ubuntu, including `cargo check`, Rust tests, and Tauri build. P4.4 remains open for the broader preference migration/corruption-recovery matrix.
