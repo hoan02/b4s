@@ -25,7 +25,7 @@ Input: completed local inventory report in ignored `.tmp/android-source-inventor
 
 1. Cross-check the recovered range branches with model captures; investigate any conflicting firmware behavior before changing runtime limits.
 2. Extend call-path inventory to gestures, in-ear, multipoint, codec/hearing, SoundFit and firmware guards; prioritize marked methods actually reached by those entrypoints.
-3. Index asset/resource configuration and reflection/JNI callers. Preserve package/version/tool/input provenance and original logs locally.
+3. Resource archive paths, sizes and hashes are now inventoried locally by `inventory-android-source.py`; inspect likely headphone assets/configuration and reflection/JNI callers without copying binaries or source into Git. Preserve package/version/tool/input provenance and original logs locally.
 4. Record explicit unknowns per feature dossier. Marker-free source, successful compilation and metadata flags do not close hardware acceptance.
 
 

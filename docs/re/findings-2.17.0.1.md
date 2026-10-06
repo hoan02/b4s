@@ -33,6 +33,11 @@ does not prove those methods or all 508 errors were recovered. Those features
 remain unresolved/cloud-dependent or deferred; verify any newly relevant failed
 call path against DEX/smali or a second engine before relying on it.
 
+A follow-up local archive inventory recorded 7,916 `res/`/`assets/`/manifest
+entries across the three APK splits, with paths, uncompressed sizes and SHA-256
+digests only. The report is ignored under `.tmp`; resource contents were not
+extracted or semantically reviewed. See `docs/re/README.md` for reproduction.
+
 ## Catalog comes from the server
 
 Static evidence in `com.base.baseus.api.ControlApi`:

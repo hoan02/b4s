@@ -90,7 +90,9 @@ unsupported on platform, cùng lý do và bằng chứng.
 
 ### 4.1. Hồ sơ nguồn và công cụ
 
-1. Ghi hash XAPK/APK/split, package/version, tool version và lỗi từng lượt chạy.
+1. Ghi hash XAPK/APK/split, package/version, tool version và lỗi từng lượt chạy;
+   inventory native/resource lưu paths, sizes, hashes trong `.tmp`, không commit
+   binaries/source.
 2. Giữ riêng decompile, resources, strings, native library inventory và server snapshots trong thư mục bị ignore.
 3. Phân tích APK chính và split ARM64: `.so`, asset JSON, bundle/script, config; không chỉ DEX strings.
 4. Lập danh sách 508 lỗi JADX; ưu tiên lỗi trong call path tai nghe, không mất thời gian sửa toàn bộ SDK không liên quan.
@@ -389,8 +391,8 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P0.1 | Chụp baseline Git/build/test; ghi thay đổi đang có, không reset | Baseline report | Không | Repo hiện tại và 65+9 tests được bảo toàn hoặc giải thích thay đổi |
 | P0.2 | Ghi firmware BP1 Ultra, Android/Windows version và Bluetooth adapter | Hardware manifest local | BP1 Ultra + Android đã xác nhận | Không chọn nhầm transport/profile |
 | P0.3 | Ghi phạm vi product và policy đã được người dùng chốt | ADR scope | Đã chốt | Earbuds/over-ear/neckband/open-ear; exclude speaker; tray mặc định; startup/reconnect/experimental opt-in |
-| P1.1 | Index entrypoints, model guards, SDK/native dependencies | Earphone feature inventory | P0 | Mọi screen/action tìm thấy có status và source pointer |
-| P1.2 | Triage JADX errors liên quan; extract resource/native inventory | Extraction coverage report | P1.1 | Các call paths ưu tiên không còn đoạn pseudocode chưa kiểm chứng |
+| P1.1 | Index entrypoints, model guards, SDK/native dependencies | Earphone feature inventory | P0 | In progress: transport plus gesture config loaders/guards indexed; feature/native call graph is incomplete. Each screen/action still needs status and source pointer. |
+| P1.2 | Triage JADX errors liên quan; extract resource/native inventory | Extraction coverage report | P1.1 | In progress: local hashes cover 7,916 resource and 106 native APK entries; gesture config schemas have targeted consumer notes. Priority failed call paths still require DEX/second-engine validation and remaining resource contents need review. |
 | P1.3 | Lần theo family/transport/framing/firmware rules | Protocol-family matrix | P1.1 | Mỗi family candidate có evidence và unknowns |
 | P1.4 | Trace server dictionary/model-param consumers | Configuration contract notes ([current dossier](../../protocol/model-parameter-consumers.md)) | P1.1 | Partial: consumer fields are classified for EQ, gesture imagery, guides, cleaning and shared sleep UI; profile dictionary is traced to account/avatar presentation. Dynamic headphone dictionary names, full field/guard coverage and configuration contract remain open. |
 | P2.1 | Chuẩn hóa capture plan, local trace format, redaction | Capture guide + manifest schema | P0.2 | Có thể lặp lại cùng thao tác và so TX/RX |

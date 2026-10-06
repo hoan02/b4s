@@ -14,8 +14,16 @@ def digest(path):
     return result.hexdigest()
 
 
+def archive_digest(archive, entry):
+    result = hashlib.sha256()
+    with archive.open(entry) as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            result.update(chunk)
+    return result.hexdigest()
+
+
 def inventory(root):
-    inputs, native, errors = [], [], []
+    inputs, native, resources, errors = [], [], [], []
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
@@ -25,13 +33,27 @@ def inventory(root):
         if path.suffix.lower() == ".apk":
             with zipfile.ZipFile(path) as archive:
                 for entry in sorted(archive.infolist(), key=lambda item: item.filename):
-                    if entry.filename.startswith("lib/") and entry.filename.endswith(".so"):
-                        result = hashlib.sha256()
-                        with archive.open(entry) as stream:
-                            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                                result.update(chunk)
-                        native.append({"apk": relative, "entry": entry.filename,
-                                       "size": entry.file_size, "sha256": result.hexdigest()})
+                    if entry.is_dir():
+                        continue
+                    is_native = (
+                        entry.filename.startswith("lib/") and entry.filename.endswith(".so")
+                    )
+                    is_resource = (
+                        entry.filename.startswith(("res/", "assets/"))
+                        or entry.filename in ("AndroidManifest.xml", "resources.arsc")
+                    )
+                    if not (is_native or is_resource):
+                        continue
+                    record = {
+                        "apk": relative,
+                        "entry": entry.filename,
+                        "size": entry.file_size,
+                        "sha256": archive_digest(archive, entry),
+                    }
+                    if is_native:
+                        native.append(record)
+                    else:
+                        resources.append(record)
         if path.suffix == ".java":
             with path.open(encoding="utf-8", errors="replace") as stream:
                 for number, line in enumerate(stream, 1):
@@ -39,11 +61,19 @@ def inventory(root):
                     if "JADX ERROR" in line or "Method not decompiled:" in line:
                         errors.append({"path": relative, "line": number,
                                        "kind": "jadx-error" if "JADX ERROR" in line else "method-not-decompiled"})
-    return {"schemaVersion": 1, "inputs": inputs, "nativeLibraries": native,
-            "decompilerMarkers": errors,
-            "limitations": ["Marker count is not JADX run error count.",
-                            "Package/version/tool provenance must be supplied from the original run.",
-                            "Only APK native entries are inspected; unpack XAPK splits first."]}
+    return {
+        "schemaVersion": 2,
+        "inputs": inputs,
+        "nativeLibraries": native,
+        "apkResources": resources,
+        "decompilerMarkers": errors,
+        "limitations": [
+            "Marker count is not JADX run error count.",
+            "Package/version/tool provenance must be supplied from the original run.",
+            "Only APK native and resource entries are inspected; unpack XAPK splits first.",
+            "Resource inventory contains archive paths, sizes and hashes, not file contents.",
+        ],
+    }
 
 
 def main():
@@ -63,6 +93,7 @@ def main():
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"Inventory: {len(report['inputs'])} hashed inputs, "
           f"{len(report['nativeLibraries'])} native entries, "
+          f"{len(report['apkResources'])} resource entries, "
           f"{len(report['decompilerMarkers'])} decompiler markers. Local output: {output}")
 
 

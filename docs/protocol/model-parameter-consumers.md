@@ -38,6 +38,24 @@ model-scoped headphone control dictionary name or prove that all dictionary
 consumers are covered; `dictByName` must not be treated as a source of runtime
 capabilities without tracing the request and command consumer.
 
+## Packaged gesture configuration
+
+The APK contains two gesture-layout/function schemas plus a mutex-rules file.
+`GestureDataViewModel` loads the `_v2` layout and function assets; the older
+head-gesture and gesture view models load the original layout/function assets.
+The records are model-scoped and associate button/layout types with allowed
+function IDs. Model/locale/account and supported-function guards further filter
+what the phone UI presents. The newer view model stores selections under a key
+derived from serial number and model in MMKV. These assets describe UI choices
+and persistence; they do not by themselves provide the command opcode mapping,
+ACK/readback behavior, or an authorization list for B4S.
+
+The archive also has `assets/command/query.json`, with per-row `function`,
+`command`, `mustDevice`, and `supportDevice` fields. No source consumer for this
+file was found by filename in the targeted JADX output. Its contents and exact
+runtime owner remain unresolved; do not use it as a protocol or capability
+source without locating that consumer.
+
 ## B4S implications
 
 - Keep EQ wire IDs, display curves, image URLs, and device capabilities as
@@ -55,9 +73,10 @@ capabilities without tracing the request and command consumer.
 
 Source pointers in the local extraction are `ControlApi`,
 `EarEqDefaultRegulationActivityNewUi`, `GestureDataViewModel`,
-`EarphoneSettingFragment`, `QuickGuideActivityV2`, `EarCleanViewModel`,
-`SleepHelperViewModel`, and `HomeFragment`. JADX output can be incomplete; the
-consumer list is a targeted trace, not an exhaustive APK inventory. Dynamic
-dictionary request names, remaining `getModelParams` fields, model/firmware
-guards, and any failed methods on these exact call paths still need tracing.
-No feature permission or model profile was changed from this source review.
+`EarphoneSettingFragment`, `HeadGestureFunctionChooseViewModel`,
+`QuickGuideActivityV2`, `EarCleanViewModel`, `SleepHelperViewModel`, and
+`HomeFragment`. JADX output can be incomplete; the consumer list is a targeted
+trace, not an exhaustive APK inventory. Dynamic dictionary request names,
+remaining `getModelParams` fields, model/firmware guards, and any failed methods
+on these exact call paths still need tracing. No feature permission or model
+profile was changed from this source review.
