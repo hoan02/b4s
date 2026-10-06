@@ -477,3 +477,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Moved transparency/adaptive/environment/level preferences and ANC/transparency command handlers from `App.tsx` into `features/listening/controller.ts`. The app shell now supplies current mode/profile and presentation callbacks; the controller owns feature intent and command error handling.
 - Behavior and existing capability inputs are preserved. `npx tsc --noEmit` and `git diff --check` passed; no test suite was run locally. P5.1 remains open for the remaining feature controllers and session/accessibility acceptance.
+
+## Increment 61 — remove obsolete sibling-device advice
+
+- Updated the handshake failure guidance in English, Vietnamese, Simplified Chinese, Spanish and Brazilian Portuguese. It no longer recommends trying a same-name scan entry, which contradicted exact-entry selection.
+- `npm run check:i18n` passed with all four non-English locales at 244/244 translations; `git diff --check` passed. No broader local build was run.
