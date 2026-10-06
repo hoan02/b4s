@@ -1,5 +1,16 @@
 use super::*;
 
+fn insert_scan_device(devices: &mut HashMap<String, BleDevice>, device: BleDevice) -> bool {
+    if devices
+        .get(&device.id)
+        .is_some_and(|existing| device.rssi < existing.rssi)
+    {
+        return false;
+    }
+    devices.insert(device.id.clone(), device);
+    true
+}
+
 pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     init_adapter().await?;
     let adapter_state = {
@@ -137,37 +148,74 @@ pub(super) async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, 
         if !state.scanning || state.scan_generation != scan_generation {
             return;
         }
-        // Prefer stronger RSSI if same Windows id already seen
-        if let Some(old) = state.devices.get(&id_str) {
-            if rssi < old.rssi {
-                // keep stronger
-                return;
-            }
-        }
-        // Same MAC already listed under another id → keep stronger, drop weaker
-        let addr_key = normalize_addr(&address);
-        if !addr_key.is_empty() && addr_key != "00:00:00:00:00:00" {
-            let mut drop_ids = Vec::new();
-            for (oid, od) in state.devices.iter() {
-                if oid != &id_str && normalize_addr(&od.address) == addr_key {
-                    if rssi >= od.rssi {
-                        drop_ids.push(oid.clone());
-                    } else {
-                        return; // existing is stronger
-                    }
-                }
-            }
-            for oid in drop_ids {
-                state.devices.remove(&oid);
-                state.peripherals.remove(&oid);
-            }
+        if !insert_scan_device(&mut state.devices, device) {
+            return;
         }
 
-        // Distinct OS entries stay independent so connection always follows the user's selection.
-        state.devices.insert(id_str.clone(), device.clone());
         state.peripherals.insert(id_str, peripheral);
     }
     emit_scan_status(app).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::device::{DeviceIdentity, DeviceRegistry};
+
+    fn device(id: &str, address: &str, rssi: i16) -> BleDevice {
+        let profile = DeviceRegistry::resolve(DeviceIdentity {
+            address: address.into(),
+            name: "Baseus Bass BP1 Pro".into(),
+            advertised_service: None,
+            manufacturer_data: Vec::new(),
+        })
+        .profile;
+        BleDevice {
+            id: id.into(),
+            name: "Baseus Bass BP1 Pro".into(),
+            address: address.into(),
+            rssi,
+            is_baseus: true,
+            connected: false,
+            headphone_candidate: true,
+            model_id: Some("bass-bp1-pro".into()),
+            model_name: Some("Baseus Bass BP1 Pro".into()),
+            device_profile: profile,
+            support: Some("experimental".into()),
+            hint: None,
+            image_url: None,
+            image_provenance: "fallback".into(),
+            color_variants: Vec::new(),
+            serial: None,
+            advertised_services: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn same_address_os_entries_remain_selectable_and_rssi_is_per_entry() {
+        let mut devices = HashMap::new();
+        assert!(insert_scan_device(
+            &mut devices,
+            device("audio-entry", "AA:BB:CC:DD:EE:FF", -45)
+        ));
+        assert!(insert_scan_device(
+            &mut devices,
+            device("control-entry", "AA:BB:CC:DD:EE:FF", -72)
+        ));
+        assert_eq!(devices.len(), 2);
+        assert_eq!(devices["audio-entry"].rssi, -45);
+        assert_eq!(devices["control-entry"].rssi, -72);
+        assert!(!insert_scan_device(
+            &mut devices,
+            device("control-entry", "AA:BB:CC:DD:EE:FF", -80)
+        ));
+        assert!(insert_scan_device(
+            &mut devices,
+            device("control-entry", "AA:BB:CC:DD:EE:FF", -60)
+        ));
+        assert_eq!(devices.len(), 2);
+        assert_eq!(devices["control-entry"].rssi, -60);
+    }
 }
 
 pub async fn stop_scan(app: AppHandle) -> Result<(), String> {

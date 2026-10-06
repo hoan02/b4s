@@ -45,7 +45,8 @@ Transport is model-profile driven. The connection path uses the selected OS
 device entry, declared service/write/notify UUIDs, handshake and notification
 framing. It does not probe generic characteristics, switch to a same-name
 sibling, re-key a missing OS entry by address, or fall back to a different
-frame format. If Windows reports a new entry ID, the user scans and selects
+frame format. Scan retains distinct OS entry IDs even when they share a
+Bluetooth address. If Windows reports a new entry ID, the user scans and selects
 that entry explicitly. BLE discovery, connection, command handling and GATT
 I/O are separate modules; shared mutable state is owned by `ble/runtime.rs`.
 

@@ -91,7 +91,6 @@ const App: Component = () => {
       setHearingProtect(null);
       setHearingThreshold(null);
       setSpatialOn(null);
-      equalizer.reset();
       setAncModeUi("off");
       setGameOn(null);
       setLdac(null);

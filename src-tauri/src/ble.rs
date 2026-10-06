@@ -225,10 +225,6 @@ fn compute_link_level(h: &LinkHealth) -> (LinkLevel, String) {
     )
 }
 
-fn normalize_addr(a: &str) -> String {
-    a.to_uppercase().replace('-', ":")
-}
-
 fn model_fields(name: &str) -> (bool, Option<String>, Option<String>, Option<String>) {
     let resolved = DeviceRegistry::resolve(DeviceIdentity {
         address: String::new(),
