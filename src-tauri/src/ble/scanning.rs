@@ -1,8 +1,6 @@
 use super::*;
 use crate::device::{DeviceIdentity, DeviceRegistry};
 
-static SCAN_OPERATION: Mutex<()> = Mutex::const_new(());
-
 fn insert_scan_device(devices: &mut HashMap<String, BleDevice>, device: BleDevice) -> bool {
     if devices
         .get(&device.id)
@@ -19,16 +17,15 @@ fn scan_generation_is_current(scanning: bool, current: u64, event: u64) -> bool 
 }
 
 pub async fn start_scan(app: AppHandle) -> Result<(), String> {
-    let _scan_operation = SCAN_OPERATION.lock().await;
+    let _scan_operation = super::adapter::SCAN_OPERATION.lock().await;
     init_adapter().await?;
-    let adapter_state = {
-        let state = BLE.lock().await;
-        state.adapter.clone()
-    }
-    .ok_or_else(|| "No Bluetooth adapter found".to_string())?
-    .adapter_state()
-    .await
-    .map_err(|e| format!("Bluetooth state: {e}"))?;
+    let adapter = super::adapter::current()
+        .await
+        .ok_or_else(|| "No Bluetooth adapter found".to_string())?;
+    let adapter_state = adapter
+        .adapter_state()
+        .await
+        .map_err(|e| format!("Bluetooth state: {e}"))?;
     if adapter_state == CentralState::PoweredOff {
         return Err("Bluetooth đang tắt trên thiết bị này".into());
     }
@@ -36,11 +33,6 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
     if state.scanning {
         return Ok(());
     }
-    let adapter = state
-        .adapter
-        .as_ref()
-        .ok_or("Adapter not initialized")?
-        .clone();
     let connected = state.connected_id.clone();
     state.devices.retain(|id, _| Some(id.clone()) == connected);
     state
@@ -252,14 +244,15 @@ pub async fn stop_scan(app: AppHandle) -> Result<(), String> {
 
 // A previous scan's deadline must not stop a later manual or automatic scan.
 async fn stop_scan_session(app: AppHandle, generation: Option<u64>) -> Result<(), String> {
-    let _scan_operation = SCAN_OPERATION.lock().await;
-    let (adapter, scan_generation) = {
+    let _scan_operation = super::adapter::SCAN_OPERATION.lock().await;
+    let scan_generation = {
         let state = BLE.lock().await;
         if !state.scanning || generation.is_some_and(|value| value != state.scan_generation) {
             return Ok(());
         }
-        (state.adapter.clone(), state.scan_generation)
+        state.scan_generation
     };
+    let adapter = super::adapter::current().await;
 
     match adapter {
         Some(adapter) => adapter

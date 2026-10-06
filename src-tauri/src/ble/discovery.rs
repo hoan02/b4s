@@ -2,8 +2,6 @@
 
 use super::*;
 
-static CENTRAL_LISTENER_OPERATION: Mutex<()> = Mutex::const_new(());
-
 fn event_is_current_connection(
     current_session: crate::device::session::SessionToken,
     event_session: crate::device::session::SessionToken,
@@ -17,40 +15,26 @@ pub(super) async fn ensure_central_listener(
     app: AppHandle,
     adapter: Adapter,
 ) -> Result<(), String> {
-    let _operation = CENTRAL_LISTENER_OPERATION.lock().await;
-    {
-        let state = BLE.lock().await;
-        if state
-            .central_task
-            .as_ref()
-            .is_some_and(|task| !task.is_finished())
-        {
-            return Ok(());
-        }
+    let _operation = super::adapter::CENTRAL_LISTENER_OPERATION.lock().await;
+    if super::adapter::has_central_listener().await {
+        return Ok(());
     }
     // Subscribe before starting scan, so initial discovery events are not lost.
     let events = adapter
         .events()
         .await
         .map_err(|error| format!("events: {error}"))?;
-    let mut state = BLE.lock().await;
-    if state
-        .central_task
-        .as_ref()
-        .is_some_and(|task| !task.is_finished())
-    {
-        return Ok(());
-    }
-    state.central_task = Some(tokio::spawn(async move {
+    let task = tokio::spawn(async move {
         listen_central_events(app, adapter, events).await;
-    }));
+    });
+    super::adapter::install_central_listener(task).await;
     Ok(())
 }
 
 /// Stop and join the app-scoped adapter event listener during bounded Quit cleanup.
 pub(super) async fn stop_central_listener() {
-    let _operation = CENTRAL_LISTENER_OPERATION.lock().await;
-    let task = BLE.lock().await.central_task.take();
+    let _operation = super::adapter::CENTRAL_LISTENER_OPERATION.lock().await;
+    let task = super::adapter::take_central_listener().await;
     if let Some(task) = task {
         task.abort();
         let _ = task.await;

@@ -2,17 +2,15 @@ use super::*;
 
 async fn resolve_peripheral(device_id: &str) -> Result<Peripheral, String> {
     init_adapter().await?;
-    let adapter = {
+    {
         let state = BLE.lock().await;
         if let Some(p) = state.peripherals.get(device_id) {
             return Ok(p.clone());
         }
-        state
-            .adapter
-            .as_ref()
-            .ok_or("Adapter not initialized")?
-            .clone()
     };
+    let adapter = super::adapter::current()
+        .await
+        .ok_or("Adapter not initialized")?;
 
     let peris = adapter
         .peripherals()

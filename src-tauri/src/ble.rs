@@ -1,5 +1,6 @@
 //! Bluetooth LE manager for multi-model earbuds (B4S).
 
+mod adapter;
 pub mod commands;
 pub mod connection;
 mod contracts;
@@ -42,8 +43,6 @@ static OBSERVATIONS: Lazy<
 > = Lazy::new(|| tokio::sync::broadcast::channel(64).0);
 
 static CONNECT_ATTEMPT: Mutex<()> = Mutex::const_new(());
-static ADAPTER_INIT: Mutex<()> = Mutex::const_new(());
-
 static APP: OnceCell<AppHandle> = OnceCell::new();
 
 pub fn set_app_handle(app: AppHandle) {
@@ -117,26 +116,7 @@ fn id_to_string(id: &PeripheralId) -> String {
 // ---------------------------------------------------------------------------
 
 pub async fn init_adapter() -> Result<(), String> {
-    let _initialization = ADAPTER_INIT.lock().await;
-    if BLE.lock().await.adapter.is_some() {
-        return Ok(());
-    }
-    let manager = Manager::new()
-        .await
-        .map_err(|e| format!("BLE manager: {e}"))?;
-    let adapters = manager
-        .adapters()
-        .await
-        .map_err(|e| format!("List adapters: {e}"))?;
-    let adapter = adapters
-        .into_iter()
-        .next()
-        .ok_or_else(|| "No Bluetooth adapter found".to_string())?;
-    let mut state = BLE.lock().await;
-    if state.adapter.is_none() {
-        state.adapter = Some(adapter);
-        log::info!("BLE adapter ready");
-    }
+    adapter::initialize().await?;
     Ok(())
 }
 
@@ -145,11 +125,10 @@ pub async fn is_adapter_available() -> bool {
     if init_adapter().await.is_err() {
         return false;
     }
-    let state = BLE.lock().await;
-    let Some(adapter) = state.adapter.clone() else {
+    let Some(adapter) = adapter::current().await else {
         return false;
     };
-    drop(state);
+    let _scan_operation = adapter::SCAN_OPERATION.lock().await;
     // Read the platform radio state. An adapter can exist while Bluetooth is
     // powered off, so probing scan alone is not a reliable power-state check.
     match adapter.adapter_state().await {

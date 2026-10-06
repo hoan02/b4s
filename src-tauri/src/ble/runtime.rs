@@ -66,8 +66,6 @@ impl SessionRuntime {
 }
 
 pub(super) struct BleInner {
-    pub(super) adapter: Option<Adapter>,
-    pub(super) central_task: Option<tokio::task::JoinHandle<()>>,
     pub(super) peripherals: HashMap<String, Peripheral>,
     pub(super) connected_id: Option<String>,
     pub(super) scanning: bool,
@@ -96,8 +94,6 @@ pub(super) struct BleInner {
 impl BleInner {
     pub(super) fn new() -> Self {
         Self {
-            adapter: None,
-            central_task: None,
             peripherals: HashMap::new(),
             connected_id: None,
             scanning: false,
