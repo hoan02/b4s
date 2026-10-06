@@ -10,6 +10,24 @@ export type NoiseEnvironment = 101 | 102 | 103 | 108;
 export type SpatialMode = "off" | "music" | "cinema" | "game";
 export type EqPresetId = string;
 
+type DeviceCommand =
+  | { kind: "setListeningState"; mode: AncMode; transparencyMode: TransparencyMode; adaptive: boolean; environment: NoiseEnvironment; level: number }
+  | { kind: "setEqPreset"; preset: EqPresetId }
+  | { kind: "setEqIndex"; index: number }
+  | { kind: "setCustomEq"; bands: EqBandPayload[]; dictSort: number; anc: boolean }
+  | { kind: "setGameMode"; enabled: boolean }
+  | { kind: "setSpatialMode"; mode: SpatialMode }
+  | { kind: "setBassBoost"; level: number }
+  | { kind: "setLdac"; enabled: boolean }
+  | { kind: "setHearingProtection"; enabled: boolean; level: number }
+  | { kind: "findBuds"; start: boolean };
+
+async function applyDeviceCommand(command: DeviceCommand): Promise<void> {
+  await invoke("apply_device_command", {
+    request: { contractVersion: 1, command },
+  });
+}
+
 export async function queryBattery(): Promise<void> {
   await invoke("query_battery");
 }
@@ -23,7 +41,7 @@ export interface ListeningStateRequest {
 }
 
 export async function setListeningState(state: ListeningStateRequest): Promise<void> {
-  await invoke("set_listening_state", state as unknown as Record<string, unknown>);
+  await applyDeviceCommand({ kind: "setListeningState", ...state });
 }
 
 export interface NoiseProfile {
@@ -43,11 +61,11 @@ export function profileNoise(profile?: {
 }
 
 export async function setEqPreset(preset: EqPresetId | string): Promise<void> {
-  await invoke("set_eq_preset", { preset });
+  await applyDeviceCommand({ kind: "setEqPreset", preset });
 }
 
 export async function setEqIndex(index: number): Promise<void> {
-  await invoke("set_eq_index", { index });
+  await applyDeviceCommand({ kind: "setEqIndex", index });
 }
 
 export interface EqBandPayload {
@@ -62,32 +80,32 @@ export async function setCustomEq(
   dictSort: number,
   anc: boolean
 ): Promise<void> {
-  await invoke("set_custom_eq", { bands, dictSort, anc });
+  await applyDeviceCommand({ kind: "setCustomEq", bands, dictSort, anc });
 }
 
 export async function setGameMode(enabled: boolean): Promise<void> {
-  await invoke("set_game_mode", { enabled });
+  await applyDeviceCommand({ kind: "setGameMode", enabled });
 }
 
 export async function setSpatialMode(mode: SpatialMode): Promise<void> {
-  await invoke("set_spatial_mode", { mode });
+  await applyDeviceCommand({ kind: "setSpatialMode", mode });
 }
 
 export async function setBassBoost(level: number): Promise<void> {
-  await invoke("set_bass_boost", { level });
+  await applyDeviceCommand({ kind: "setBassBoost", level });
 }
 
 export async function setLdac(enabled: boolean): Promise<void> {
-  await invoke("set_ldac", { enabled });
+  await applyDeviceCommand({ kind: "setLdac", enabled });
 }
 
 export async function setHearingProtection(
   enabled: boolean,
   level: number
 ): Promise<void> {
-  await invoke("set_hearing_protection", { enabled, level });
+  await applyDeviceCommand({ kind: "setHearingProtection", enabled, level });
 }
 
 export async function findBuds(start = true): Promise<void> {
-  await invoke("find_buds", { start });
+  await applyDeviceCommand({ kind: "findBuds", start });
 }
