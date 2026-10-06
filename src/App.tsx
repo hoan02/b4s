@@ -76,7 +76,6 @@ const App: Component = () => {
     case: null,
   });
   const [ancMode, setAncModeUi] = createSignal<AncMode>("off");
-  const [ancStrength, setAncStrength] = createSignal(70);
   const [transparencyMode, setTransparencyMode] = createSignal<TransparencyMode>("full");
   const [adaptiveNoise, setAdaptiveNoise] = createSignal(true);
   const [noiseEnvironment, setNoiseEnvironment] = createSignal<NoiseEnvironment>(102);
@@ -332,21 +331,6 @@ const App: Component = () => {
     } catch (e) {
       setControlError(formatError(e));
       notify(formatError(e), "error", t("toast.error"));
-    }
-  };
-
-  const handleAncStrength = async (value: number) => {
-    setAncStrength(value);
-    try {
-      await setListeningState({
-        mode: ancMode(),
-        transparencyMode: transparencyMode(),
-        adaptive: adaptiveNoise(),
-        environment: noiseEnvironment(),
-        level: noiseLevel(),
-      });
-    } catch (e) {
-      setControlError(formatError(e));
     }
   };
 
@@ -683,7 +667,6 @@ const App: Component = () => {
                 battery={battery()}
                 link={link()}
                 ancMode={ancMode()}
-                ancStrength={ancStrength()}
                 transparencyMode={transparencyMode()}
                 adaptiveNoise={adaptiveNoise()}
                 noiseEnvironment={noiseEnvironment()}
@@ -711,7 +694,6 @@ const App: Component = () => {
                     : modelEq()?.presets.find((preset) => preset.id === eqActive())?.label ?? "—"
                 }
                 onAncMode={handleAncMode}
-                onAncStrength={handleAncStrength}
                 onTransparencyMode={handleTransparencyMode}
                 onAdaptiveNoise={handleAdaptiveNoise}
                 onNoiseEnvironment={handleNoiseEnvironment}
@@ -752,25 +734,6 @@ const App: Component = () => {
           confirmLabel={findDialogMode() === "active" ? t("dialog.stopFinding") : t("dialog.ready")}
           onCancel={() => setFindConfirmOpen(false)}
           onConfirm={() => (findDialogMode() === "active" ? stopFindBuds() : startFindBuds())}
-        />
-      </Show>
-      <Show when={false}>
-        <ConfirmDialog
-          title={t("dialog.loudSoundTitle")}
-          message={t("dialog.loudSoundMessage")}
-          confirmLabel={t("dialog.ready")}
-          onCancel={() => setFindConfirmOpen(false)}
-          onConfirm={startFindBuds}
-        />
-      </Show>
-      <Show when={false}>
-        <ConfirmDialog
-          title={t("dialog.findingTitle")}
-          message={t("dialog.findingMessage")}
-          cancelLabel={t("dialog.continue")}
-          confirmLabel={t("dialog.stopFinding")}
-          onCancel={() => undefined}
-          onConfirm={handleFindBuds}
         />
       </Show>
     </div>

@@ -32,7 +32,6 @@ interface Props {
   battery: BatteryData;
   link: LinkHealth;
   ancMode: AncMode;
-  ancStrength: number;
   transparencyMode: TransparencyMode;
   adaptiveNoise: boolean;
   noiseEnvironment: NoiseEnvironment;
@@ -56,7 +55,6 @@ interface Props {
   spatialMode: SpatialMode;
   eqLabel: string;
   onAncMode: (m: AncMode) => void;
-  onAncStrength: (v: number) => void;
   onTransparencyMode: (m: TransparencyMode) => void;
   onAdaptiveNoise: (on: boolean) => void;
   onNoiseEnvironment: (v: NoiseEnvironment) => void;
@@ -202,14 +200,6 @@ const HomePanel: Component<Props> = (props) => {
           </div>
         </Show>
         <Show when={props.ancMode === "anc"}>
-          <Show when={props.adaptiveNoise}>
-          <div class="noise-environments noise-environments-new">
-            <button type="button" class={props.noiseEnvironment === 102 ? "active" : ""} onClick={() => props.onNoiseEnvironment(102)}><IconOffice size={28} /><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></button>
-            <button type="button" class={props.noiseEnvironment === 103 ? "active" : ""} onClick={() => props.onNoiseEnvironment(103)}><IconOutdoor size={28} /><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></button>
-            <button type="button" class={props.noiseEnvironment === 101 ? "active" : ""} onClick={() => props.onNoiseEnvironment(101)}><IconTransit size={28} /><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></button>
-            <button type="button" class={props.noiseEnvironment === 108 ? "active" : ""} onClick={() => props.onNoiseEnvironment(108)}><IconFlight size={28} /><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></button>
-          </div>
-          </Show>
           <div class="noise-options noise-reduction-panel">
             <Show when={props.adaptiveNoise}>
               <AdaptiveEnvironmentCards selected={props.noiseEnvironment} onSelect={props.onNoiseEnvironment} />
@@ -218,26 +208,6 @@ const HomePanel: Component<Props> = (props) => {
             <Show when={props.adaptiveNoise} fallback={<div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel}/{props.noiseMaxLevel}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>}>
               <div class="noise-environments">{[[102, t("home.indoor"), t("home.homeOffice")], [103, t("home.outdoor"), t("home.streetPark")], [101, t("home.commuting"), t("home.subwayBus")], [108, t("home.inTransit"), t("home.planeTrain")]].map(([id, title, detail]) => <button type="button" class={props.noiseEnvironment === id ? "active" : ""} onClick={() => props.onNoiseEnvironment(id as NoiseEnvironment)}><span>{title}</span><small>{detail}</small></button>)}</div>
             </Show>
-          </div>
-        </Show>
-        <Show when={false}>
-          <div class="home-anc-level">
-            <div class="row">
-              <span>{t("home.level")}</span>
-              <strong>{props.ancStrength}%</strong>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={props.ancStrength}
-              onInput={(e) =>
-                props.onAncStrength(
-                  Number((e.currentTarget as HTMLInputElement).value)
-                )
-              }
-            />
           </div>
         </Show>
       </div>

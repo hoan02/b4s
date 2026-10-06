@@ -61,7 +61,7 @@ pub fn is_headphone_candidate(name: &str) -> bool {
         .map_or(true, |model| !model.is_speaker_only())
 }
 
-/// Prefix differences in the app registry are not different product identities.
+/// A display prefix alone does not create a different catalog identity.
 pub fn identity_key(name: &str) -> String {
     let lower = name.trim().to_lowercase();
     lower.strip_prefix("baseus ").unwrap_or(&lower).to_owned()

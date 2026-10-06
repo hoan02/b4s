@@ -35,7 +35,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — feature observations use a typed snapshot; scan/connection/link DTOs now carry contract version 1 and link levels are closed enums; remaining Tauri command types and lifecycle envelopes still need consolidation |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store and runtime subscriptions now have a dedicated async owner with unmount cleanup; feature controller extraction remains outstanding |
-| P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; device inventory/visual acceptance outstanding |
+| P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
 | P6.1 | ANC/transparency/game, constraints/readback | Open |
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
@@ -447,3 +447,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - The BP1 decoder now accepts hearing state only on source-traced AA93. AA94 remains an ACK/error opcode and can no longer update the confirmed snapshot even if it carries two payload bytes. Added regression assertions for short and state-shaped AA94 responses.
 - Replaced stale protocol references that claimed BP1 Ultra was a verified target, called the BP1 Pro profile “legacy compatibility,” retained a model registry, or retried an alternate handshake. The strict profile/evidence boundary is now explicit.
 - `cargo test --manifest-path src-tauri/Cargo.toml --lib` is left to PR CI per current guidance; no hardware behavior is claimed.
+
+
+## Increment 56 — remove unreachable listening UI paths
+
+- Removed the hidden ANC strength slider/state and two permanently hidden find-bud dialogs. Removed duplicate adaptive-environment cards so each available environment appears once.
+- Updated the catalog identity comment to describe exact product normalization rather than a retired app registry. `npx tsc --noEmit` and `git diff --check` passed; visual/hardware acceptance remains open under P5.2/P8.1.
