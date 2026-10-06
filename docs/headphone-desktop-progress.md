@@ -27,7 +27,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
 | P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan and connection preserve/select exact OS entry IDs even when entries share an address; demo-only scan/connect logic now lives in `ble/mock.rs`; actor lifecycle, injected transport interface, and event ownership remain open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
-| P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards, connect-attempt cancellation lease, session/entry-guarded OS disconnect events, and an owned/aborted notification task on session reset integrated; session actor and full event-lifecycle ownership outstanding |
+| P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards, connect-attempt cancellation lease, session/entry-guarded OS disconnect events, and an owned/aborted notification task on session reset integrated; CI regression covers reset abort; session actor and full event-lifecycle ownership outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
@@ -642,3 +642,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Runtime now retains the active GATT notification task. Session reset invalidates its lease and aborts the retained task; registration rechecks the token and aborts immediately if reset won the race.
 - The adapter central-event task, per-session actor, task join/cleanup ordering and fake-transport lifecycle coverage remain open. Rust formatting and whitespace checks passed; CI will validate the code.
+
+## Increment 94 — cover notification-task reset
+
+- Added a Tokio regression that gives `BleInner` a pending owned notification task, resets the session, and asserts its abort handle has finished. This covers the lifecycle edge introduced in increment 93.
+- No local Rust suite was run; selected-file formatting and whitespace checks are local, and CI covers the test. P3.3 remains open for actor ownership, central events, and ordered cleanup/join.

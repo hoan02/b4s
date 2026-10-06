@@ -98,5 +98,23 @@ impl BleInner {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::BleInner;
+
+    #[tokio::test]
+    async fn resetting_session_aborts_its_owned_notification_task() {
+        let mut state = BleInner::new();
+        let task = tokio::spawn(std::future::pending::<()>());
+        let abort_handle = task.abort_handle();
+        state.notification_task = Some(task);
+
+        state.reset_link();
+        tokio::task::yield_now().await;
+
+        assert!(abort_handle.is_finished());
+    }
+}
+
 pub(super) static BLE: Lazy<Arc<Mutex<BleInner>>> =
     Lazy::new(|| Arc::new(Mutex::new(BleInner::new())));

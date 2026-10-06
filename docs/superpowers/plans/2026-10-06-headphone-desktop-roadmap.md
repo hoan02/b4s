@@ -400,7 +400,7 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P2.3 | Replay harness và scripted fake transport | Offline test harness | P2.1 | Mô phỏng split/batched packet, timeout, late ACK, disconnect |
 | P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | Transport interface + BLE adapter | P2.3 | In progress: demo behavior is isolated in `src-tauri/src/ble/mock.rs`; scan/connect still share the global runtime and need a session owner plus injected transport. |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | Frame codecs | P1.3, P2.3 | Captured/replay vectors đúng; malformed/CRC sai không đổi state |
-| P3.3 | Session lifecycle/generation/cancel/reconnect | Session actor/state machine | P3.1 | In progress: the per-device notification task is retained and aborted on session reset with token validation at registration; actor/event lifecycle and join ordering remain to complete. |
+| P3.3 | Session lifecycle/generation/cancel/reconnect | Session actor/state machine | P3.1 | In progress: the per-device notification task is retained and aborted on session reset with token validation at registration; a Tokio regression covers reset abort; actor/event lifecycle and join ordering remain to complete. |
 | P3.4 | Queue/correlation/deadline/readback | Command executor | P3.2/P3.3 | Write success không bị báo là device-confirmed |
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | ADR + nhỏ gọn prototype | P0.2/P1.3/U01 | Xác minh API Windows, RFCOMM/channel/pairing thật; BLE/SPP cùng profile có quy tắc explicit |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | Typed profiles + migration | P1.3/P1.4 | Không substring framing; firmware/UUID có provenance |
