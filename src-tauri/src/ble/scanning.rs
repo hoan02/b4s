@@ -253,23 +253,29 @@ pub async fn stop_scan(app: AppHandle) -> Result<(), String> {
 // A previous scan's deadline must not stop a later manual or automatic scan.
 async fn stop_scan_session(app: AppHandle, generation: Option<u64>) -> Result<(), String> {
     let _scan_operation = SCAN_OPERATION.lock().await;
-    let adapter = {
-        let mut state = BLE.lock().await;
+    let (adapter, scan_generation) = {
+        let state = BLE.lock().await;
         if !state.scanning || generation.is_some_and(|value| value != state.scan_generation) {
+            return Ok(());
+        }
+        (state.adapter.clone(), state.scan_generation)
+    };
+
+    match adapter {
+        Some(adapter) => adapter
+            .stop_scan()
+            .await
+            .map_err(|error| format!("stop_scan: {error}"))?,
+        None => {}
+    }
+    {
+        let mut state = BLE.lock().await;
+        if !scan_generation_is_current(state.scanning, state.scan_generation, scan_generation) {
             return Ok(());
         }
         state.scanning = false;
         state.scan_revision = state.scan_revision.saturating_add(1);
-        state.adapter.clone()
-    };
-
-    let stop_result = match adapter {
-        Some(adapter) => adapter
-            .stop_scan()
-            .await
-            .map_err(|error| format!("stop_scan: {error}")),
-        None => Ok(()),
-    };
+    }
     emit_scan_status(&app).await;
-    stop_result
+    Ok(())
 }

@@ -45,6 +45,7 @@ static COMMAND_EXECUTOR: Lazy<crate::device::executor::CommandExecutor> =
     Lazy::new(Default::default);
 
 static CONNECT_ATTEMPT: Mutex<()> = Mutex::const_new(());
+static ADAPTER_INIT: Mutex<()> = Mutex::const_new(());
 
 static APP: OnceCell<AppHandle> = OnceCell::new();
 
@@ -119,8 +120,8 @@ fn id_to_string(id: &PeripheralId) -> String {
 // ---------------------------------------------------------------------------
 
 pub async fn init_adapter() -> Result<(), String> {
-    let mut state = BLE.lock().await;
-    if state.adapter.is_some() {
+    let _initialization = ADAPTER_INIT.lock().await;
+    if BLE.lock().await.adapter.is_some() {
         return Ok(());
     }
     let manager = Manager::new()
@@ -134,8 +135,11 @@ pub async fn init_adapter() -> Result<(), String> {
         .into_iter()
         .next()
         .ok_or_else(|| "No Bluetooth adapter found".to_string())?;
-    log::info!("BLE adapter ready");
-    state.adapter = Some(adapter);
+    let mut state = BLE.lock().await;
+    if state.adapter.is_none() {
+        state.adapter = Some(adapter);
+        log::info!("BLE adapter ready");
+    }
     Ok(())
 }
 
