@@ -482,3 +482,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Updated the handshake failure guidance in English, Vietnamese, Simplified Chinese, Spanish and Brazilian Portuguese. It no longer recommends trying a same-name scan entry, which contradicted exact-entry selection.
 - `npm run check:i18n` passed with all four non-English locales at 244/244 translations; `git diff --check` passed. No broader local build was run.
+
+## Increment 62 — validate runtime payload shapes
+
+- Scan, connection and link adapters now validate required field types and closed link levels after checking contract version 1. The device snapshot bridge validates required fields, nullable observations, and protocol enums before exposing payloads to Solid state.
+- `npx tsc --noEmit` and `git diff --check` passed. No test suite or full local build was run; CI remains the cross-platform verification gate. P4.3 remains open for backend session/sequence envelopes and structured error semantics.

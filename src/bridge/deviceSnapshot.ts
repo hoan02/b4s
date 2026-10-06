@@ -28,15 +28,50 @@ export interface DeviceSnapshot {
   hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNullable(value: unknown, guard: (item: unknown) => boolean): boolean {
+  return value === null || guard(value);
+}
+
+function isBatteryReading(value: unknown): boolean {
+  return isRecord(value) && typeof value.percentage === "number" &&
+    typeof value.charging === "boolean" && typeof value.observedAtMs === "number";
+}
+
+function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
+  if (!isRecord(value) || value.schemaVersion !== 1 ||
+    !Number.isSafeInteger(value.sessionId) || !Number.isSafeInteger(value.revision) ||
+    !isNullable(value.modelId, (item) => typeof item === "string") ||
+    !isNullable(value.deviceId, (item) => typeof item === "string") ||
+    typeof value.mock !== "boolean" || !isRecord(value.battery)) return false;
+
+  const battery = value.battery;
+  const hearing = value.hearing;
+  const validHearing = hearing === null || (isRecord(hearing) &&
+    typeof hearing.enabled === "boolean" && typeof hearing.level === "number" &&
+    typeof hearing.observedAtMs === "number");
+  return ["left", "right", "case"].every((key) =>
+    isNullable(battery[key], isBatteryReading)) &&
+    isNullable(value.anc, (item) => ["off", "anc", "transparency"].includes(item as string)) &&
+    isNullable(value.eq, (item) => [
+      "balanced", "bassBoost", "voice", "clear", "hifiLive", "pop", "jazzRock",
+      "classical", "acoustic", "bassReduce", "trebleReduce",
+    ].includes(item as string)) &&
+    isNullable(value.eqIndex, (item) => Number.isInteger(item)) &&
+    ["game", "ldac", "spatialEnabled"].every((key) =>
+      isNullable(value[key], (item) => typeof item === "boolean")) &&
+    isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing;
+}
+
 function decodeSnapshotV1(payload: unknown): DeviceSnapshot {
-  if (
-    payload === null ||
-    typeof payload !== "object" ||
-    (payload as { schemaVersion?: unknown }).schemaVersion !== 1
-  ) {
+  if (!isRecord(payload) || payload.schemaVersion !== 1) {
     throw new Error("Unsupported device snapshot schema version");
   }
-  return payload as DeviceSnapshot;
+  if (!isDeviceSnapshot(payload)) throw new Error("Invalid device snapshot payload");
+  return payload;
 }
 
 export async function getDeviceSnapshot(): Promise<DeviceSnapshot> {

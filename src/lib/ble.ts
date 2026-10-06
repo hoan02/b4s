@@ -163,25 +163,73 @@ export interface ScanStatus {
   error: string | null;
 }
 
-function decodeContractV1<T>(payload: unknown, contractName: string): T {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNullable(value: unknown, guard: (item: unknown) => boolean): boolean {
+  return value === null || guard(value);
+}
+
+function isLinkHealth(value: unknown): value is LinkHealth {
+  if (!isRecord(value)) return false;
+  return value.contractVersion === 1 &&
+    ["connected", "mock", "peripheralConnected", "hasWriteUuid", "hasNotifyUuid", "handshakeOk"]
+      .every((key) => typeof value[key] === "boolean") &&
+    ["notifyCount", "txCount"].every((key) => typeof value[key] === "number") &&
+    ["lastNotifyMs", "lastTxMs", "lastRxHex", "lastTxHex", "writeChar", "notifyChar"]
+      .every((key) => isNullable(value[key], (item) =>
+        typeof item === (key.endsWith("Ms") ? "number" : "string"))) &&
+    ["live", "waiting", "dead", "demo", "offline"].includes(value.level as string) &&
+    typeof value.message === "string";
+}
+
+function isBleDevice(value: unknown): value is BleDevice {
+  if (!isRecord(value)) return false;
+  return ["id", "name", "address"].every((key) => typeof value[key] === "string") &&
+    typeof value.rssi === "number" &&
+    typeof value.isBaseus === "boolean" &&
+    typeof value.connected === "boolean";
+}
+
+function isConnectionState(value: unknown): value is ConnectionState {
+  return isRecord(value) && value.contractVersion === 1 &&
+    typeof value.connected === "boolean" &&
+    isNullable(value.device, isBleDevice) &&
+    isNullable(value.error, (item) => typeof item === "string") &&
+    isLinkHealth(value.link);
+}
+
+function isScanStatus(value: unknown): value is ScanStatus {
+  return isRecord(value) && value.contractVersion === 1 &&
+    typeof value.scanning === "boolean" &&
+    Array.isArray(value.devices) && value.devices.every(isBleDevice) &&
+    isNullable(value.error, (item) => typeof item === "string");
+}
+
+function decodeContractV1<T>(
+  payload: unknown,
+  contractName: string,
+  guard: (value: unknown) => value is T
+): T {
   if (
-    payload === null ||
-    typeof payload !== "object" ||
-    (payload as { contractVersion?: unknown }).contractVersion !== 1
+    !isRecord(payload) || payload.contractVersion !== 1
   ) {
     throw new Error(`Unsupported ${contractName} contract version`);
   }
+  if (!guard(payload)) throw new Error(`Invalid ${contractName} payload`);
   return payload as T;
 }
 
 function listenContractV1<T>(
   eventName: string,
   contractName: string,
+  guard: (value: unknown) => value is T,
   cb: (payload: T) => void
 ): Promise<UnlistenFn> {
   return listen<unknown>(eventName, (event) => {
     try {
-      cb(decodeContractV1<T>(event.payload, contractName));
+      cb(decodeContractV1(event.payload, contractName, guard));
     } catch (error) {
       console.error(`[BLE] rejected ${contractName} event`, error);
     }
@@ -219,15 +267,15 @@ export async function disconnect(): Promise<void> {
 }
 
 export async function getScanStatus(): Promise<ScanStatus> {
-  return decodeContractV1<ScanStatus>(await invoke<unknown>("ble_get_scan_status"), "scan status");
+  return decodeContractV1(await invoke<unknown>("ble_get_scan_status"), "scan status", isScanStatus);
 }
 
 export async function getConnection(): Promise<ConnectionState> {
-  return decodeContractV1<ConnectionState>(await invoke<unknown>("ble_get_connection"), "connection state");
+  return decodeContractV1(await invoke<unknown>("ble_get_connection"), "connection state", isConnectionState);
 }
 
 export async function getLinkHealth(): Promise<LinkHealth> {
-  return decodeContractV1<LinkHealth>(await invoke<unknown>("ble_get_link_health"), "link health");
+  return decodeContractV1(await invoke<unknown>("ble_get_link_health"), "link health", isLinkHealth);
 }
 
 // ---------------------------------------------------------------------------
@@ -235,15 +283,15 @@ export async function getLinkHealth(): Promise<LinkHealth> {
 // ---------------------------------------------------------------------------
 
 export function onScanStatus(cb: (status: ScanStatus) => void): Promise<UnlistenFn> {
-  return listenContractV1("ble://scan-status", "scan status", cb);
+  return listenContractV1("ble://scan-status", "scan status", isScanStatus, cb);
 }
 
 export function onConnection(cb: (state: ConnectionState) => void): Promise<UnlistenFn> {
-  return listenContractV1("ble://connection", "connection state", cb);
+  return listenContractV1("ble://connection", "connection state", isConnectionState, cb);
 }
 
 export function onLinkHealth(cb: (link: LinkHealth) => void): Promise<UnlistenFn> {
-  return listenContractV1("ble://link", "link health", cb);
+  return listenContractV1("ble://link", "link health", isLinkHealth, cb);
 }
 
 
@@ -251,6 +299,8 @@ export function onConnecting(cb: (id: string) => void): Promise<UnlistenFn> {
   return listenContractV1<{ contractVersion: 1; deviceId: string }>(
     "ble://connecting",
     "connecting state",
+    (value): value is { contractVersion: 1; deviceId: string } =>
+      isRecord(value) && value.contractVersion === 1 && typeof value.deviceId === "string",
     (state) => cb(state.deviceId)
   );
 }
