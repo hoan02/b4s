@@ -18,7 +18,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P0.1 | Chụp baseline Git/build/test; ghi thay đổi đang có, không reset | Complete — clean base and original checks recorded |
 | P0.2 | Ghi firmware BP1 Ultra, Android/Windows version và Bluetooth adapter | External evidence required |
 | P0.3 | Ghi phạm vi product và policy đã được người dùng chốt | Complete — architecture/desktop-scope.md; updated direction supersedes legacy-facade policy |
-| P1.1 | Index entrypoints, model guards, SDK/native dependencies | In progress — transport dispatch indexed; gesture v1/v2 config loaders, model-scoped function lists, UI guards and per-device/model local persistence are now traced; feature/native inventory remains incomplete |
+| P1.1 | Index entrypoints, model guards, SDK/native dependencies | In progress — transport dispatch and gesture v1/v2 config loaders, model-scoped function lists, UI guards and per-device/model local persistence are traced; [BP1 Pro feature matrix](protocol/bp1-feature-evidence-matrix.md) now records source/replay status and hardware limits; broader feature/native inventory remains incomplete |
 | P1.2 | Triage JADX errors liên quan; extract resource/native inventory | In progress — current APK/split hashes, all 106 ARM64 native-library digests and 7,916 resource-entry paths/sizes/hashes inventoried locally; gesture assets and named consumers are classified; six explicit headphone-package JADX markers are isolated to AI/record/OTA paths; remaining resource content review and affected-method verification stay open |
 | P1.3 | Lần theo family/transport/framing/firmware rules | In progress — exact transport/framing guards indexed; firmware/callback tracing outstanding |
 | P1.4 | Trace server dictionary/model-param consumers | In progress — model parameter fields are mapped to EQ, gesture presentation, phone guides, cleaning and shared sleep UI; traced profile dictionary use is account presentation; dynamic headphone dictionary names and full field/guard coverage remain open ([consumer dossier](protocol/model-parameter-consumers.md)) |
@@ -47,7 +47,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
 | P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | In progress — tray lifecycle, bounded Quit cleanup, and opt-in startup/reconnect preferences; installer/signing and Windows acceptance remain external |
-| P8.3 | README/model matrix/diagnostics guide | In progress — generated matrix covers all current public candidates and speaker exclusions; per-feature hardware evidence and acceptance report remain open |
+| P8.3 | README/model matrix/diagnostics guide | In progress — generated matrix covers all current public candidates and speaker exclusions; BP1 Pro feature evidence/limit matrix is added; per-feature hardware evidence and acceptance report remain open |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | Open |
 
 ## Delivery sequence
@@ -622,3 +622,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Device-command failures now set `retryable: false` in the typed Tauri error envelope. A write may have reached the device even when its readback fails, so a blanket retry signal could duplicate a stateful action. Added a Rust serialization regression.
 - Queue/transport error categories remain broad under P4.3; the conservative retry flag does not replace the remaining BLE-internal typed error taxonomy.
+
+## Increment 90 — document BP1 Pro feature evidence boundaries
+
+- Added a source/replay/hardware distinction for ten BP1 Pro features, including ANC parameter readback, EQ wire index, game/bass confirmation, spatial mode limits and transport-only find-buds behavior. In-ear/gesture remain planned; LDAC is unresolved and hearing protection remains disabled pending profile evidence.
+- The table explicitly excludes scan-only BP1 Ultra from the control matrix and does not promote source-derived tests to hardware acceptance. Broader source/native inventory and hardware reports remain open under P1/P8.

@@ -391,7 +391,7 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P0.1 | Chụp baseline Git/build/test; ghi thay đổi đang có, không reset | Baseline report | Không | Repo hiện tại và 65+9 tests được bảo toàn hoặc giải thích thay đổi |
 | P0.2 | Ghi firmware BP1 Ultra, Android/Windows version và Bluetooth adapter | Hardware manifest local | BP1 Ultra + Android đã xác nhận | Không chọn nhầm transport/profile |
 | P0.3 | Ghi phạm vi product và policy đã được người dùng chốt | ADR scope | Đã chốt | Earbuds/over-ear/neckband/open-ear; exclude speaker; tray mặc định; startup/reconnect/experimental opt-in |
-| P1.1 | Index entrypoints, model guards, SDK/native dependencies | Earphone feature inventory | P0 | In progress: transport plus gesture config loaders/guards indexed; feature/native call graph is incomplete. Each screen/action still needs status and source pointer. |
+| P1.1 | Index entrypoints, model guards, SDK/native dependencies | Earphone feature inventory | P0 | In progress: transport plus gesture config loaders/guards indexed; [BP1 Pro feature matrix](../../protocol/bp1-feature-evidence-matrix.md) records current source/replay status and hardware limits. Broader feature/native call graph is incomplete; each screen/action still needs status and source pointer. |
 | P1.2 | Triage JADX errors liên quan; extract resource/native inventory | Extraction coverage report | P1.1 | In progress: local hashes cover 7,916 resource and 106 native APK entries; gesture config schemas have targeted consumer notes. Priority failed call paths still require DEX/second-engine validation and remaining resource contents need review. |
 | P1.3 | Lần theo family/transport/framing/firmware rules | Protocol-family matrix | P1.1 | Mỗi family candidate có evidence và unknowns |
 | P1.4 | Trace server dictionary/model-param consumers | Configuration contract notes ([current dossier](../../protocol/model-parameter-consumers.md)) | P1.1 | Partial: consumer fields are classified for EQ, gesture imagery, guides, cleaning and shared sleep UI; profile dictionary is traced to account/avatar presentation. Dynamic headphone dictionary names, full field/guard coverage and configuration contract remain open. |
@@ -420,7 +420,7 @@ giá trị/dependency/rủi ro đã biết và confirmation policy. Trường ch
 | P7.3 | Hardware validation cho family kế tiếp | Per-feature support report | Có thiết bị/capture | Discover/init/read/write/reconnect thật trên firmware ghi nhận |
 | P8.1 | Windows robustness và accessibility acceptance | Acceptance report | P5/P6 | Sleep/resume, BT off, app restart, OS scaling, cancellation qua |
 | P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | Windows release candidate | P8.1 | Close→tray, Open không duplicate session; Quit cleanup; startup/reconnect off mặc định; migration giữ opt-in |
-| P8.3 | README/model matrix/diagnostics guide | Release documentation | P8.1/P7 | Mỗi model/feature/platform có evidence/limitations rõ |
+| P8.3 | README/model matrix/diagnostics guide | Release documentation | P8.1/P7 | In progress: public candidate matrix and BP1 Pro feature evidence/limit matrix exist; each model/feature/platform still needs its acceptance evidence and limitations. |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | ADRs/backlog riêng | Offline release + scope review | Không chặn release offline; rollout riêng có hardware/recovery gates |
 
 Không đổi toàn bộ code trước khi có lát cắt kiểm chứng. Mỗi PR thay một ranh
