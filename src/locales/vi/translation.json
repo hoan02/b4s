@@ -169,7 +169,7 @@
   "dialog.ready": "Tôi đã sẵn sàng",
   "dialog.stopFinding": "Dừng tìm",
   "dialog.findingTitle": "Đang tìm tai nghe",
-  "dialog.findingMessage": "Tai nghe đang phát âm thanh tìm kiếm. Hãy để tai nghe ngoài tai và bấm Dừng tìm khi đã xác định được vị trí.",
+  "dialog.findingMessage": "Đã gửi yêu cầu phát âm báo tìm tai nghe. B4S chưa xác nhận thiết bị đã phát. Hãy để tai nghe ngoài tai; bấm Dừng tìm để gửi yêu cầu dừng.",
   "dialog.continue": "Tiếp tục",
   "toast.disconnected": "Đã ngắt kết nối",
   "toast.connected": "Đã kết nối {{name}}",
@@ -184,9 +184,9 @@
   "toast.resetEq": "Đã đặt lại EQ",
   "toast.gameOn": "Đã bật chế độ trò chơi",
   "toast.gameOff": "Đã tắt chế độ trò chơi",
-  "toast.finding": "Tai nghe đang phát âm thanh tìm kiếm",
+  "toast.finding": "Đã gửi yêu cầu tìm; chưa xác nhận tai nghe đã phát âm báo",
   "toast.findingTitle": "Đang tìm tai nghe",
-  "toast.findStopped": "Đã dừng âm thanh tìm tai nghe",
+  "toast.findStopped": "Đã gửi yêu cầu dừng; chưa xác nhận âm báo đã tắt",
   "toast.stopped": "Đã dừng",
   "toast.controlError": "Lỗi điều khiển",
   "theme.dark": "Giao diện tối",
@@ -205,5 +205,7 @@
   "device.applying": "Đang áp dụng…",
   "eq.storageError": "Không thể lưu thay đổi trên máy tính này.",
   "control.unknown": "Chưa nhận được trạng thái từ thiết bị",
-  "more.on": "Bật"
+  "more.on": "Bật",
+  "toast.findSimulated": "Chế độ demo đã mô phỏng yêu cầu tìm tai nghe",
+  "toast.findStopSimulated": "Chế độ demo đã mô phỏng yêu cầu dừng tìm"
 }

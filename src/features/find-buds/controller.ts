@@ -12,10 +12,14 @@ export function createFindBudsController(notify: Notify) {
 
   const start = async () => {
     try {
-      await findBuds(true);
+      const result = await findBuds(true);
       setActive(true);
       setDialogMode("active");
-      notify(t("toast.finding"), "info", t("toast.findingTitle"));
+      notify(
+        t(result.disposition === "simulated" ? "toast.findSimulated" : "toast.finding"),
+        "info",
+        t("toast.findingTitle")
+      );
     } catch (error) {
       notify(formatError(error), "error");
     }
@@ -23,11 +27,15 @@ export function createFindBudsController(notify: Notify) {
 
   const stop = async (errorTitle?: string) => {
     try {
-      await findBuds(false);
+      const result = await findBuds(false);
       setActive(false);
       setConfirmationOpen(false);
       setDialogMode("confirm");
-      notify(t("toast.findStopped"), "info", t("toast.stopped"));
+      notify(
+        t(result.disposition === "simulated" ? "toast.findStopSimulated" : "toast.findStopped"),
+        "info",
+        t("toast.stopped")
+      );
     } catch (error) {
       notify(formatError(error), "error", errorTitle);
     }

@@ -136,8 +136,8 @@
   "eqPreset.classic":"经典","eqPreset.bass":"强劲低音","eqPreset.hifi":"Hi-Fi 现场","eqPreset.cinema":"电影","eqPreset.dj":"DJ","eqPreset.original":"原音","eqPreset.rock":"经典摇滚","eqPreset.pop":"流行","eqPreset.jazz":"爵士摇滚","eqPreset.classical":"古典","eqPreset.clear":"高音增强","eqPreset.acoustic":"原声","eqPreset.bassReduce":"降低低音","eqPreset.trebleReduce":"降低高音","eqPreset.voice":"人声",
   "eqPresetSub.classic":"均衡","eqPresetSub.bass":"增强低音","eqPresetSub.cinema":"电影音效","eqPresetSub.hifi":"现场舞台","eqPresetSub.voice":"清晰人声","eqPresetSub.dj":"DJ","eqPresetSub.pop":"流行音乐","eqPresetSub.jazz":"爵士","eqPresetSub.classical":"古典","eqPresetSub.clear":"增强高音","eqPresetSub.acoustic":"原声","eqPresetSub.original":"原音","eqPresetSub.rock":"摇滚",
   "eq.title":"均衡器","eq.customBands":"自定义 · {{count}} 段","eq.preset":"预设","eq.nameLabel":"均衡器预设名称","eq.saved":"已保存自定义曲线（蓝牙支持为实验性）","eq.resetDone":"均衡器已重置",
-  "dialog.turnOffContinue":"关闭并继续","dialog.turnOffSpatialTitle":"关闭空间音频？","dialog.turnOffSpatialMessage":"开启空间音频时无法调整均衡器。要关闭空间音频并继续吗？","dialog.loudSoundMessage":"此功能会播放较大音量的声音以查找耳机，可能引起不适或损害听力。继续前请摘下耳机。","dialog.findingTitle":"正在查找耳机","dialog.findingMessage":"耳机正在播放定位提示音。请勿佩戴耳机，找到后选择停止查找。",
-  "toast.soundFitUnavailable":"听力测试流程可在手机应用中使用。","toast.customEqSaved":"自定义均衡曲线已保存（蓝牙支持为实验性）","toast.resetEq":"均衡器已重置","toast.gameOn":"游戏模式已开启","toast.gameOff":"游戏模式已关闭","toast.finding":"耳机正在播放定位提示音","toast.findStopped":"定位提示音已停止","toast.controlError":"控制错误",
+  "dialog.turnOffContinue":"关闭并继续","dialog.turnOffSpatialTitle":"关闭空间音频？","dialog.turnOffSpatialMessage":"开启空间音频时无法调整均衡器。要关闭空间音频并继续吗？","dialog.loudSoundMessage":"此功能会播放较大音量的声音以查找耳机，可能引起不适或损害听力。继续前请摘下耳机。","dialog.findingTitle":"正在查找耳机","dialog.findingMessage":"已发送播放定位提示音的请求。B4S 无法确认提示音是否已开始。请勿佩戴耳机；选择“停止查找”可发送停止请求。",
+  "toast.soundFitUnavailable":"听力测试流程可在手机应用中使用。","toast.customEqSaved":"自定义均衡曲线已保存（蓝牙支持为实验性）","toast.resetEq":"均衡器已重置","toast.gameOn":"游戏模式已开启","toast.gameOff":"游戏模式已关闭","toast.finding":"已发送查找请求；尚未确认设备正在播放","toast.findStopped":"已发送停止请求；尚未确认提示音已停止","toast.controlError":"控制错误",
   "eq.save":"保存","eq.presetFootnote":"预设取决于所选耳机型号。","eq.customFootnote":"草稿保存在此电脑上。应用草稿需要耳机确认。","listen.ldacNote":"LDAC 通常由 Windows 或 Android 的蓝牙系统管理。此开关保存在 B4S 中；电脑可能无法像手机应用一样切换编解码器。",
   "linkMessage.offline": "未连接",
   "linkMessage.demo": "演示模式 — 仅显示界面，不连接真实耳机",
@@ -149,5 +149,7 @@
   "device.applying": "正在应用…",
   "eq.storageError": "无法在此电脑上保存更改。",
   "control.unknown": "尚未收到设备状态",
-  "more.on": "开启"
+  "more.on": "开启",
+  "toast.findSimulated": "演示模式已模拟查找请求",
+  "toast.findStopSimulated": "演示模式已模拟停止请求"
 }

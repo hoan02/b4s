@@ -22,7 +22,7 @@ export function createConfirmedOperation<T>(dependencies: Dependencies<T>) {
       dependencies.pending(false);
       dependencies.error(null);
     },
-    async run(command: () => Promise<void>, confirmed: () => void, failed: (message: string) => void) {
+    async run(command: () => Promise<unknown>, confirmed: () => void, failed: (message: string) => void) {
       if (busy) return;
       const operationEpoch = epoch;
       const token = dependencies.session.capture();

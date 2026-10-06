@@ -211,7 +211,7 @@
   "dialog.ready": "I am ready",
   "dialog.stopFinding": "Stop finding",
   "dialog.findingTitle": "Finding earbuds",
-  "dialog.findingMessage": "The earbuds are playing a locating sound. Keep them out of your ears and select Stop finding once you locate them.",
+  "dialog.findingMessage": "A locating-sound request was sent. B4S cannot confirm whether it started. Keep the earbuds out of your ears; choose Stop finding to send a stop request.",
   "dialog.continue": "Continue",
   "toast.disconnected": "Disconnected",
   "toast.connected": "Connected to {{name}}",
@@ -221,9 +221,9 @@
   "toast.resetEq": "EQ reset",
   "toast.gameOn": "Game mode on",
   "toast.gameOff": "Game mode off",
-  "toast.finding": "The earbuds are playing a locating sound",
+  "toast.finding": "Finding request sent; device playback is unconfirmed",
   "toast.findingTitle": "Finding earbuds",
-  "toast.findStopped": "Locating sound stopped",
+  "toast.findStopped": "Stop request sent; device stop is unconfirmed",
   "toast.stopped": "Stopped",
   "toast.controlError": "Control error",
   "theme.dark": "Dark theme",
@@ -242,5 +242,7 @@
   "device.applying": "Applying…",
   "eq.storageError": "Could not save changes on this computer.",
   "control.unknown": "Device state has not been received yet",
-  "more.on": "On"
+  "more.on": "On",
+  "toast.findSimulated": "Demo simulated the find request",
+  "toast.findStopSimulated": "Demo simulated the stop request"
 }

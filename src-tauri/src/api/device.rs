@@ -1,6 +1,6 @@
 use crate::{ble, catalog, device, protocol};
 use protocol::{BatteryState, EqBand, ListeningCommand, SpatialMode};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 const DEVICE_COMMAND_CONTRACT_VERSION: u16 = 1;
 
@@ -68,6 +68,23 @@ enum TransparencyMode {
     Voice,
 }
 
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+enum DeviceCommandDisposition {
+    DeviceStateObserved,
+    TransportAccepted,
+    Simulated,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct DeviceCommandResponse {
+    contract_version: u16,
+    session_id: u64,
+    snapshot_revision: u64,
+    disposition: DeviceCommandDisposition,
+}
+
 fn validate_device_command_contract(version: u16) -> Result<(), String> {
     if version == DEVICE_COMMAND_CONTRACT_VERSION {
         Ok(())
@@ -104,9 +121,11 @@ pub(crate) async fn query_battery() -> Result<BatteryState, String> {
 }
 
 #[tauri::command]
-pub(crate) async fn apply_device_command(request: DeviceCommandRequest) -> Result<(), String> {
+pub(crate) async fn apply_device_command(
+    request: DeviceCommandRequest,
+) -> Result<DeviceCommandResponse, String> {
     validate_device_command_contract(request.contract_version)?;
-    match request.command {
+    let disposition = match request.command {
         DeviceCommand::SetListeningState {
             mode,
             transparency_mode,
@@ -125,24 +144,62 @@ pub(crate) async fn apply_device_command(request: DeviceCommandRequest) -> Resul
                 }
                 ListeningMode::Anc => ListeningCommand::CustomLevel(level),
             };
-            ble::commands::send_listening(command).await
+            ble::commands::send_listening(command).await?;
+            DeviceCommandDisposition::TransportAccepted
         }
-        DeviceCommand::SetEqPreset { preset } => ble::commands::send_eq_id(&preset).await,
-        DeviceCommand::SetEqIndex { index } => ble::commands::send_eq_index(index).await,
+        DeviceCommand::SetEqPreset { preset } => {
+            ble::commands::send_eq_id(&preset).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::SetEqIndex { index } => {
+            ble::commands::send_eq_index(index).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
         DeviceCommand::SetCustomEq {
             bands,
             dict_sort,
             anc,
-        } => ble::commands::send_custom_eq(bands, dict_sort, anc).await,
-        DeviceCommand::SetGameMode { enabled } => ble::commands::send_game_mode(enabled).await,
-        DeviceCommand::SetSpatialMode { mode } => ble::commands::send_spatial(mode).await,
-        DeviceCommand::SetBassBoost { level } => ble::commands::send_bass_boost(level).await,
-        DeviceCommand::SetLdac { enabled } => ble::commands::send_ldac(enabled).await,
-        DeviceCommand::SetHearingProtection { enabled, level } => {
-            ble::commands::send_hearing_protection(enabled, level).await
+        } => {
+            ble::commands::send_custom_eq(bands, dict_sort, anc).await?;
+            DeviceCommandDisposition::DeviceStateObserved
         }
-        DeviceCommand::FindBuds { start } => ble::commands::send_find_buds(start).await,
-    }
+        DeviceCommand::SetGameMode { enabled } => {
+            ble::commands::send_game_mode(enabled).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::SetSpatialMode { mode } => {
+            ble::commands::send_spatial(mode).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::SetBassBoost { level } => {
+            ble::commands::send_bass_boost(level).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::SetLdac { enabled } => {
+            ble::commands::send_ldac(enabled).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::SetHearingProtection { enabled, level } => {
+            ble::commands::send_hearing_protection(enabled, level).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::FindBuds { start } => {
+            ble::commands::send_find_buds(start).await?;
+            DeviceCommandDisposition::TransportAccepted
+        }
+    };
+    let link = ble::get_link_health().await;
+    let snapshot = ble::commands::get_device_snapshot().await;
+    Ok(DeviceCommandResponse {
+        contract_version: DEVICE_COMMAND_CONTRACT_VERSION,
+        session_id: snapshot.session_id,
+        snapshot_revision: snapshot.revision,
+        disposition: if link.mock {
+            DeviceCommandDisposition::Simulated
+        } else {
+            disposition
+        },
+    })
 }
 
 #[cfg(test)]
@@ -172,5 +229,23 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[test]
+    fn command_response_distinguishes_observation_from_transport_acceptance() {
+        let accepted = serde_json::to_value(DeviceCommandResponse {
+            contract_version: 1,
+            session_id: 8,
+            snapshot_revision: 21,
+            disposition: DeviceCommandDisposition::TransportAccepted,
+        })
+        .unwrap();
+        assert_eq!(accepted["contractVersion"], 1);
+        assert_eq!(accepted["sessionId"], 8);
+        assert_eq!(accepted["snapshotRevision"], 21);
+        assert_eq!(accepted["disposition"], "transportAccepted");
+
+        let observed = serde_json::to_value(DeviceCommandDisposition::DeviceStateObserved).unwrap();
+        assert_eq!(observed, "deviceStateObserved");
     }
 }

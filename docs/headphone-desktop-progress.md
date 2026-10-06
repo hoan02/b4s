@@ -32,7 +32,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — lifecycle envelopes/reducers reject stale updates; Tauri APIs are domain-grouped and device mutations use a closed versioned intent DTO; structured errors and consistent result semantics remain open |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — lifecycle envelopes/reducers reject stale updates; Tauri APIs are domain-grouped and device mutations use closed versioned intents with explicit observed/transport/simulated dispositions; typed failures and remaining command DTOs remain open |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions, find-buds, listening, EQ, game, spatial and advanced-sound workflows have dedicated owners; navigation/accessibility acceptance remains open |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
@@ -41,7 +41,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; per-model hearing policy exists but feature remains disabled; spatial policy outstanding |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
-| P6.5 | Multipoint/find/device settings | Open |
+| P6.5 | Multipoint/find/device settings | In progress — find start/stop distinguishes transport acceptance from confirmed device state; stop acknowledgement, multipoint and remaining settings require evidence |
 | P7.1 | Classify headphone-only catalog và legacy migration | Complete — 124 current headphone candidates are separated from five regionally consistent speaker products; one-time migration covers 112 exact identities and preserves 12 historical names without a current catalog target as inert data; runtime resolver removed |
 | P7.2 | Adapter của family kế tiếp | Open |
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
@@ -572,3 +572,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Replaced ten primitive Tauri mutations with one `apply_device_command` boundary using a version-1 request envelope and a closed tagged intent enum. Listening and spatial values deserialize as enums; arbitrary command kinds, opcodes, unknown fields, invalid enum values, and unsupported contract versions are rejected before BLE dispatch.
 - Frontend feature adapters preserve their named functions but now send the shared typed DTO. Added Rust deserialization/version tests. TypeScript, selected-file formatting and Rust compilation are delegated to current-head CI; no local build/test suite was run.
+
+## Increment 80 — report device command disposition
+
+- Versioned command responses now carry the session, snapshot revision and one of `deviceStateObserved`, `transportAccepted`, or `simulated`. The disposition follows the command path: readback-backed feature commands report observed state; ANC/find-buds report transport acceptance; demo responses are explicit simulations.
+- Find-buds toasts and active-dialog guidance now say that start/stop requests were sent without claiming the earbud played or stopped its sound. Updated all five locales. Added Rust response serialization coverage. `npx tsc --noEmit`, `npm run check:i18n` (246/246 per non-English locale), selected-file `rustfmt --check`, and `git diff --check` pass; no local Rust suite/build was run, so current-head CI is the compile/test gate.
