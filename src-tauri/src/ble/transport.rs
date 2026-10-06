@@ -162,6 +162,17 @@ pub(super) async fn write_and_readback(
     Ok(())
 }
 
+pub(super) async fn write_and_observe(
+    peripheral: &Peripheral,
+    data: &[u8],
+    expected: crate::device::confirmation::ExpectedState,
+) -> Result<(), String> {
+    let token = BLE.lock().await.session.token();
+    let transport = GattConfirmedTransport { peripheral };
+    crate::device::confirmation::write_and_observe(&transport, token, data, expected).await?;
+    Ok(())
+}
+
 struct GattConfirmedTransport<'a> {
     peripheral: &'a Peripheral,
 }

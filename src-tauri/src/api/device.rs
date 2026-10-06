@@ -156,7 +156,7 @@ pub(crate) async fn apply_device_command(
                 ListeningMode::Anc => ListeningCommand::CustomLevel(level),
             };
             ble::commands::send_listening(command).await?;
-            DeviceCommandDisposition::TransportAccepted
+            DeviceCommandDisposition::DeviceStateObserved
         }
         DeviceCommand::SetEqPreset { preset } => {
             ble::commands::send_eq_id(&preset).await?;

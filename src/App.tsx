@@ -62,7 +62,7 @@ const App: Component = () => {
     right: null,
     case: null,
   });
-  const [ancMode, setAncModeUi] = createSignal<AncMode>("off");
+  const [ancMode, setAncModeUi] = createSignal<AncMode | null>(null);
   const [modelProfiles, setModelProfiles] = createSignal<ModelProfile[]>([]);
   const modelEq = () => modelProfiles().find((profile) => profile.id === device()?.modelId)?.eq;
   const [gameOn, setGameOn] = createSignal<boolean | null>(null);
@@ -96,7 +96,7 @@ const App: Component = () => {
       setHearingProtect(null);
       setHearingThreshold(null);
       setSpatialOn(null);
-      setAncModeUi("off");
+      setAncModeUi(null);
       setGameOn(null);
       setLdac(null);
       return;
@@ -156,6 +156,8 @@ const App: Component = () => {
 
   const listening = createListeningController({
     mode: ancMode,
+    session,
+    refreshSnapshot,
     noiseCapabilities: noiseCaps,
     clearError: () => setControlError(null),
     setError: setControlError,
@@ -478,10 +480,13 @@ const App: Component = () => {
                 battery={battery()}
                 link={link()}
                 ancMode={ancMode()}
+                ancPending={listening.pending()}
+                ancError={listening.error()}
                 transparencyMode={listening.transparencyMode()}
                 adaptiveNoise={listening.adaptiveNoise()}
                 noiseEnvironment={listening.noiseEnvironment()}
                 noiseLevel={listening.noiseLevel()}
+                listeningSupported={device()?.deviceProfile.capabilities.anc ?? false}
                 noiseMaxLevel={listening.noiseProfile().maxLevel}
                 noiseSupported={(noiseCaps()?.maxCustomLevel ?? 0) > 0}
                 adaptiveSupported={noiseCaps()?.supportsAdaptive ?? false}

@@ -3,7 +3,7 @@
 //! not that a particular write caused the state.
 
 use super::session::SessionToken;
-use crate::protocol::{DeviceEvent, EqPreset};
+use crate::protocol::{AncMode, DeviceEvent, EqPreset};
 use futures::future::BoxFuture;
 
 #[derive(Clone, Debug)]
@@ -15,6 +15,7 @@ pub struct StateObservation {
 
 pub enum ExpectedState {
     Battery,
+    Anc(AncMode),
     Eq(EqPreset),
     EqIndex(u8),
     Game(bool),
@@ -38,9 +39,33 @@ pub async fn write_and_confirm<T: ConfirmedTransport + ?Sized>(
     query: &[u8],
     expected: ExpectedState,
 ) -> Result<StateObservation, String> {
+    write_and_wait(transport, session, command, Some(query), expected).await
+}
+
+/// Wait for a state notification produced by a write without sending a
+/// speculative query command. The observation subscription is established
+/// before the write so a fast AA34 reply cannot be lost.
+pub async fn write_and_observe<T: ConfirmedTransport + ?Sized>(
+    transport: &T,
+    session: SessionToken,
+    command: &[u8],
+    expected: ExpectedState,
+) -> Result<StateObservation, String> {
+    write_and_wait(transport, session, command, None, expected).await
+}
+
+async fn write_and_wait<T: ConfirmedTransport + ?Sized>(
+    transport: &T,
+    session: SessionToken,
+    command: &[u8],
+    query: Option<&[u8]>,
+    expected: ExpectedState,
+) -> Result<StateObservation, String> {
     let mut replies = transport.subscribe();
     transport.write(command).await?;
-    transport.write(query).await?;
+    if let Some(query) = query {
+        transport.write(query).await?;
+    }
     await_state(&mut replies, session, expected).await
 }
 
@@ -51,6 +76,7 @@ impl ExpectedState {
         }
         match (self, observation.opcode, &observation.event) {
             (Self::Battery, 0x02, DeviceEvent::Battery(_)) => true,
+            (Self::Anc(expected), 0x34, DeviceEvent::Anc(actual)) => expected == actual,
             (Self::Eq(expected), 0x30, DeviceEvent::EqIndex(actual)) => {
                 expected.to_byte() == *actual
             }
@@ -297,6 +323,30 @@ mod tests {
         assert_eq!(
             *transport.writes.lock().unwrap(),
             vec![vec![0xBA, 0x54, 1], vec![0xBA, 0x53]]
+        );
+    }
+
+    #[tokio::test]
+    async fn anc_write_waits_for_state_notification_without_speculative_query() {
+        let session = SessionEpoch::default().token();
+        let expected = StateObservation {
+            session,
+            opcode: 0x34,
+            event: DeviceEvent::Anc(AncMode::Transparency),
+        };
+        let transport = FakeTransport::new([ScriptedWrite::Reply(expected)]);
+        let found = write_and_observe(
+            &transport,
+            session,
+            &[0xBA, 0x34, 0x02, 0xFF],
+            ExpectedState::Anc(AncMode::Transparency),
+        )
+        .await
+        .unwrap();
+        assert_eq!(found.opcode, 0x34);
+        assert_eq!(
+            *transport.writes.lock().unwrap(),
+            vec![vec![0xBA, 0x34, 0x02, 0xFF]]
         );
     }
 

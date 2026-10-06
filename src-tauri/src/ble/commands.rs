@@ -25,7 +25,14 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
     }
     with_connected_peripheral(|p| {
         let d = data.clone();
-        Box::pin(async move { write_bytes(&p, &d).await })
+        Box::pin(async move {
+            write_and_observe(
+                &p,
+                &d,
+                crate::device::confirmation::ExpectedState::Anc(mode),
+            )
+            .await
+        })
     })
     .await
 }

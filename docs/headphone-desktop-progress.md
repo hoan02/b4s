@@ -36,8 +36,8 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions, find-buds, listening, EQ, game, spatial and advanced-sound workflows have dedicated owners; navigation/accessibility acceptance remains open |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
-| P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | In progress — pending/error states and keyboard dialog semantics are implemented; Experimental preference is persisted, off by default, initialized before device discovery, and backend-gated by reviewed catalog eligibility; full accessibility and eligible experimental feature evidence remain open |
-| P6.1 | ANC/transparency/game, constraints/readback | Open |
+| P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | In progress — pending/error states, keyboard dialog semantics and unknown ANC state are explicit; ANC controls use profile availability and disable during confirmed operations; Experimental preference is persisted and backend-gated; full accessibility and eligible experimental feature evidence remain open |
+| P6.1 | ANC/transparency/game, constraints/readback | In progress — BP1 Pro ANC writes now await a matching AA34 state observation; transparency submode confirmation and hardware freshness acceptance remain open |
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; per-model hearing policy exists but feature remains disabled; spatial policy outstanding |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
@@ -587,3 +587,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added a version-1 Tauri error envelope with stable camel-case codes, readable detail and retryability. BLE scan/connect/disconnect, battery readback, device intent, model-profile lookup, desktop preferences and update check/install now return typed failures at the app boundary. The frontend validates the envelope and extracts its message instead of rendering structured errors as `[object Object]`.
 - Added Rust serialization coverage for the envelope. TypeScript and five-locale parity pass; selected API-file `rustfmt --check` and whitespace checks pass. Lower BLE-layer typed error propagation remains open under P4.3.
+
+## Increment 83 — confirm listening state from AA34
+
+- BP1 Pro listening writes now subscribe before TX, write the requested BA34 command, and complete only after an in-session AA34 report matches the requested Off/ANC/Transparency mode. No extra query or inferred ACK value is sent; timeout and stale-session behavior use the existing serialized confirmation boundary. The command disposition is now `deviceStateObserved` after successful observation.
+- Added a fake-transport regression for a fast transparency state notification and asserted no speculative query write. The UI starts ANC as unknown, exposes profile-unsupported listening controls as disabled, and shows pending/error state until the command is confirmed or rejected. Per-firmware ANC level/transparency-submode readback and real hardware acceptance remain open.
