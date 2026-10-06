@@ -39,6 +39,8 @@ la ventana, B4S se oculta en la bandeja cuando está disponible; elige **Quit
 B4S** en el menú de la bandeja para salir. Las funciones dependen del modelo y
 del firmware.
 
+Si no puedes buscar o conectar, consulta la [guía de solución de problemas de escritorio](docs/desktop-troubleshooting.md).
+
 Necesitas Node.js 20, Rust estable, los requisitos de Tauri para tu plataforma y
 auriculares Bluetooth para probar el dispositivo:
 

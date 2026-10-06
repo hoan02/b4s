@@ -33,6 +33,8 @@ BP1 Pro 有经过审查的型号配置。BP1 Ultra 可以被识别，但由于�
 12 秒。也可以设置登录时启动 B4S。关闭窗口会在系统托盘可用时隐藏 B4S；
 选择托盘菜单中的 **Quit B4S** 退出。功能因型号和固件而异。
 
+无法扫描或连接时，请参阅[桌面故障排除指南](docs/desktop-troubleshooting.md)。
+
 开发需要 Node.js 20、Rust stable、对应平台的 Tauri 依赖；测试设备功能
 还需要蓝牙耳机：
 

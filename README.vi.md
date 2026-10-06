@@ -45,6 +45,8 @@ Xem [catalog model](docs/model-catalog.md) và [ghi chú giao thức](docs/proto
 Chức năng thay đổi theo model và firmware. B4S tránh gửi lệnh chưa được hỗ trợ
 khi profile không khai báo capability tương ứng.
 
+Nếu không thể quét hoặc kết nối, xem [hướng dẫn xử lý sự cố desktop](docs/desktop-troubleshooting.md).
+
 ## Phát triển
 
 Cần Node.js 20, Rust stable, các thành phần cần thiết của Tauri trên hệ điều hành
