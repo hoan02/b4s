@@ -2,6 +2,15 @@
 
 use super::*;
 
+fn event_is_current_connection(
+    current_session: crate::device::session::SessionToken,
+    event_session: crate::device::session::SessionToken,
+    active_id: Option<&str>,
+    event_id: &str,
+) -> bool {
+    current_session == event_session && active_id == Some(event_id)
+}
+
 pub(super) async fn ensure_central_listener(
     app: AppHandle,
     adapter: Adapter,
@@ -42,22 +51,80 @@ async fn listen_central_events(
             }
             CentralEvent::DeviceDisconnected(id) => {
                 let id_str = id_to_string(&id);
-                let mut state = BLE.lock().await;
-                let was_active = state.connected_id.as_ref() == Some(&id_str);
+                let (was_active, token) = {
+                    let state = BLE.lock().await;
+                    (
+                        state.connected_id.as_ref() == Some(&id_str),
+                        state.session.token(),
+                    )
+                };
                 if was_active {
+                    let peripheral_still_connected = match adapter.peripheral(&id).await {
+                        Ok(peripheral) => peripheral.is_connected().await.unwrap_or(false),
+                        Err(_) => false,
+                    };
+                    if peripheral_still_connected {
+                        continue;
+                    }
+                }
+
+                let mut state = BLE.lock().await;
+                let still_active = was_active
+                    && event_is_current_connection(
+                        state.session.token(),
+                        token,
+                        state.connected_id.as_deref(),
+                        &id_str,
+                    );
+                if still_active {
                     state.connected_id = None;
                     state.battery = BatteryState::default();
                     state.reset_link();
                 }
-                if let Some(d) = state.devices.get_mut(&id_str) {
-                    d.connected = false;
+                if still_active || state.connected_id.as_ref() != Some(&id_str) {
+                    if let Some(d) = state.devices.get_mut(&id_str) {
+                        d.connected = false;
+                    }
                 }
                 drop(state);
-                if was_active {
+                if still_active {
                     emit_connection_state(&app).await;
                 }
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::device::session::SessionEpoch;
+
+    #[test]
+    fn delayed_disconnect_cannot_clear_a_reconnected_session() {
+        let mut sessions = SessionEpoch::default();
+        let old_session = sessions.token();
+        sessions.invalidate();
+        let current_session = sessions.token();
+
+        assert!(!event_is_current_connection(
+            current_session,
+            old_session,
+            Some("selected-entry"),
+            "selected-entry",
+        ));
+        assert!(!event_is_current_connection(
+            current_session,
+            current_session,
+            Some("new-entry"),
+            "selected-entry",
+        ));
+        assert!(event_is_current_connection(
+            current_session,
+            current_session,
+            Some("selected-entry"),
+            "selected-entry",
+        ));
     }
 }

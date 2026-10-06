@@ -27,7 +27,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
 | P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan and connection preserve/select exact OS entry IDs even when entries share an address; actor lifecycle, injected transport interface, and event ownership remain open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
-| P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards and connect-attempt cancellation lease integrated; session actor and full event-lifecycle ownership outstanding |
+| P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards, connect-attempt cancellation lease, and session/entry-guarded OS disconnect events integrated; session actor and full event-lifecycle ownership outstanding |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
@@ -557,3 +557,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Re-ran the local input inventory without exporting source: three extracted APK splits were hashed, and all 106 ARM64 native libraries were hashed in place. The JSON report remains gitignored under `.tmp`.
 - The scanner found 1,410 source markers overall, which are not equivalent to the original JADX run's 508 reported errors. Six explicit error markers are inside the headphone package, all in AI/recording/OTA code paths. The authored findings document records the split hashes and this limitation; resource analysis and any secondary-engine checks remain open. No proprietary APK, native library, decompiled source, or raw inventory was added to Git.
+
+## Increment 77 — guard OS disconnect events by session
+
+- The shared adapter stream now rechecks current OS connection state before honoring a disconnect event and verifies both the originating session token and selected entry ID after the asynchronous check. A delayed disconnect from the previous connection can no longer clear a newer session that selected the same OS entry.
+- Added a focused pure Rust regression for old-session and wrong-entry events. Selected-file `rustfmt --check` and `git diff --check` pass; current-head CI is the Rust compile/test gate. P3.3 remains open for session-actor ownership and complete event lifecycle management.
