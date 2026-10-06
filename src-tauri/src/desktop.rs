@@ -18,8 +18,8 @@ pub fn install_tray(app: &mut tauri::App) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit B4S", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &status, &separator, &quit])?;
+    let quit_item = MenuItem::with_id(app, "quit", "Quit B4S", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&open, &status, &separator, &quit_item])?;
 
     app.manage(TrayStatus(status));
     let mut tray = TrayIconBuilder::new()
