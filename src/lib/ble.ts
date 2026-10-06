@@ -129,6 +129,7 @@ export async function listModelProfiles(): Promise<ModelProfile[]> {
 export type LinkLevel = "live" | "waiting" | "dead" | "demo" | "offline";
 
 export interface LinkHealth {
+  contractVersion: 1;
   connected: boolean;
   mock: boolean;
   peripheralConnected: boolean;
@@ -143,11 +144,12 @@ export interface LinkHealth {
   lastTxHex: string | null;
   writeChar: string | null;
   notifyChar: string | null;
-  level: LinkLevel | string;
+  level: LinkLevel;
   message: string;
 }
 
 export interface ConnectionState {
+  contractVersion: 1;
   connected: boolean;
   device: BleDevice | null;
   error: string | null;
@@ -155,6 +157,7 @@ export interface ConnectionState {
 }
 
 export interface ScanStatus {
+  contractVersion: 1;
   scanning: boolean;
   devices: BleDevice[];
   error: string | null;
@@ -244,6 +247,7 @@ export function rssiLabel(rssi: number): string {
 
 export function emptyLink(): LinkHealth {
   return {
+    contractVersion: 1,
     connected: false,
     mock: false,
     peripheralConnected: false,

@@ -78,9 +78,20 @@ pub struct BleDevice {
 }
 
 /// How healthy the control link is — UI uses this to show Demo / Waiting / Live / Dead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum LinkLevel {
+    Live,
+    Waiting,
+    Dead,
+    Demo,
+    Offline,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkHealth {
+    pub contract_version: u16,
     /// Frontend session thinks we are connected
     pub connected: bool,
     /// True when using mock scan/devices (no real GATT)
@@ -104,7 +115,7 @@ pub struct LinkHealth {
     pub write_char: Option<String>,
     pub notify_char: Option<String>,
     /// live | waiting | dead | demo | offline
-    pub level: String,
+    pub level: LinkLevel,
     /// Human-readable summary for the UI
     pub message: String,
 }
@@ -112,6 +123,7 @@ pub struct LinkHealth {
 impl Default for LinkHealth {
     fn default() -> Self {
         Self {
+            contract_version: 1,
             connected: false,
             mock: false,
             peripheral_connected: false,
@@ -126,7 +138,7 @@ impl Default for LinkHealth {
             last_tx_hex: None,
             write_char: None,
             notify_char: None,
-            level: "offline".into(),
+            level: LinkLevel::Offline,
             message: "Not connected".into(),
         }
     }
@@ -135,6 +147,7 @@ impl Default for LinkHealth {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionState {
+    pub contract_version: u16,
     pub connected: bool,
     pub device: Option<BleDevice>,
     pub error: Option<String>,
@@ -144,6 +157,7 @@ pub struct ConnectionState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanStatus {
+    pub contract_version: u16,
     pub scanning: bool,
     pub devices: Vec<BleDevice>,
     pub error: Option<String>,
@@ -239,31 +253,31 @@ fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
-fn compute_link_level(h: &LinkHealth) -> (String, String) {
+fn compute_link_level(h: &LinkHealth) -> (LinkLevel, String) {
     if !h.connected {
-        return ("offline".into(), "Not connected".into());
+        return (LinkLevel::Offline, "Not connected".into());
     }
     if h.mock {
         return (
-            "demo".into(),
+            LinkLevel::Demo,
             "Demo mode — UI only, not talking to real earbuds".into(),
         );
     }
     if !h.peripheral_connected {
         return (
-            "dead".into(),
+            LinkLevel::Dead,
             "BLE link dropped — disconnect and scan again".into(),
         );
     }
     if !h.has_write_uuid || !h.has_notify_uuid {
         return (
-            "dead".into(),
+            LinkLevel::Dead,
             "GATT control service missing — not a BP1 protocol device, or Windows pairing incomplete".into(),
         );
     }
     if h.notify_count > 0 {
         return (
-            "live".into(),
+            LinkLevel::Live,
             format!(
                 "Live link · {} notifies · {} writes",
                 h.notify_count, h.tx_count
@@ -272,12 +286,12 @@ fn compute_link_level(h: &LinkHealth) -> (String, String) {
     }
     if h.handshake_ok {
         return (
-            "waiting".into(),
+            LinkLevel::Waiting,
             "The profile handshake was written; waiting for a framed device response.".into(),
         );
     }
     (
-        "dead".into(),
+        LinkLevel::Dead,
         "The selected device did not complete its reviewed control handshake.".into(),
     )
 }
@@ -418,6 +432,7 @@ pub async fn get_scan_status() -> ScanStatus {
         ))
     });
     ScanStatus {
+        contract_version: 1,
         scanning: state.scanning,
         devices,
         error: None,
@@ -487,6 +502,18 @@ mod scan_tests {
         assert_eq!(devices[0].id, "audio");
         assert_eq!(devices[1].id, "control");
     }
+
+    #[test]
+    fn link_contract_is_versioned_and_uses_a_closed_level_enum() {
+        let encoded = serde_json::to_value(LinkHealth::default()).unwrap();
+        assert_eq!(encoded["contractVersion"], 1);
+        assert_eq!(encoded["level"], "offline");
+        assert_eq!(
+            serde_json::from_value::<LinkLevel>(encoded["level"].clone()).unwrap(),
+            LinkLevel::Offline
+        );
+        assert!(serde_json::from_value::<LinkLevel>(serde_json::json!("unknown")).is_err());
+    }
 }
 
 pub async fn get_connection_state() -> ConnectionState {
@@ -502,6 +529,7 @@ pub async fn get_connection_state() -> ConnectionState {
             .as_ref()
             .and_then(|id| state.peripherals.get(id).cloned());
         let partial = LinkHealth {
+            contract_version: 1,
             connected,
             mock: state.mock,
             peripheral_connected: false, // filled below
@@ -516,7 +544,7 @@ pub async fn get_connection_state() -> ConnectionState {
             last_tx_hex: state.last_tx_hex.clone(),
             write_char: state.write_char.clone(),
             notify_char: state.notify_char.clone(),
-            level: String::new(),
+            level: LinkLevel::Offline,
             message: String::new(),
         };
         (connected, device, state.mock, partial, peripheral)
@@ -535,6 +563,7 @@ pub async fn get_connection_state() -> ConnectionState {
     link_partial.message = message;
 
     ConnectionState {
+        contract_version: 1,
         connected,
         device,
         error: None,

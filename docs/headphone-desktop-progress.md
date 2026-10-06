@@ -32,7 +32,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — feature state now uses one typed snapshot stream; connection/link contracts and remaining Tauri command types still need consolidation |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — feature observations use a typed snapshot; scan/connection/link DTOs now carry contract version 1 and link levels are closed enums; remaining Tauri command types and lifecycle envelopes still need consolidation |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store and listener cleanup; feature controller extraction outstanding |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; device inventory/visual acceptance outstanding |
@@ -414,3 +414,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added a frozen table mapping 111 historical model IDs to canonical runtime/catalog IDs by exact full product identity. Startup migrates the remembered-device record and model-scoped custom-EQ keys once; bytes are copied only when the destination is absent, and no mapping participates in scan or live identity resolution.
 - Thirteen historical names have no exact identity in the current public snapshot; their stored data is left untouched and inactive rather than assigned by substring or similarity. The 111-entry explicit table was generated from exact normalized full-name equality against the current snapshot/reviewed profiles; `npx tsc --noEmit` passed.
+
+
+## Increment 51 — versioned link and lifecycle DTOs
+
+- Scan status, connection state, and link health now expose `contractVersion: 1` from both command responses and their matching events. Link health uses a closed `LinkLevel` enum with the five supported values; arbitrary strings are rejected at the Rust boundary and no longer admitted by the frontend type.
+- Added serialization coverage for the versioned link contract and enum values. `cargo check`, TypeScript typecheck, and `git diff --check` passed; repository-wide `cargo fmt --check` still reports existing formatting differences outside this slice, so only the edited Rust file was formatted.
+- No local test suite was run; CI will exercise the serialization test. This advances P4.3 but does not close it: event sequence/session envelopes, typed error semantics, and remaining command DTO migration are open.
