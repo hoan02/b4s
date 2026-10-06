@@ -293,7 +293,8 @@ const BlePairing: Component<Props> = (props) => {
             <Show
               when={
                 !scanning() &&
-                devices().length === 0 &&
+                matched().length === 0 &&
+                others().length === 0 &&
                 !error() &&
                 adapterOk() !== false
               }
@@ -304,7 +305,7 @@ const BlePairing: Component<Props> = (props) => {
               </div>
             </Show>
 
-            <Show when={scanning() && devices().length === 0}>
+            <Show when={scanning() && matched().length === 0 && others().length === 0}>
               <div class="ble-empty scanning">
                 <div class="ble-scan-status" role="status" aria-live="polite">
                   <span class="scan-bars" aria-hidden="true"><i /><i /><i /></span>
