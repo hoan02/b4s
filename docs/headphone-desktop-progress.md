@@ -492,3 +492,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - The frontend `BleDevice` shape now matches the required Rust payload, including its always-present reviewed `deviceProfile`, metadata arrays, and nullable identity fields. Removed the retired experimental protocol family from the frontend protocol union and removed optional-chain capability fallbacks in `App.tsx`.
 - Lifecycle payload validation now checks the complete reviewed profile and GATT descriptor shape before accepting a scan/connection event. `npx tsc --noEmit` and `git diff --check` passed; no full build or test suite was run locally.
+
+## Increment 64 — extract advanced sound controller
+
+- Moved bass, LDAC and hearing-protection command workflows, shared confirmed-operation queue, and pending/error state into `features/sound/controller.ts`. The app shell now wires profile snapshot setters, session identity, and notifications into the controller.
+- Device changes still reset the operation and stale completions remain session-guarded. `npx tsc --noEmit` and `git diff --check` passed; no full local build/test suite was run.

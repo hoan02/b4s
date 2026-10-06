@@ -13,6 +13,7 @@ import { resolveEqSelection } from "./features/equalizer/selection";
 import { subscribeDeviceRuntime } from "./features/devices/runtimeSubscriptions";
 import { createFindBudsController } from "./features/find-buds/controller";
 import { createListeningController } from "./features/listening/controller";
+import { createSoundController } from "./features/sound/controller";
 import { createDeviceSession } from "./stores/deviceSession";
 import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
@@ -30,9 +31,6 @@ import {
   setCustomEq,
   setGameMode,
   setSpatialMode,
-  setBassBoost,
-  setLdac as sendLdac,
-  setHearingProtection as sendHearingProtection,
 } from "./lib/device";
 import { defaultCustomBands } from "./lib/eq";
 import { readDesktopPreferences, writeAutoReconnect } from "./lib/desktopPreferences";
@@ -92,8 +90,6 @@ const App: Component = () => {
   const [spatialMode, setSpatialModeUi] = createSignal<SpatialMode>("music");
   const [bassBoost, setBassBoostUi] = createSignal<number | null>(null);
   const [ldac, setLdac] = createSignal<boolean | null>(null);
-  const [soundPending, setSoundPending] = createSignal(false);
-  const [soundError, setSoundError] = createSignal<string | null>(null);
   const [hearingThreshold, setHearingThreshold] = createSignal<number | null>(null);
   const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
   const [pendingEqAction, setPendingEqAction] = createSignal<PendingEqAction | null>(null);
@@ -113,7 +109,7 @@ const App: Component = () => {
     setEqWireIndex(snapshot?.eqIndex ?? null);
     if (!snapshot) {
       equalizer.reset();
-      advancedSound.reset();
+      sound.reset();
       spatialOperation.reset();
       gameOperation.reset();
       setBassBoostUi(null);
@@ -164,9 +160,6 @@ const App: Component = () => {
   const equalizer = createConfirmedOperation({
     session, refresh: refreshSnapshot, pending: setEqPending, error: setEqError, formatError,
   });
-  const advancedSound = createConfirmedOperation({
-    session, refresh: refreshSnapshot, pending: setSoundPending, error: setSoundError, formatError,
-  });
   const spatialOperation = createConfirmedOperation({
     session, refresh: refreshSnapshot, pending: setSpatialPending, error: setSpatialError, formatError,
   });
@@ -200,6 +193,17 @@ const App: Component = () => {
       applyLink(await getLinkHealth());
     },
     notify,
+  });
+  const sound = createSoundController({
+    session,
+    refreshSnapshot,
+    isDemo: () => link().mock,
+    hearingThreshold,
+    setBassBoost: setBassBoostUi,
+    setLdac,
+    setHearingProtection: setHearingProtect,
+    formatError,
+    notifyError: (message) => notify(message, "error"),
   });
 
   const findController = createFindBudsController(notify);
@@ -393,12 +397,6 @@ const App: Component = () => {
     }, (message) => notify(message, "error"));
   };
 
-  const handleBassBoost = async (level: number) => {
-    await advancedSound.run(() => setBassBoost(level), () => {
-      if (link().mock) setBassBoostUi(level);
-    }, (message) => notify(message, "error"));
-  };
-
   const confirmEqAction = async () => {
     const action = pendingEqAction();
     setPendingEqAction(null);
@@ -419,22 +417,6 @@ const App: Component = () => {
     } catch (e) {
       notify(formatError(e), "error");
     }
-  };
-
-  const handleLdac = async (enabled: boolean) => {
-    await advancedSound.run(() => sendLdac(enabled), () => {
-      if (link().mock) setLdac(enabled);
-    }, (message) => notify(message, "error"));
-  };
-
-  const handleHearingProtection = async (enabled: boolean) => {
-    await advancedSound.run(() => {
-      const threshold = hearingThreshold();
-      if (threshold === null) throw new Error(t("control.unknown"));
-      return sendHearingProtection(enabled, threshold);
-    }, () => {
-      if (link().mock) setHearingProtect(enabled);
-    }, (message) => notify(message, "error"));
   };
 
   const handleDisconnect = async () => {
@@ -529,16 +511,16 @@ const App: Component = () => {
             <MorePanel
               bassSupported={device()?.deviceProfile.capabilities.bassBoost ?? false}
               ldacSupported={device()?.deviceProfile.capabilities.ldac ?? false}
-              pending={soundPending()}
-              error={soundError()}
+              pending={sound.pending()}
+              error={sound.error()}
               hearingSupported={device()?.deviceProfile.capabilities.hearingProtection ?? false}
               bassBoost={bassBoost()}
               ldac={ldac()}
               hearingProtect={hearingProtect()}
               onBack={() => setView("home")}
-              onBassBoost={handleBassBoost}
-              onLdac={handleLdac}
-              onHearingProtect={handleHearingProtection}
+              onBassBoost={sound.setBassBoost}
+              onLdac={sound.setLdac}
+              onHearingProtect={sound.setHearingProtection}
             />
           </section>
         </Show>
