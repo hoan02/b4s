@@ -245,10 +245,20 @@ const EqPanel: Component<Props> = (props) => {
             <For each={props.frequencies}>
               {(frequency, i) => (
                 <div class="eq-slider-col">
-                  <span class="eq-gain">
-                    {localBands()[i()] > 0 ? "+" : ""}
-                    {localBands()[i()]}
-                  </span>
+                  <input
+                    type="number"
+                    class="eq-gain"
+                    inputmode="numeric"
+                    min={props.minGain}
+                    max={props.maxGain}
+                    step={1}
+                    value={localBands()[i()]}
+                    aria-label={`${frequency} Hz`}
+                    onChange={(e) => {
+                      const raw = Number((e.currentTarget as HTMLInputElement).value);
+                      setBand(i(), Number.isFinite(raw) ? raw : localBands()[i()]);
+                    }}
+                  />
                   <input
                     type="range"
                     min={props.minGain}
