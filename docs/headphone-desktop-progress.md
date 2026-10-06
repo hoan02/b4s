@@ -32,11 +32,11 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — snapshot schema and scan/connection/link/connecting DTO versions are validated at frontend boundaries; closed link enum; session/sequence envelopes and consistent typed error semantics remain open |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — lifecycle payload shapes, reviewed profile fields and snapshot readings are validated at frontend boundaries; session/sequence envelopes and consistent typed error semantics remain open |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
-| P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions and find-buds workflow now have dedicated owners; remaining feature-controller extraction and navigation/accessibility acceptance are open |
+| P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions, find-buds, listening, EQ, game, spatial and advanced-sound workflows have dedicated owners; navigation/accessibility acceptance remains open |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
-| P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
+| P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | In progress — pending/error states, keyboard dialog focus/escape and selected-control semantics are implemented; full accessibility acceptance and Experimental policy remain open |
 | P6.1 | ANC/transparency/game, constraints/readback | Open |
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
 | P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; per-model hearing policy exists but feature remains disabled; spatial policy outstanding |
