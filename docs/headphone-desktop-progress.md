@@ -356,7 +356,7 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added a system tray with Open, live device status and Quit. Closing the main window hides it only when tray setup succeeds; explicit Quit makes bounded best-effort scan/find cleanup and disconnect before exit.
 - Added OS-backed start-at-login preference and persisted auto-reconnect opt-in, both off by default. Reconnect remains one scan for the last supported device, and failure to save an OS preference is reported.
-- Rust `cargo check` passed on the Windows workspace after fixing the tray close-event signature and scan-only catalog mutability. Full CI is required for Linux/schema/frontend integration; tests were not run locally.
+- Rust `cargo check` passed on the Windows workspace after fixing the tray close-event signature and scan-only catalog mutability. CI found that resolving the new plugin had advanced the Rust Tauri crate to 2.12 while the JS API is 2.11; the Rust crate and its locked runtime/build family are now aligned to 2.11.5. Full CI is required for Linux/schema/frontend integration; tests were not run locally.
 - Signed installer/update artifacts, tray behavior on supported Windows versions, startup migration behavior, and the P8.1 sleep/resume/accessibility acceptance remain open. This increment does not close P8.2 or claim release readiness.
 
 
