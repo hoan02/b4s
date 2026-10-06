@@ -32,7 +32,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — typed snapshot present; old frontend listeners/commands still need migration and removal |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — feature state now uses one typed snapshot stream; connection/link contracts and remaining Tauri command types still need consolidation |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store and listener cleanup; feature controller extraction outstanding |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; device inventory/visual acceptance outstanding |
@@ -395,3 +395,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Notification reassembly and decoding now require the profile's declared bare-AA/BA or 789C framing. Unresolved framing is passive, and wrapped framing cannot accept bare notifications.
 - Removed the unused legacy `set_anc_mode` command and frontend heuristic that fabricated ANC range/adaptive support from model IDs. The typed listening-state command and resolved profile constraints are the only control path.
 - `cargo test --lib` passed: 101 tests. One stale provenance assertion failed in the first run and was updated; the complete rerun passed. `git diff --check` passed. BP1 Ultra transport, firmware scope, full BLE runtime extraction, stored-ID migration, frontend contract replacement, and hardware acceptance remain open.
+
+
+## Increment 48 — one device-state event contract
+
+- Replaced per-feature device events with the versioned `device://snapshot` stream for battery, ANC, EQ, game, spatial, bass, LDAC, and hearing state. Demo-session observations publish the same snapshot contract; the frontend no longer listens to individual device events. Removed the direct battery getter and unused connected/disconnected/device/raw events.
+- Removed default mode/range arguments from custom EQ, hearing protection, and listening commands; callers must send explicit values, and invalid transparency enums now return errors.
+- Rust library suite passed 101/101 on the same change set before a dead empty branch was removed; latest `cargo check`, `npx tsc --noEmit`, and whitespace checks pass. CI is pending for this slice. Link-health, scan, and connection streams remain separate operational state and still need a versioned typed contract.

@@ -210,10 +210,6 @@ export function onScanStatus(cb: (status: ScanStatus) => void): Promise<Unlisten
   return listen<ScanStatus>("ble://scan-status", (e) => cb(e.payload));
 }
 
-export function onDevice(cb: (device: BleDevice) => void): Promise<UnlistenFn> {
-  return listen<BleDevice>("ble://device", (e) => cb(e.payload));
-}
-
 export function onConnection(cb: (state: ConnectionState) => void): Promise<UnlistenFn> {
   return listen<ConnectionState>("ble://connection", (e) => cb(e.payload));
 }
@@ -222,13 +218,6 @@ export function onLinkHealth(cb: (link: LinkHealth) => void): Promise<UnlistenFn
   return listen<LinkHealth>("ble://link", (e) => cb(e.payload));
 }
 
-export function onConnected(cb: (device: BleDevice) => void): Promise<UnlistenFn> {
-  return listen<BleDevice>("ble://connected", (e) => cb(e.payload));
-}
-
-export function onDisconnected(cb: (id: string) => void): Promise<UnlistenFn> {
-  return listen<string>("ble://disconnected", (e) => cb(e.payload));
-}
 
 export function onConnecting(cb: (id: string) => void): Promise<UnlistenFn> {
   return listen<string>("ble://connecting", (e) => cb(e.payload));

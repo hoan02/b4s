@@ -2,8 +2,7 @@
  * Device control + live state — listening features
  */
 
-import { invoke, listen, type UnlistenFn } from "./tauri";
-import type { BatteryData } from "../components/Battery";
+import { invoke } from "./tauri";
 
 export type AncMode = "off" | "anc" | "transparency";
 export type TransparencyMode = "full" | "voice";
@@ -11,32 +10,8 @@ export type NoiseEnvironment = 101 | 102 | 103 | 108;
 export type SpatialMode = "off" | "music" | "cinema" | "game";
 export type EqPresetId = string;
 
-export interface DeviceBattery {
-  left: number;
-  right: number;
-  case: number;
-  leftCharging: boolean;
-  rightCharging: boolean;
-  caseCharging: boolean;
-}
-
-export function toBatteryData(b: DeviceBattery): BatteryData {
-  return {
-    left: b.left,
-    right: b.right,
-    case: b.case,
-    leftCharging: b.leftCharging,
-    rightCharging: b.rightCharging,
-    caseCharging: b.caseCharging,
-  };
-}
-
-export async function fetchBattery(): Promise<DeviceBattery> {
-  return invoke<DeviceBattery>("get_battery");
-}
-
-export async function queryBattery(): Promise<DeviceBattery> {
-  return invoke<DeviceBattery>("query_battery");
+export async function queryBattery(): Promise<void> {
+  await invoke("query_battery");
 }
 
 export interface ListeningStateRequest {
@@ -84,8 +59,8 @@ export interface EqBandPayload {
 
 export async function setCustomEq(
   bands: EqBandPayload[],
-  dictSort = 101,
-  anc = false
+  dictSort: number,
+  anc: boolean
 ): Promise<void> {
   await invoke("set_custom_eq", { bands, dictSort, anc });
 }
@@ -108,61 +83,11 @@ export async function setLdac(enabled: boolean): Promise<void> {
 
 export async function setHearingProtection(
   enabled: boolean,
-  level = 1
+  level: number
 ): Promise<void> {
   await invoke("set_hearing_protection", { enabled, level });
 }
 
 export async function findBuds(start = true): Promise<void> {
   await invoke("find_buds", { start });
-}
-
-export function onBattery(cb: (b: DeviceBattery) => void): Promise<UnlistenFn> {
-  return listen<DeviceBattery>("device://battery", (e) => cb(e.payload));
-}
-
-export function onAnc(cb: (mode: AncMode) => void): Promise<UnlistenFn> {
-  return listen<string>("device://anc", (e) => {
-    // Strict parse — do NOT default unknown → "anc" (that snapped UI to Giảm ồn)
-    const m = String(e.payload ?? "")
-      .toLowerCase()
-      .replace(/[^a-z]/g, "");
-    if (m === "off" || m === "normal") cb("off");
-    else if (m === "transparency" || m === "ambient" || m === "transp")
-      cb("transparency");
-    else if (m === "anc" || m === "noisereduction" || m === "noisereduce")
-      cb("anc");
-    // else: ignore garbage / partial payloads
-  });
-}
-
-export function onEq(cb: (preset: string) => void): Promise<UnlistenFn> {
-  return listen<string>("device://eq", (e) => cb(String(e.payload)));
-}
-
-export function onGameMode(cb: (on: boolean) => void): Promise<UnlistenFn> {
-  return listen<boolean>("device://game", (e) => cb(!!e.payload));
-}
-
-export function onBassBoost(cb: (level: number) => void): Promise<UnlistenFn> {
-  return listen<number>("device://bass-boost", (e) => cb(Number(e.payload) || 0));
-}
-
-export function onLdac(cb: (enabled: boolean) => void): Promise<UnlistenFn> {
-  return listen<boolean>("device://ldac", (e) => cb(!!e.payload));
-}
-
-export function onHearingProtection(
-  cb: (state: { enabled: boolean; level: number }) => void
-): Promise<UnlistenFn> {
-  return listen<{ enabled: boolean; level: number }>(
-    "device://hearing-protection",
-    (e) => cb(e.payload)
-  );
-}
-
-export function onRawNotify(
-  cb: (raw: { hex?: string; cmd?: number }) => void
-): Promise<UnlistenFn> {
-  return listen("ble://raw", (e) => cb(e.payload as { hex?: string; cmd?: number }));
 }

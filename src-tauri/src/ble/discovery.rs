@@ -2,13 +2,23 @@
 
 use super::*;
 
-pub(super) async fn ensure_central_listener(app: AppHandle, adapter: Adapter) -> Result<(), String> {
+pub(super) async fn ensure_central_listener(
+    app: AppHandle,
+    adapter: Adapter,
+) -> Result<(), String> {
     let mut state = BLE.lock().await;
-    if state.central_task.as_ref().is_some_and(|task| !task.is_finished()) {
+    if state
+        .central_task
+        .as_ref()
+        .is_some_and(|task| !task.is_finished())
+    {
         return Ok(());
     }
     // Subscribe before starting scan, so initial discovery events are not lost.
-    let events = adapter.events().await.map_err(|error| format!("events: {error}"))?;
+    let events = adapter
+        .events()
+        .await
+        .map_err(|error| format!("events: {error}"))?;
     state.central_task = Some(tokio::spawn(async move {
         listen_central_events(app, adapter, events).await;
     }));
@@ -23,7 +33,9 @@ async fn listen_central_events(
     while let Some(event) = events.next().await {
         match event {
             CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
-                if !BLE.lock().await.scanning { continue; }
+                if !BLE.lock().await.scanning {
+                    continue;
+                }
                 if let Ok(p) = adapter.peripheral(&id).await {
                     process_peripheral(&app, p, &id).await;
                 }
@@ -43,11 +55,9 @@ async fn listen_central_events(
                 drop(state);
                 if was_active {
                     emit_connection_state(&app).await;
-                    let _ = app.emit("ble://disconnected", &id_str);
                 }
             }
             _ => {}
         }
     }
 }
-

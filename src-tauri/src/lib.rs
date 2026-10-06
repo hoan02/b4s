@@ -3,9 +3,9 @@
 
 mod ble;
 mod catalog;
-mod device;
 #[cfg(desktop)]
 mod desktop;
+mod device;
 mod protocol;
 
 use protocol::{BatteryState, EqBand, ListeningCommand, SpatialMode};
@@ -74,7 +74,10 @@ fn get_start_at_login(app: AppHandle) -> Result<bool, String> {
     #[cfg(desktop)]
     {
         use tauri_plugin_autostart::ManagerExt;
-        return app.autolaunch().is_enabled().map_err(|error| error.to_string());
+        return app
+            .autolaunch()
+            .is_enabled()
+            .map_err(|error| error.to_string());
     }
     #[cfg(not(desktop))]
     {
@@ -128,11 +131,6 @@ async fn get_device_snapshot() -> device::snapshot::DeviceSnapshot {
 }
 
 #[tauri::command]
-async fn get_battery() -> Result<BatteryState, String> {
-    Ok(ble::get_battery_state().await)
-}
-
-#[tauri::command]
 async fn query_battery() -> Result<BatteryState, String> {
     ble::query_battery().await
 }
@@ -140,25 +138,23 @@ async fn query_battery() -> Result<BatteryState, String> {
 #[tauri::command]
 async fn set_listening_state(
     mode: String,
-    transparency_mode: Option<String>,
-    adaptive: Option<bool>,
-    environment: Option<u16>,
-    level: Option<u8>,
+    transparency_mode: String,
+    adaptive: bool,
+    environment: u16,
+    level: u8,
 ) -> Result<(), String> {
     let command = match mode.to_lowercase().as_str() {
         "off" | "normal" => ListeningCommand::Normal,
-        "transparency" | "ambient" => {
-            if transparency_mode.as_deref() == Some("voice") {
-                ListeningCommand::TransparencyVoice
-            } else {
-                ListeningCommand::TransparencyFull
-            }
-        }
+        "transparency" | "ambient" => match transparency_mode.as_str() {
+            "full" => ListeningCommand::TransparencyFull,
+            "voice" => ListeningCommand::TransparencyVoice,
+            _ => return Err(format!("Unknown transparency mode: {transparency_mode}")),
+        },
         "anc" | "noiseReduction" | "noisereduction" => {
-            if adaptive.unwrap_or(false) {
-                ListeningCommand::AdaptiveEnvironment(environment.ok_or("Adaptive environment is required")?)
+            if adaptive {
+                ListeningCommand::AdaptiveEnvironment(environment)
             } else {
-                ListeningCommand::CustomLevel(level.ok_or("Custom ANC level is required")?)
+                ListeningCommand::CustomLevel(level)
             }
         }
         _ => return Err(format!("Unknown listening mode: {mode}")),
@@ -199,12 +195,8 @@ async fn set_bass_boost(level: u8) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn set_custom_eq(
-    bands: Vec<EqBand>,
-    dict_sort: Option<u8>,
-    anc: Option<bool>,
-) -> Result<(), String> {
-    ble::send_custom_eq(bands, dict_sort.unwrap_or(101), anc.unwrap_or(false)).await
+async fn set_custom_eq(bands: Vec<EqBand>, dict_sort: u8, anc: bool) -> Result<(), String> {
+    ble::send_custom_eq(bands, dict_sort, anc).await
 }
 
 #[tauri::command]
@@ -213,8 +205,8 @@ async fn set_ldac(enabled: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn set_hearing_protection(enabled: bool, level: Option<u8>) -> Result<(), String> {
-    ble::send_hearing_protection(enabled, level.unwrap_or(1)).await
+async fn set_hearing_protection(enabled: bool, level: u8) -> Result<(), String> {
+    ble::send_hearing_protection(enabled, level).await
 }
 
 #[tauri::command]
@@ -328,9 +320,7 @@ async fn check_for_updates(app: AppHandle) -> Result<UpdateCheckResult, String> 
 
 #[tauri::command]
 async fn install_update(app: AppHandle) -> Result<(), String> {
-    let updater = app
-        .updater()
-        .map_err(|e| format!("Updater: {e}"))?;
+    let updater = app.updater().map_err(|e| format!("Updater: {e}"))?;
     let update = updater
         .check()
         .await
@@ -398,10 +388,8 @@ fn is_remote_newer(remote: &str, current: &str) -> bool {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let _ = env_logger::Builder::from_env(
-        env_logger::Env::default().default_filter_or("info"),
-    )
-    .try_init();
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .try_init();
 
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -426,7 +414,6 @@ pub fn run() {
             list_models,
             list_model_profiles,
             get_model_profile,
-            get_battery,
             get_device_snapshot,
             query_battery,
             set_listening_state,
@@ -468,7 +455,9 @@ pub fn run() {
                         });
                     }
                 }
-                Err(error) => log::warn!("System tray unavailable; window close exits normally: {error}"),
+                Err(error) => {
+                    log::warn!("System tray unavailable; window close exits normally: {error}")
+                }
             }
 
             let handle = app.handle().clone();

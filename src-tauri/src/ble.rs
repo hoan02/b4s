@@ -852,8 +852,6 @@ async fn connect_one(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     drop(state);
 
     emit_connection_state(&app).await;
-    let _ = app.emit("ble://connected", &device);
-
     // Poll battery + link health while connected
     let app_h = app.clone();
     let poll_id = device_id.clone();
@@ -1085,7 +1083,7 @@ async fn handle_notification(
                             event: event.clone(),
                         });
                     }
-                    apply_event(app, event, token, fr.cmd).await;
+                    apply_event(event, token, fr.cmd).await;
                     any_decoded = true;
                 }
                 Err(e) => log::debug!("Decode skip: {e}  raw={:02X?}", frame),
@@ -1095,16 +1093,11 @@ async fn handle_notification(
     }
 
     if !any_decoded {
-        let _ = app.emit("ble://raw", &serde_json::json!({ "hex": hex_encode(data) }));
+        log::debug!("Notification did not produce a recognized device state: {:02X?}", data);
     }
 }
 
-async fn apply_event(
-    app: &AppHandle,
-    event: DeviceEvent,
-    token: crate::device::session::SessionToken,
-    opcode: u8,
-) {
+async fn apply_event(event: DeviceEvent, token: crate::device::session::SessionToken, opcode: u8) {
     let mut state = BLE.lock().await;
     if !state.session.accepts(token) {
         return;
@@ -1125,7 +1118,6 @@ async fn apply_event(
                 }
                 _ => return,
             }
-            let _ = app.emit("device://battery", &state.battery);
         }
         DeviceEvent::Anc(mode) => {
             // Only update last_anc + UI when mode actually changes (avoid flicker)
@@ -1134,44 +1126,16 @@ async fn apply_event(
             if prev != Some(*mode) {
                 log::info!("ANC mode → {:?}", mode);
             }
-            // Always emit stable string for frontend (not opaque enum shape)
-            let s = match mode {
-                AncMode::Off => "off",
-                AncMode::Anc => "anc",
-                AncMode::Transparency => "transparency",
-            };
-            let _ = app.emit("device://anc", s);
         }
         DeviceEvent::SpatialEnabled(_) => {}
-        DeviceEvent::EqIndex(index) => {
-            let _ = app.emit("device://eq-index", index);
-        }
-        DeviceEvent::Eq(preset) => {
-            let _ = app.emit("device://eq", preset);
-        }
-        DeviceEvent::GameMode(on) => {
-            let _ = app.emit("device://game", on);
-        }
-        DeviceEvent::BassBoost(level) => {
-            let _ = app.emit("device://bass-boost", level);
-        }
-        DeviceEvent::Ldac(enabled) => {
-            let _ = app.emit("device://ldac", enabled);
-        }
-        DeviceEvent::HearingProtection { enabled, level } => {
-            let _ = app.emit(
-                "device://hearing-protection",
-                &serde_json::json!({ "enabled": enabled, "level": level }),
-            );
-        }
-        DeviceEvent::Unknown { cmd, payload } => {
-            let _ = app.emit(
-                "ble://raw",
-                &serde_json::json!({ "cmd": cmd, "hex": hex_encode(payload) }),
-            );
-        }
+        DeviceEvent::EqIndex(_)
+        | DeviceEvent::Eq(_)
+        | DeviceEvent::GameMode(_)
+        | DeviceEvent::BassBoost(_)
+        | DeviceEvent::Ldac(_)
+        | DeviceEvent::HearingProtection { .. }
+        | DeviceEvent::Unknown { .. } => {}
     }
-    let _ = app.emit("device://event", &event);
 }
 
 fn hex_encode(data: &[u8]) -> String {
@@ -1373,24 +1337,9 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), String> {
         ListeningCommand::CustomLevel(_) | ListeningCommand::AdaptiveEnvironment(_) => AncMode::Anc,
     };
     log::info!("TX ANC {:?} → {:02X?}", mode, data);
-    {
-        let mut state = BLE.lock().await;
-        // Real confirmed state is changed only by a device state report.
-        if state.mock {
-            state.last_anc = Some(mode);
-        }
-        if state.mock {
-            drop(state);
-            if let Some(app) = app_handle() {
-                let s = match mode {
-                    AncMode::Off => "off",
-                    AncMode::Anc => "anc",
-                    AncMode::Transparency => "transparency",
-                };
-                let _ = app.emit("device://anc", s);
-            }
-            return Ok(());
-        }
+    if BLE.lock().await.mock {
+        BLE.lock().await.last_anc = Some(mode);
+        return observe_mock_state(DeviceEvent::Anc(mode), 0x34).await;
     }
     with_connected_peripheral(|p| {
         let d = data.clone();
@@ -1426,10 +1375,7 @@ pub async fn send_eq(preset: EqPreset) -> Result<(), String> {
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
-        if let Some(app) = app_handle() {
-            let _ = app.emit("device://eq", &preset);
-        }
-        return Ok(());
+        return observe_mock_state(DeviceEvent::Eq(preset), 0x30).await;
     }
     drop(state);
     with_connected_peripheral(|p| {
@@ -1452,10 +1398,7 @@ pub async fn send_game_mode(on: bool) -> Result<(), String> {
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
-        if let Some(app) = app_handle() {
-            let _ = app.emit("device://game", &on);
-        }
-        return Ok(());
+        return observe_mock_state(DeviceEvent::GameMode(on), 0x23).await;
     }
     drop(state);
     with_connected_peripheral(|p| {
@@ -1503,6 +1446,13 @@ pub async fn shutdown(app: AppHandle) {
 
 pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetSpatial(mode)).await?;
+    if BLE.lock().await.mock {
+        return observe_mock_state(
+            DeviceEvent::SpatialEnabled(mode != protocol::SpatialMode::Off),
+            0x42,
+        )
+        .await;
+    }
     with_connected_peripheral(|p| {
         Box::pin(async move {
             write_and_readback(
@@ -1524,10 +1474,7 @@ pub async fn send_eq_index(index: u8) -> Result<(), String> {
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
-        if let Some(app) = app_handle() {
-            let _ = app.emit("device://eq-index", index);
-        }
-        return Ok(());
+        return observe_mock_state(DeviceEvent::EqIndex(index), 0x30).await;
     }
     drop(state);
     with_connected_peripheral(|p| {
@@ -1558,10 +1505,7 @@ pub async fn send_custom_eq(
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
-        if let Some(app) = app_handle() {
-            let _ = app.emit("device://eq-custom", true);
-        }
-        return Ok(());
+        return observe_mock_state(DeviceEvent::EqIndex(dict_sort), 0x30).await;
     }
     drop(state);
     with_connected_peripheral(|p| {
@@ -1580,6 +1524,9 @@ pub async fn send_custom_eq(
 
 pub async fn send_bass_boost(level: u8) -> Result<(), String> {
     let data = encode_connected_feature(protocol::FeatureCommand::SetBassBoost(level)).await?;
+    if BLE.lock().await.mock {
+        return observe_mock_state(DeviceEvent::BassBoost(level), 0x53).await;
+    }
     with_connected_peripheral(|p| {
         Box::pin(async move {
             write_and_readback(
@@ -1616,10 +1563,7 @@ pub async fn send_ldac(enabled: bool) -> Result<(), String> {
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
-        if let Some(app) = app_handle() {
-            let _ = app.emit("device://ldac", enabled);
-        }
-        return Ok(());
+        return observe_mock_state(DeviceEvent::Ldac(enabled), 0x74).await;
     }
     drop(state);
     with_connected_peripheral(|p| {
@@ -1643,13 +1587,7 @@ pub async fn send_hearing_protection(enabled: bool, level: u8) -> Result<(), Str
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
-        if let Some(app) = app_handle() {
-            let _ = app.emit(
-                "device://hearing-protection",
-                &serde_json::json!({ "enabled": enabled, "level": level }),
-            );
-        }
-        return Ok(());
+        return observe_mock_state(DeviceEvent::HearingProtection { enabled, level }, 0x93).await;
     }
     drop(state);
     with_connected_peripheral(|p| {
@@ -1681,8 +1619,18 @@ pub async fn get_device_snapshot() -> crate::device::snapshot::DeviceSnapshot {
     BLE.lock().await.snapshot.clone()
 }
 
-pub async fn get_battery_state() -> BatteryState {
-    BLE.lock().await.battery.clone()
+async fn observe_mock_state(event: DeviceEvent, opcode: u8) -> Result<(), String> {
+    let snapshot = {
+        let mut state = BLE.lock().await;
+        if !state.mock {
+            return Err("Connected session is not a demo session".into());
+        }
+        state.snapshot.observe(opcode, &event, now_ms());
+        state.snapshot.clone()
+    };
+    let app = app_handle().ok_or("Application event handle is unavailable")?;
+    app.emit("device://snapshot", &snapshot)
+        .map_err(|error| format!("Publish demo snapshot: {error}"))
 }
 
 // ---------------------------------------------------------------------------
@@ -1727,9 +1675,6 @@ pub async fn disconnect(app: AppHandle) -> Result<(), String> {
     // A new connection may have started while the OS was cleaning up.
     if BLE.lock().await.session.accepts(token) {
         emit_connection_state(&app).await;
-        if let Some(id) = id {
-            let _ = app.emit("ble://disconnected", &id);
-        }
     }
     Ok(())
 }
@@ -2005,7 +1950,6 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
                 }
                 s.devices.insert(d.id.clone(), d.clone());
             }
-            let _ = app2.emit("ble://device", &d);
             emit_scan_status(&app2).await;
         });
     }
@@ -2078,27 +2022,10 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
     state
         .snapshot
         .observe(0x23, &DeviceEvent::GameMode(false), now_ms());
-    let token = state.session.token();
     drop(state);
 
     emit_connection_state(&app).await;
-    let _ = app.emit("ble://connected", &device);
-    let _ = app.emit("device://battery", &bat);
-
-    // Simulate periodic battery notify
-    let app2 = app.clone();
-    tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(300)).await;
-        if !BLE.lock().await.session.accepts(token) {
-            return;
-        }
-        let _ = app2.emit("device://anc", "anc");
-        tokio::time::sleep(Duration::from_millis(200)).await;
-        if !BLE.lock().await.session.accepts(token) {
-            return;
-        }
-        let _ = app2.emit("device://eq", &EqPreset::Balanced);
-    });
-
+    let snapshot = BLE.lock().await.snapshot.clone();
+    let _ = app.emit("device://snapshot", &snapshot);
     Ok(device)
 }

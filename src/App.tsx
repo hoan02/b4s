@@ -15,7 +15,6 @@ import type { BatteryData } from "./components/Battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
 import {
   disconnect as bleDisconnect,
-  onDisconnected,
   onConnection,
   onLinkHealth,
   getConnection,
@@ -24,7 +23,6 @@ import {
   listModelProfiles,
 } from "./lib/ble";
 import {
-  fetchBattery,
   queryBattery,
   setListeningState,
   setEqIndex,
@@ -37,14 +35,6 @@ import {
   setHearingProtection as sendHearingProtection,
   findBuds,
   profileNoise,
-  onBattery,
-  onAnc,
-  onEq,
-  onGameMode,
-  onBassBoost,
-  onLdac,
-  onHearingProtection,
-  toBatteryData,
 } from "./lib/device";
 import { defaultCustomBands } from "./lib/eq";
 import { readDesktopPreferences, writeAutoReconnect } from "./lib/desktopPreferences";
@@ -267,8 +257,7 @@ const App: Component = () => {
           await queryBattery();
           await refreshSnapshot();
         } catch {
-          if (link().mock) setBattery(toBatteryData(await fetchBattery()));
-          else await refreshSnapshot();
+          await refreshSnapshot();
         }
       }
     } catch {
@@ -277,19 +266,6 @@ const App: Component = () => {
 
     try {
       track(
-        await onDisconnected(() => {
-          session.selectDevice(null);
-          setConnected(false);
-          setDevice(null);
-          setBattery({ left: null, right: null, case: null });
-          setLink(emptyLink());
-          setControlError(null);
-          setView("home");
-          stopLinkPoll();
-          notify(t("toast.disconnected"), "info");
-        })
-      );
-      track(
         await onConnection((state) => {
           session.selectDevice(state.connected ? state.device?.id ?? null : null);
           if (state.connected) void refreshSnapshot().catch(() => {});
@@ -297,41 +273,18 @@ const App: Component = () => {
           setDevice(state.device);
           if (state.link) applyLink(state.link);
           if (!state.connected) {
+            setControlError(null);
+            setView("home");
             setBattery({ left: null, right: null, case: null });
             setLink(emptyLink());
             stopLinkPoll();
+            notify(t("toast.disconnected"), "info");
           } else startLinkPoll();
         })
       );
       track(await onLinkHealth((l) => applyLink(l)));
       track(await onDeviceSnapshot((snapshot) => session.accept(snapshot)));
       await refreshSnapshot();
-      track(await onBattery((b) => { if (link().mock) setBattery(toBatteryData(b)); }));
-      track(await onAnc((m) => { if (link().mock) setAncModeUi(m); }));
-      track(
-        await onEq((p) => {
-          if (!link().mock) return;
-          const map: Record<string, EqPresetId> = {
-            balanced: "classic",
-            classic: "classic",
-            bassboost: "bass",
-            bass: "bass",
-            voice: "voice",
-            clear: "clear",
-            hifilive: "hifi",
-            pop: "pop",
-            jazzrock: "jazz",
-            classical: "classical",
-            acoustic: "acoustic",
-          };
-          const key = p.toLowerCase().replace(/[^a-z]/g, "");
-          setEqActive(map[key] ?? "classic");
-        })
-      );
-      track(await onGameMode((on) => { if (link().mock) setGameOn(on); }));
-      track(await onBassBoost((level) => { if (link().mock) setBassBoostUi(level); }));
-      track(await onLdac((on) => { if (link().mock) setLdac(on); }));
-      track(await onHearingProtection((state) => { if (link().mock) setHearingProtect(state.enabled); }));
     } catch (e) {
       console.warn("[App] events", e);
     }
@@ -362,8 +315,7 @@ const App: Component = () => {
         await queryBattery();
           await refreshSnapshot();
       } catch {
-        if (link().mock) setBattery(toBatteryData(await fetchBattery()));
-          else await refreshSnapshot();
+        await refreshSnapshot();
       }
     } catch {
       /* */
@@ -437,7 +389,7 @@ const App: Component = () => {
       }
       return setCustomEq(bands.map((gain, index) => ({
         frequency: schema.bands[index], qValue: 1, gain, filter: 1,
-      })));
+      })), 101, false);
     }, () => {
       if (link().mock) setEqCustomActive(true);
       notify(t("toast.customEqSaved"), "success", `EQ custom · ${customLabel}`);
