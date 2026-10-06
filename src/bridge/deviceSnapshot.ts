@@ -28,10 +28,27 @@ export interface DeviceSnapshot {
   hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
 }
 
-export function getDeviceSnapshot(): Promise<DeviceSnapshot> {
-  return invoke<DeviceSnapshot>("get_device_snapshot");
+function decodeSnapshotV1(payload: unknown): DeviceSnapshot {
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    (payload as { schemaVersion?: unknown }).schemaVersion !== 1
+  ) {
+    throw new Error("Unsupported device snapshot schema version");
+  }
+  return payload as DeviceSnapshot;
+}
+
+export async function getDeviceSnapshot(): Promise<DeviceSnapshot> {
+  return decodeSnapshotV1(await invoke<unknown>("get_device_snapshot"));
 }
 
 export function onDeviceSnapshot(callback: (snapshot: DeviceSnapshot) => void): Promise<UnlistenFn> {
-  return listen<DeviceSnapshot>("device://snapshot", (event) => callback(event.payload));
+  return listen<unknown>("device://snapshot", (event) => {
+    try {
+      callback(decodeSnapshotV1(event.payload));
+    } catch (error) {
+      console.error("[Device] rejected snapshot event", error);
+    }
+  });
 }

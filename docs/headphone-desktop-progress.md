@@ -32,7 +32,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — feature observations use a typed snapshot; scan/connection/link DTOs now carry contract version 1 and link levels are closed enums; remaining Tauri command types and lifecycle envelopes still need consolidation |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — snapshot schema and scan/connection/link/connecting DTO versions are validated at frontend boundaries; closed link enum; session/sequence envelopes and consistent typed error semantics remain open |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions and find-buds workflow now have dedicated owners; remaining feature-controller extraction and navigation/accessibility acceptance are open |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
@@ -459,3 +459,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Moved find-buds active/confirmation state, start/stop commands and localized feedback into `features/find-buds/controller.ts`. `App.tsx` now composes the controller with the home view and dialog; reconnect/disconnect reset feature-local state.
 - `npx tsc --noEmit` and `git diff --check` passed. No test suite was run locally; CI validates the frontend build. Other listening/equalizer controllers and hardware stop/cancel behavior remain open.
+
+
+## Increment 58 — validate all active BLE event versions
+
+- The in-progress connection event now carries a versioned `ConnectingState`; its frontend adapter validates the version before exposing the selected device ID. Device snapshot invoke/event adapters now reject unsupported `schemaVersion` values too.
+- Removed the unused `ble://bind-state` event that guessed binding actions by searching arbitrary notification bytes for English text; no frontend consumer existed.
+- `npx tsc --noEmit`, `cargo check`, and `git diff --check` passed. P4.3 remains open for session/sequence envelopes and structured command/error contracts; no compatibility event path remains for these states.

@@ -248,7 +248,11 @@ export function onLinkHealth(cb: (link: LinkHealth) => void): Promise<UnlistenFn
 
 
 export function onConnecting(cb: (id: string) => void): Promise<UnlistenFn> {
-  return listen<string>("ble://connecting", (e) => cb(e.payload));
+  return listenContractV1<{ contractVersion: 1; deviceId: string }>(
+    "ble://connecting",
+    "connecting state",
+    (state) => cb(state.deviceId)
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -157,6 +157,13 @@ pub struct ConnectionState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ConnectingState {
+    pub contract_version: u16,
+    pub device_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ScanStatus {
     pub contract_version: u16,
     pub scanning: bool,

@@ -96,7 +96,13 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     let attempt_token = state.session.token();
     drop(state);
 
-    let _ = app.emit("ble://connecting", &device_id);
+    let _ = app.emit(
+        "ble://connecting",
+        &ConnectingState {
+            contract_version: 1,
+            device_id: device_id.clone(),
+        },
+    );
     match connect_one(app.clone(), device_id.clone()).await {
         Ok(device) => Ok(device),
         Err(error) => {
@@ -462,21 +468,6 @@ async fn handle_notification(
         state.last_rx_hex = Some(hex_encode(data));
     }
     let _ = app.emit("ble://link", &get_connection_state().await.link);
-
-    if let Ok(text) = std::str::from_utf8(data) {
-        let lower = text.to_ascii_lowercase();
-        if lower.contains("init state") {
-            let _ = app.emit(
-                "ble://bind-state",
-                &serde_json::json!({ "state": "initial", "action": "relieveBind" }),
-            );
-        } else if lower.contains("already configured") {
-            let _ = app.emit(
-                "ble://bind-state",
-                &serde_json::json!({ "state": "alreadyConfigured", "action": "preserveExisting" }),
-            );
-        }
-    }
 
     let (last_anc, family) = {
         let state = BLE.lock().await;
