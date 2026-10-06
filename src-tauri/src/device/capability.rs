@@ -25,6 +25,17 @@ pub enum Feature {
     InEar,
 }
 
+impl Feature {
+    /// Capability key used by the reviewed profile's `experimentalFeatures`.
+    pub fn key(self) -> &'static str {
+        match self {
+            Feature::Gesture => "gesture",
+            Feature::InEar => "inEar",
+            _ => "",
+        }
+    }
+}
+
 pub fn authorize_control(profile: &DeviceProfile) -> Result<(), String> {
     let connection = profile
         .connection
@@ -71,6 +82,18 @@ pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String
         Feature::InEar => capability.in_ear,
     };
     if enabled {
+        let key = feature.key();
+        if !key.is_empty()
+            && profile
+                .experimental_features
+                .iter()
+                .any(|feature| feature == key)
+            && !EXPERIMENTAL_MODE.load(Ordering::Relaxed)
+        {
+            return Err(format!(
+                "{feature:?} is implemented from source/replay evidence and requires Experimental mode"
+            ));
+        }
         Ok(())
     } else {
         Err(format!(
@@ -118,5 +141,22 @@ mod tests {
         assert!(authorize_control(&ultra).is_err());
         set_experimental_mode(false);
         assert!(authorize_control(&ultra).is_err());
+    }
+
+    #[test]
+    fn per_feature_experimental_gate_requires_both_capability_and_mode() {
+        let mut pro = profile_for(Some("bass-bp1-pro"), None, None);
+        // Capability is disabled in the reviewed profile.
+        assert!(authorize(&pro, Feature::Gesture).is_err());
+        pro.capabilities.gesture = true;
+        pro.experimental_features = vec!["gesture".into()];
+        // Enabled capability still needs the user's Experimental opt-in.
+        assert!(authorize(&pro, Feature::Gesture).is_err());
+        set_experimental_mode(true);
+        assert!(authorize(&pro, Feature::Gesture).is_ok());
+        // A non-experimental feature is unaffected by the gate.
+        assert!(authorize(&pro, Feature::Eq).is_ok());
+        set_experimental_mode(false);
+        assert!(authorize(&pro, Feature::Gesture).is_err());
     }
 }

@@ -19,8 +19,8 @@
     "ldac": false,
     "hearingProtection": false,
     "findBuds": true,
-    "gesture": false,
-    "inEar": false
+    "gesture": true,
+    "inEar": true
   },
   "noise": {
     "supportsAdaptive": true,
@@ -422,11 +422,15 @@
         "functions": [1, 0]
       }
     ],
-    "provenance": "assets/gesture/gesture_config_function_list.json (2.17.0.1); firmware/capture acceptance not verified, capability disabled"
+    "provenance": "assets/gesture/gesture_config_function_list.json (2.17.0.1); firmware/capture acceptance not verified, experimental-only"
   },
   "inEar": {
-    "provenance": "GestureBleManager.a and EarHeadSetViewModel (BA25/BA26); model/firmware support not verified, capability disabled"
+    "provenance": "GestureBleManager.a and EarHeadSetViewModel (BA25/BA26); model/firmware support not verified, experimental-only"
   },
+  "experimentalFeatures": [
+    "gesture",
+    "inEar"
+  ],
   "schemaVersion": 2,
   "connection": {
     "transport": "bleGatt",

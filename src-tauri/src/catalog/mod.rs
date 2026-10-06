@@ -80,6 +80,20 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
                 return Err(format!("invalid in-ear provenance in {}", profile.id));
             }
         }
+        let mut experimental = std::collections::HashSet::new();
+        for feature in &profile.experimental_features {
+            let capability_enabled = match feature.as_str() {
+                "gesture" => profile.capabilities.gesture && profile.gesture.is_some(),
+                "inEar" => profile.capabilities.in_ear && profile.in_ear.is_some(),
+                _ => false,
+            };
+            if !capability_enabled || !experimental.insert(feature) {
+                return Err(format!(
+                    "invalid experimental feature {feature} in {}",
+                    profile.id
+                ));
+            }
+        }
         if profile.schema_version != 2 {
             return Err(format!("unsupported profile schema in {}", profile.id));
         }
@@ -290,5 +304,20 @@ mod tests {
             provenance: "synthetic validation fixture".into(),
         });
         assert!(validate_profiles(&[model]).is_ok());
+    }
+
+    #[test]
+    fn experimental_features_must_be_enabled_reviewed_capabilities() {
+        let mut model = profile_for("bass-bp1-pro").unwrap();
+        model.capabilities.gesture = false;
+        model.experimental_features = vec!["gesture".into()];
+        assert!(validate_profiles(&[model.clone()]).is_err());
+        model.capabilities.gesture = true;
+        assert!(validate_profiles(&[model.clone()]).is_ok());
+        model.experimental_features = vec!["gesture".into(), "gesture".into()];
+        assert!(validate_profiles(&[model.clone()]).is_err());
+        model.capabilities.gesture = false;
+        model.experimental_features = vec!["rawOpcode".into()];
+        assert!(validate_profiles(&[model]).is_err());
     }
 }

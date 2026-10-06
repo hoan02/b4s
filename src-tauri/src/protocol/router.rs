@@ -444,8 +444,8 @@ mod tests {
     #[test]
     fn gesture_and_in_ear_require_capability_reviewed_schema_and_allowed_functions() {
         let mut profile = profile_for(Some("bass-bp1-pro"), None, None);
-        // The profile ships the source schema but keeps the capability disabled
-        // until hardware evidence exists.
+        // The reviewed profile enables the capabilities but marks them
+        // experimental-only, so a user without the opt-in cannot dispatch.
         assert!(encode_feature(
             &profile,
             FeatureCommand::SetGesture {
@@ -457,8 +457,8 @@ mod tests {
         .is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
 
-        profile.capabilities.gesture = true;
-        profile.capabilities.in_ear = true;
+        // Isolate the schema/allowlist behaviour from the Experimental gate.
+        profile.experimental_features.clear();
         assert_eq!(
             encode_feature(
                 &profile,

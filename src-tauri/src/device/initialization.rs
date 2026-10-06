@@ -62,14 +62,18 @@ mod tests {
             .into_iter()
             .find(|m| m.id == "bass-bp1-pro")
             .unwrap();
-        let profile = profile_for(Some(&model.id), None, None);
+        let mut profile = profile_for(Some(&model.id), None, None);
+        // Clear the Experimental gate so the planner is deterministic: every
+        // enabled capability is queried, including the experimental in-ear one.
+        profile.experimental_features.clear();
         assert_eq!(
             plan_for(Some(&model), &profile),
             vec![
                 StartupQuery::Battery,
                 StartupQuery::Eq,
                 StartupQuery::Bass,
-                StartupQuery::Spatial
+                StartupQuery::Spatial,
+                StartupQuery::InEar
             ]
         );
     }

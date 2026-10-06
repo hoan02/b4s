@@ -86,6 +86,8 @@ pub struct DeviceProfile {
     pub protocol: ProtocolFamily,
     pub verified: bool,
     pub noise: NoiseCapability,
+    #[serde(default)]
+    pub experimental_features: Vec<String>,
 }
 
 pub fn unknown_profile(model_id: Option<&str>, model_name: Option<&str>) -> DeviceProfile {
@@ -103,6 +105,7 @@ pub fn unknown_profile(model_id: Option<&str>, model_name: Option<&str>) -> Devi
             max_custom_level: 0,
             supports_transparency_voice: false,
         },
+        experimental_features: Vec::new(),
     }
 }
 
@@ -242,6 +245,7 @@ pub fn profile_for(
                 max_custom_level: profile.noise.max_custom_level,
                 supports_transparency_voice: profile.noise.supports_transparency_voice,
             },
+            experimental_features: profile.experimental_features,
         };
     }
     let Some(model) = all_models().into_iter().find(|model| model.id == id) else {
@@ -264,6 +268,7 @@ pub fn profile_for(
             max_custom_level: 0,
             supports_transparency_voice: false,
         },
+        experimental_features: Vec::new(),
     }
 }
 

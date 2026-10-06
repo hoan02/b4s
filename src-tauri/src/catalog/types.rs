@@ -142,5 +142,9 @@ pub struct ModelProfile {
     pub gesture: Option<GestureProfile>,
     #[serde(default)]
     pub in_ear: Option<InEarProfile>,
+    /// Capability keys that are implemented from source/replay evidence but
+    /// only eligible while the user opts into Experimental mode.
+    #[serde(default)]
+    pub experimental_features: Vec<String>,
     pub image: Option<String>,
 }
