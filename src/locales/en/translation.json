@@ -288,5 +288,7 @@
   "restore.title": "Restore default settings",
   "restore.hint": "Reset operation settings on the earbuds",
   "restore.message": "Restore the earbuds' operation settings to factory defaults? This cannot be undone.",
-  "restore.confirm": "Restore"
+  "restore.confirm": "Restore",
+  "adaptiveLr.title": "Adaptive L/R earbuds",
+  "adaptiveLr.hint": "Adaptive audio between left and right earbuds"
 }

@@ -195,5 +195,7 @@
   "restore.title": "Restaurar ajustes predeterminados",
   "restore.hint": "Restablecer los ajustes de funcionamiento de los auriculares",
   "restore.message": "¿Restaurar los ajustes de funcionamiento de los auriculares a los valores de fábrica? No se puede deshacer.",
-  "restore.confirm": "Restaurar"
+  "restore.confirm": "Restaurar",
+  "adaptiveLr.title": "Auriculares adaptables L/R",
+  "adaptiveLr.hint": "Audio adaptable entre el auricular izquierdo y derecho"
 }

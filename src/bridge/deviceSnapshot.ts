@@ -51,6 +51,7 @@ export interface DeviceSnapshot {
   hearing: { enabled: boolean; level: number; observedAtMs: number } | null;
   inEar: InEarReading | null;
   multipoint: MultipointReading | null;
+  adaptiveLr: MultipointReading | null;
   restoreAvailable: boolean | null;
   gesture: GestureReading[];
 }
@@ -99,6 +100,9 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
   const multipoint = value.multipoint;
   const validMultipoint = multipoint === null || (isRecord(multipoint) &&
     typeof multipoint.enabled === "boolean" && isCounter(multipoint.observedAtMs));
+  const adaptiveLr = value.adaptiveLr;
+  const validAdaptiveLr = adaptiveLr === null || (isRecord(adaptiveLr) &&
+    typeof adaptiveLr.enabled === "boolean" && isCounter(adaptiveLr.observedAtMs));
   const gesture = value.gesture;
   const validGesture = Array.isArray(gesture) && gesture.every((reading) =>
     isRecord(reading) && Number.isInteger(reading.layout) &&
@@ -118,7 +122,7 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
     ["game", "ldac", "spatialEnabled"].every((key) =>
       isNullable(value[key], (item) => typeof item === "boolean")) &&
     isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing &&
-    validInEar && validMultipoint && validGesture &&
+    validInEar && validMultipoint && validAdaptiveLr && validGesture &&
     isNullable(value.restoreAvailable, (item) => typeof item === "boolean");
 }
 

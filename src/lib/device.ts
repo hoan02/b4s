@@ -24,6 +24,7 @@ type DeviceCommand =
   | { kind: "setInEar"; enabled: boolean }
   | { kind: "setMultipoint"; enabled: boolean }
   | { kind: "restoreDefaults" }
+  | { kind: "setAdaptiveLr"; enabled: boolean }
   | { kind: "setGesture"; layout: number; left: number | null; right: number | null };
 
 export interface DeviceCommandResponse {
@@ -141,6 +142,10 @@ export async function setMultipoint(enabled: boolean): Promise<DeviceCommandResp
 
 export async function restoreDefaults(): Promise<DeviceCommandResponse> {
   return applyDeviceCommand({ kind: "restoreDefaults" });
+}
+
+export async function setAdaptiveLr(enabled: boolean): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "setAdaptiveLr", enabled });
 }
 
 export async function setGesture(

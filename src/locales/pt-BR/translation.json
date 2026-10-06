@@ -195,5 +195,7 @@
   "restore.title": "Restaurar configurações padrão",
   "restore.hint": "Redefinir as configurações de operação do fone",
   "restore.message": "Restaurar as configurações de operação do fone para o padrão de fábrica? Isso não pode ser desfeito.",
-  "restore.confirm": "Restaurar"
+  "restore.confirm": "Restaurar",
+  "adaptiveLr.title": "Fones adaptáveis L/R",
+  "adaptiveLr.hint": "Áudio adaptável entre os fones esquerdo e direito"
 }

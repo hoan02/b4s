@@ -60,6 +60,10 @@ interface Props {
   restoreSupported: boolean;
   restorePending?: boolean;
   restoreError?: string | null;
+  adaptiveLrSupported: boolean;
+  adaptiveLrOn: boolean | null;
+  adaptiveLrPending?: boolean;
+  adaptiveLrError?: string | null;
   gameMode: boolean | null;
   gamePending?: boolean;
   gameError?: string | null;
@@ -83,6 +87,7 @@ interface Props {
   onOpenGestures: () => void;
   onInEar: (enabled: boolean) => void;
   onMultipoint: (enabled: boolean) => void;
+  onAdaptiveLr: (enabled: boolean) => void;
   onRestore: () => void;
   onSpatialOn: (on: boolean) => void;
   onSpatialMode: (m: SpatialMode) => void;
@@ -449,6 +454,27 @@ const HomePanel: Component<Props> = (props) => {
             </div>
             <span class="list-chev">›</span>
           </button>
+          <Show when={props.adaptiveLrSupported}>
+          <div class="list-row">
+            <span class="list-ico list-ico-text">AL</span>
+            <div class="list-text">
+              <span class="list-title">{t("adaptiveLr.title")}</span>
+              <span class="list-sub">{props.adaptiveLrOn === null ? t("control.unknown") : t("adaptiveLr.hint")}</span>
+              <OperationStatus pending={props.adaptiveLrPending} error={props.adaptiveLrError} />
+            </div>
+            <label class="toggle sm">
+              <input
+                type="checkbox"
+                disabled={props.adaptiveLrPending}
+                aria-checked={props.adaptiveLrOn === null ? "mixed" : props.adaptiveLrOn}
+                checked={props.adaptiveLrOn === true}
+                aria-label={t("adaptiveLr.title")}
+                onChange={(e) => props.onAdaptiveLr((e.currentTarget as HTMLInputElement).checked)}
+              />
+              <span class="slider" />
+            </label>
+          </div>
+          </Show>
           <Show when={props.restoreSupported}>
           <button
             type="button"

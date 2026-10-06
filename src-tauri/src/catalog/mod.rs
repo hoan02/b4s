@@ -102,6 +102,14 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
                 ));
             }
         }
+        if profile.capabilities.adaptive_lr && profile.adaptive_lr.is_none() {
+            return Err(format!("missing adaptiveLr provenance in {}", profile.id));
+        }
+        if let Some(adaptive) = &profile.adaptive_lr {
+            if adaptive.provenance.trim().is_empty() {
+                return Err(format!("invalid adaptiveLr provenance in {}", profile.id));
+            }
+        }
         let mut experimental = std::collections::HashSet::new();
         for feature in &profile.experimental_features {
             let capability_enabled = match feature.as_str() {
@@ -111,6 +119,7 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
                 "restoreDefaults" => {
                     profile.capabilities.restore_defaults && profile.restore_defaults.is_some()
                 }
+                "adaptiveLr" => profile.capabilities.adaptive_lr && profile.adaptive_lr.is_some(),
                 _ => false,
             };
             if !capability_enabled || !experimental.insert(feature) {

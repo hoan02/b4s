@@ -43,8 +43,13 @@ The restore and call settings share the same conflict vocabulary already seen el
 - The auto power-off ("`time_off`") opcode; `BA46`/`BA4A` candidates were ruled out and
   no confident match was found.
 - `BA36` availability semantics and whether it is a boolean or a bitfield.
-- `BA3F`, `BA49`, `BA55`, `BA90`, `BA9A`, `BA56`, `BA77`, `BA70`–`BA7D` remain unlabeled.
+- `BA3F`/`BA4A` effect on audio (the label is confirmed but the runtime behavior is not).
+- `BA49`, `BA55`, `BA90`, `BA9A`, `BA56`, `BA77`, `BA70`–`BA7D` remain unlabeled.
 - Prompt language/volume and indicator-light opcodes were not located in this pass.
+
+The application also decodes resources into `res/values/strings.xml`, which is how
+`str_left_and_right_adapter` was resolved; resource decoding can be reproduced locally
+with `jadx.cli.JadxCLI --no-src` into an ignored directory.
 
 The restore path is implemented behind the Experimental opt-in (section 6). The
 phone-side call settings, touch lock, firmware parsing and auto-off remain unimplemented
@@ -55,5 +60,11 @@ until they are traced to a specific model/firmware and reviewed.
 `BA36`/`AA36` (availability) and `BA37`/`AA37` (restore) are implemented behind the
 reviewed `restoreDefaults` capability and the Experimental opt-in, with an explicit
 confirmation dialog. Restore is treated as a transport-accepted action that waits for an
-`AA37 00` result and never becomes "confirmed device state". The touch-lock, firmware,
-auto-off and phone-side call settings remain unimplemented.
+`AA37 00` result and never becomes "confirmed device state".
+
+`BA3F`/`AA3F` (state) and `BA4A01`/`BA4A00` (set) are implemented behind the
+`adaptiveLr` capability and the Experimental opt-in. The resolved resource
+`str_left_and_right_adapter` = "Adaptive L/R Earbuds" supplies the user-facing label; the
+setter writes `BA4A` and re-queries `BA3F` for confirmation.
+
+The touch-lock, firmware, auto-off and phone-side call settings remain unimplemented.

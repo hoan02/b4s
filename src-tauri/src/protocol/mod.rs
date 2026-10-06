@@ -95,6 +95,11 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             // EarPhoneSettingV2Activity.u2: BA37 after the user confirms; AA37 is the result.
             Frame::write(0x37, &[]).encode_write()
         }
+        Command::QueryAdaptiveLr => Frame::write(0x3F, &[]).encode_write(),
+        Command::SetAdaptiveLr(enabled) => {
+            // EarPhoneSettingV2Activity.e2: BA4A01 on / BA4A00 off.
+            Frame::write(0x4A, &[if enabled { 0x01 } else { 0x00 }]).encode_write()
+        }
         Command::QueryGesture(layout) => Frame::write(0x21, &[layout]).encode_write(),
         Command::SetGesture {
             layout,

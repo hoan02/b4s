@@ -251,5 +251,7 @@
   "restore.title": "Khôi phục cài đặt mặc định",
   "restore.hint": "Đặt lại cài đặt vận hành trên tai nghe",
   "restore.message": "Khôi phục cài đặt vận hành của tai nghe về mặc định nhà máy? Không thể hoàn tác.",
-  "restore.confirm": "Khôi phục"
+  "restore.confirm": "Khôi phục",
+  "adaptiveLr.title": "Tai nghe thích ứng L/R",
+  "adaptiveLr.hint": "Thích ứng âm thanh giữa tai trái và phải"
 }

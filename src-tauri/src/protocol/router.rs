@@ -51,6 +51,7 @@ pub enum FeatureCommand {
     SetInEar(bool),
     SetMultipoint(bool),
     RestoreDefaults,
+    SetAdaptiveLr(bool),
 }
 
 pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Result<Vec<u8>, String> {
@@ -71,6 +72,7 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::SetInEar(_) => Feature::InEar,
         FeatureCommand::SetMultipoint(_) => Feature::Multipoint,
         FeatureCommand::RestoreDefaults => Feature::RestoreDefaults,
+        FeatureCommand::SetAdaptiveLr(_) => Feature::AdaptiveLr,
     };
     authorize(profile, feature)?;
     if let FeatureCommand::SetCustomEq {
@@ -172,6 +174,14 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
                 .and_then(|model| model.restore_defaults)
                 .ok_or("No reviewed restore-defaults schema")?;
         }
+        FeatureCommand::SetAdaptiveLr(_) => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.adaptive_lr)
+                .ok_or("No reviewed adaptiveLr schema")?;
+        }
         _ => {}
     }
 
@@ -231,6 +241,9 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         }
         (ProtocolFamily::Bp1Pro, FeatureCommand::RestoreDefaults) => {
             Ok(encode_command(Command::RestoreDefaults))
+        }
+        (ProtocolFamily::Bp1Pro, FeatureCommand::SetAdaptiveLr(enabled)) => {
+            Ok(encode_command(Command::SetAdaptiveLr(enabled)))
         }
         (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
@@ -484,6 +497,7 @@ mod tests {
         assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetMultipoint(true)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::RestoreDefaults).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetAdaptiveLr(true)).is_err());
 
         // Isolate the schema/allowlist behaviour from the Experimental gate.
         profile.experimental_features.clear();
@@ -530,6 +544,10 @@ mod tests {
         assert_eq!(
             encode_feature(&profile, FeatureCommand::RestoreDefaults).unwrap(),
             vec![0xBA, 0x37]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetAdaptiveLr(true)).unwrap(),
+            vec![0xBA, 0x4A, 0x01]
         );
     }
 }

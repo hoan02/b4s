@@ -32,6 +32,7 @@ pub enum ExpectedState {
     InEar(bool),
     Multipoint(bool),
     RestoreResult(u8),
+    AdaptiveLr(bool),
     Gesture {
         layout: u8,
         left: Option<u8>,
@@ -121,6 +122,9 @@ impl ExpectedState {
                 expected == actual
             }
             (Self::RestoreResult(expected), 0x37, DeviceEvent::RestoreResult(actual)) => {
+                expected == actual
+            }
+            (Self::AdaptiveLr(expected), 0x3F, DeviceEvent::AdaptiveLr(actual)) => {
                 expected == actual
             }
             (
@@ -503,6 +507,16 @@ mod tests {
         restore.event = DeviceEvent::RestoreResult(0);
         restore.opcode = 0x36;
         assert!(!ExpectedState::RestoreResult(0).matches(session, &restore));
+
+        let mut adaptive = StateObservation {
+            session,
+            opcode: 0x3F,
+            event: DeviceEvent::AdaptiveLr(true),
+        };
+        assert!(ExpectedState::AdaptiveLr(true).matches(session, &adaptive));
+        assert!(!ExpectedState::AdaptiveLr(false).matches(session, &adaptive));
+        adaptive.opcode = 0x4A;
+        assert!(!ExpectedState::AdaptiveLr(true).matches(session, &adaptive));
 
         let mut observation = StateObservation {
             session,

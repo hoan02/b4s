@@ -22,7 +22,8 @@
     "gesture": true,
     "inEar": true,
     "multipoint": true,
-    "restoreDefaults": true
+    "restoreDefaults": true,
+    "adaptiveLr": true
   },
   "noise": {
     "supportsAdaptive": true,
@@ -435,11 +436,15 @@
   "restoreDefaults": {
     "provenance": "EarphoneSettingFragment/EarPhoneSettingV2Activity (BA36 availability, BA37 restore); destructive action not verified on hardware, experimental-only"
   },
+  "adaptiveLr": {
+    "provenance": "EarPhoneSettingV2Activity n2/o2 and resolved string str_left_and_right_adapter = 'Adaptive L/R Earbuds' (BA3F query/state, BA4A set); effect not verified, experimental-only"
+  },
   "experimentalFeatures": [
     "gesture",
     "inEar",
     "multipoint",
-    "restoreDefaults"
+    "restoreDefaults",
+    "adaptiveLr"
   ],
   "schemaVersion": 2,
   "connection": {

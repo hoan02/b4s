@@ -41,6 +41,13 @@ pub struct MultipointReading {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AdaptiveLrReading {
+    pub enabled: bool,
+    pub observed_at_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GestureReading {
     pub layout: u8,
     pub left: u8,
@@ -76,6 +83,7 @@ pub struct DeviceSnapshot {
     pub hearing: Option<HearingReading>,
     pub in_ear: Option<InEarReading>,
     pub multipoint: Option<MultipointReading>,
+    pub adaptive_lr: Option<AdaptiveLrReading>,
     pub restore_available: Option<bool>,
     pub gesture: Vec<GestureReading>,
 }
@@ -100,6 +108,7 @@ impl DeviceSnapshot {
             hearing: None,
             in_ear: None,
             multipoint: None,
+            adaptive_lr: None,
             restore_available: None,
             gesture: Vec::new(),
         }
@@ -159,6 +168,12 @@ impl DeviceSnapshot {
                 })
             }
             DeviceEvent::RestoreAvailable(available) => self.restore_available = Some(*available),
+            DeviceEvent::AdaptiveLr(enabled) => {
+                self.adaptive_lr = Some(AdaptiveLrReading {
+                    enabled: *enabled,
+                    observed_at_ms: at_ms,
+                })
+            }
             DeviceEvent::GestureConfig {
                 layout,
                 left,
@@ -345,5 +360,17 @@ mod tests {
         snapshot.observe(0x36, &DeviceEvent::RestoreAvailable(false), 31);
         assert_eq!(snapshot.restore_available, Some(false));
         assert!(DeviceSnapshot::new(9).restore_available.is_none());
+    }
+
+    #[test]
+    fn adaptive_lr_observation_is_timestamped_and_resets_with_session() {
+        let mut snapshot = DeviceSnapshot::new(10);
+        assert!(snapshot.adaptive_lr.is_none());
+        snapshot.observe(0x3F, &DeviceEvent::AdaptiveLr(true), 40);
+        assert!(snapshot.adaptive_lr.as_ref().unwrap().enabled);
+        assert_eq!(snapshot.adaptive_lr.as_ref().unwrap().observed_at_ms, 40);
+        snapshot.observe(0x3F, &DeviceEvent::AdaptiveLr(false), 41);
+        assert!(!snapshot.adaptive_lr.as_ref().unwrap().enabled);
+        assert!(DeviceSnapshot::new(11).adaptive_lr.is_none());
     }
 }

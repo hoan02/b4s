@@ -82,6 +82,12 @@ impl Bp1ProAnc {
                 [code, ..] => Ok(DeviceEvent::RestoreResult(*code)),
                 _ => Err(DecodeError::UnknownOpcode(0x37)),
             },
+            // Adaptive L/R earbuds state: AA 3F [00|01]. AA4A is the set reply.
+            0x3F => match frame.payload.as_slice() {
+                [0] => Ok(DeviceEvent::AdaptiveLr(false)),
+                [1] => Ok(DeviceEvent::AdaptiveLr(true)),
+                _ => Err(DecodeError::UnknownOpcode(0x3F)),
+            },
             // Gesture v1 configuration: AA 21 [layout] [left] [right].
             0x21 => match frame.payload.as_slice() {
                 [layout, left, right] if *layout <= 5 => Ok(DeviceEvent::GestureConfig {
@@ -647,6 +653,29 @@ mod tests {
             vec![0xBA, 0x36]
         );
         assert_eq!(encode_command(Command::RestoreDefaults), vec![0xBA, 0x37]);
+    }
+
+    #[test]
+    fn adaptive_lr_state_and_set_code() {
+        assert_eq!(
+            dec(&[0xAA, 0x3F, 0x01]).unwrap(),
+            DeviceEvent::AdaptiveLr(true)
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x3F, 0x00]).unwrap(),
+            DeviceEvent::AdaptiveLr(false)
+        );
+        assert!(dec(&[0xAA, 0x3F, 0x02]).is_err());
+        assert!(dec(&[0xAA, 0x4A, 0x01]).is_err());
+        assert_eq!(encode_command(Command::QueryAdaptiveLr), vec![0xBA, 0x3F]);
+        assert_eq!(
+            encode_command(Command::SetAdaptiveLr(true)),
+            vec![0xBA, 0x4A, 0x01]
+        );
+        assert_eq!(
+            encode_command(Command::SetAdaptiveLr(false)),
+            vec![0xBA, 0x4A, 0x00]
+        );
     }
 
     #[test]

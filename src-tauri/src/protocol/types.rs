@@ -197,6 +197,8 @@ pub enum Command {
     SetMultipoint(bool),
     QueryRestoreSupport,
     RestoreDefaults,
+    QueryAdaptiveLr,
+    SetAdaptiveLr(bool),
     QueryGesture(u8),
     SetGesture {
         layout: u8,
@@ -236,6 +238,7 @@ pub enum DeviceEvent {
     Multipoint(bool),
     RestoreAvailable(bool),
     RestoreResult(u8),
+    AdaptiveLr(bool),
     /// Raw / unknown — forwarded for debug
     Unknown {
         cmd: u8,

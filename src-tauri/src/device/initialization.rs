@@ -11,6 +11,7 @@ pub enum StartupQuery {
     InEar,
     Multipoint,
     RestoreSupport,
+    AdaptiveLr,
     Gesture(u8),
 }
 
@@ -36,6 +37,7 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
         (Feature::InEar, StartupQuery::InEar),
         (Feature::Multipoint, StartupQuery::Multipoint),
         (Feature::RestoreDefaults, StartupQuery::RestoreSupport),
+        (Feature::AdaptiveLr, StartupQuery::AdaptiveLr),
     ] {
         if authorize(profile, feature).is_ok() {
             plan.push(query);
@@ -69,6 +71,7 @@ pub fn command_for(query: StartupQuery) -> Option<Command> {
         StartupQuery::InEar => Some(Command::QueryInEar),
         StartupQuery::Multipoint => Some(Command::QueryMultipoint),
         StartupQuery::RestoreSupport => Some(Command::QueryRestoreSupport),
+        StartupQuery::AdaptiveLr => Some(Command::QueryAdaptiveLr),
         StartupQuery::Gesture(layout) => Some(Command::QueryGesture(layout)),
     }
 }
@@ -98,6 +101,7 @@ mod tests {
                 StartupQuery::InEar,
                 StartupQuery::Multipoint,
                 StartupQuery::RestoreSupport,
+                StartupQuery::AdaptiveLr,
                 StartupQuery::Gesture(0),
                 StartupQuery::Gesture(1),
                 StartupQuery::Gesture(2),

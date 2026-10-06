@@ -58,6 +58,8 @@ pub struct Capabilities {
     pub multipoint: bool,
     #[serde(default)]
     pub restore_defaults: bool,
+    #[serde(default)]
+    pub adaptive_lr: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -136,6 +138,12 @@ pub struct RestoreDefaultsProfile {
     pub provenance: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AdaptiveLrProfile {
+    pub provenance: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelProfile {
@@ -162,6 +170,8 @@ pub struct ModelProfile {
     pub multipoint: Option<MultipointProfile>,
     #[serde(default)]
     pub restore_defaults: Option<RestoreDefaultsProfile>,
+    #[serde(default)]
+    pub adaptive_lr: Option<AdaptiveLrProfile>,
     /// Capability keys that are implemented from source/replay evidence but
     /// only eligible while the user opts into Experimental mode.
     #[serde(default)]

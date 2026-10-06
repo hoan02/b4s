@@ -64,6 +64,9 @@ enum DeviceCommand {
         enabled: bool,
     },
     RestoreDefaults,
+    SetAdaptiveLr {
+        enabled: bool,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -229,6 +232,10 @@ pub(crate) async fn apply_device_command(
         DeviceCommand::RestoreDefaults => {
             ble::commands::send_restore_defaults().await?;
             DeviceCommandDisposition::TransportAccepted
+        }
+        DeviceCommand::SetAdaptiveLr { enabled } => {
+            ble::commands::send_adaptive_lr(enabled).await?;
+            DeviceCommandDisposition::DeviceStateObserved
         }
     };
     let link = ble::get_link_health().await;

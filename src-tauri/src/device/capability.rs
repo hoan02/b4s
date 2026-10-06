@@ -25,6 +25,7 @@ pub enum Feature {
     InEar,
     Multipoint,
     RestoreDefaults,
+    AdaptiveLr,
 }
 
 impl Feature {
@@ -35,6 +36,7 @@ impl Feature {
             Feature::InEar => "inEar",
             Feature::Multipoint => "multipoint",
             Feature::RestoreDefaults => "restoreDefaults",
+            Feature::AdaptiveLr => "adaptiveLr",
             _ => "",
         }
     }
@@ -86,6 +88,7 @@ pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String
         Feature::InEar => capability.in_ear,
         Feature::Multipoint => capability.multipoint,
         Feature::RestoreDefaults => capability.restore_defaults,
+        Feature::AdaptiveLr => capability.adaptive_lr,
     };
     if enabled {
         let key = feature.key();

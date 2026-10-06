@@ -195,5 +195,7 @@
   "restore.title": "恢复默认设置",
   "restore.hint": "重置耳机上的操作设置",
   "restore.message": "将耳机操作设置恢复为出厂默认？此操作无法撤销。",
-  "restore.confirm": "恢复"
+  "restore.confirm": "恢复",
+  "adaptiveLr.title": "左右耳自适应",
+  "adaptiveLr.hint": "左右耳自适应音频"
 }

@@ -381,6 +381,25 @@ pub async fn send_restore_defaults() -> Result<(), CommandError> {
     .await
 }
 
+pub async fn send_adaptive_lr(enabled: bool) -> Result<(), CommandError> {
+    let data = encode_connected_feature(protocol::FeatureCommand::SetAdaptiveLr(enabled)).await?;
+    if BLE.lock().await.mock {
+        return observe_mock_state(DeviceEvent::AdaptiveLr(enabled), 0x3F).await;
+    }
+    with_connected_peripheral(|p| {
+        Box::pin(async move {
+            write_and_readback(
+                &p,
+                &data,
+                &[0xBA, 0x3F],
+                crate::device::confirmation::ExpectedState::AdaptiveLr(enabled),
+            )
+            .await
+        })
+    })
+    .await
+}
+
 async fn encode_connected_feature(command: protocol::FeatureCommand) -> Result<Vec<u8>, String> {
     let state = BLE.lock().await;
     let id = state.connected_id.as_ref().ok_or("Not connected")?;
