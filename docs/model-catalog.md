@@ -7,11 +7,10 @@ server identities, categories, regional image URLs and color codes; it does
 not supply protocol capabilities. New headphone identities remain `scanOnly`
 with an `unknown` protocol and cannot initiate a control connection. Pairing
 filters catalog products whose category paths in every region identify them as
-speakers; unclassified or regionally mixed products stay visible. Historical
-speaker IDs remain resolvable for saved-device reconnects. CDN images are not
-fetched automatically. Existing reviewed profiles and legacy support levels
-are preserved. See [2.17.0.1 findings](re/findings-2.17.0.1.md) for scope and
-completeness limits.
+speakers; unclassified or regionally mixed products stay visible. CDN images
+are not fetched automatically. Reviewed profiles remain separate from this
+public metadata snapshot. See [2.17.0.1 findings](re/findings-2.17.0.1.md) for
+scope and completeness limits.
 
 The catalog follows the same separation used by the APK: model data selects a
 protocol family, while the family adapter owns packet encoding. A model profile
@@ -34,11 +33,11 @@ The profile's `protocolFamily` must be an existing family such as `bp1`. The
 router then reuses that family adapter. A profile alone does not implement new
 wire behavior or guarantee that every UI control works on the model.
 
-Currently registered family values are `bp1`, `baseusAaBaExperimental`, and `unknown`.
-Support values are `verified`, `experimental`, and `scanOnly`. For recognition
-only, use `scanOnly` and `unknown`. JSON profiles override matching legacy IDs
-and supply runtime ANC settings and capabilities. Transport defaults and some
-frontend controls still need migration; see [architecture](architecture.md).
+Current family values are `bp1` and `unknown`. Support values are `verified`,
+`experimental`, and `scanOnly`. For recognition-only, use `scanOnly` and
+`unknown`. A JSON profile supplies explicit runtime transport, ANC settings and
+capabilities; no registry fallback or transport default authorizes control. See
+[architecture](architecture.md) for the profile boundary.
 
 Run `cargo test --manifest-path src-tauri/Cargo.toml --lib` to validate all
 profiles. EQ curves must match the number of bands, gains need valid limits,
@@ -59,9 +58,8 @@ handshake, UUID selection and wrapping for the new family.
 
 BP1 Pro has a reviewed JSON profile at
 `src-tauri/catalog/models/bass-bp1-pro.json`. BP1 Ultra is recognizable but
-remains scan-only while its control transport is unverified; its registry entry
-does not authorize a connection. Keep their model records separate because
-framing and firmware behavior can differ. Do not infer that the JSON catalog is
-complete from a registry entry or a shared family name. The app's `verified`
+remains scan-only while its control transport is unverified. Keep their model
+records separate because framing and firmware behavior can differ. Do not infer
+that the JSON catalog is complete from public metadata or a shared family name. The app's `verified`
 support label is reserved for model and feature behavior checked on real
 hardware; consult the progress tracker for remaining evidence gates.

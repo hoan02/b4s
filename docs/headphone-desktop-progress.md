@@ -47,7 +47,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
 | P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | In progress — tray lifecycle, bounded Quit cleanup, and opt-in startup/reconnect preferences; installer/signing and Windows acceptance remain external |
-| P8.3 | README/model matrix/diagnostics guide | In progress — current lifecycle/support limits documented; full model/feature evidence matrix remains open |
+| P8.3 | README/model matrix/diagnostics guide | In progress — architecture and catalog docs now describe the single modern profile-driven runtime; full model/feature evidence matrix remains open |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | Open |
 
 ## Delivery sequence
@@ -434,3 +434,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - Moved scan-independent connection/link/snapshot listener registration and disposal into `features/devices/runtimeSubscriptions.ts`. Registration is sequential, aborts when the owner is disposed, and immediately unregisters listeners that resolve after unmount.
 - `App.tsx` now supplies state handlers and owns only the returned disposer; ordering/session behavior is unchanged. `npx tsc --noEmit` passed before the final disposal-race guard adjustment; no local test suite was run. CI will validate the final change.
 - P5.1 remains open for extracting feature controllers and verifying navigation/accessibility behavior.
+
+
+## Increment 54 — align contributor docs with the current architecture
+
+- Rewrote the architecture guide around reviewed profiles, passive public metadata, exact identity, explicit family codecs, strict transport selection, snapshot state and versioned runtime DTOs. Updated model-catalog guidance to remove retired legacy-registry/generic-family claims and describe the current `bp1`/`unknown` family boundary.
+- Updated stale Rust module and router comments that still described the removed experimental compatibility path. No build was needed for this documentation/comment-only slice; full per-model evidence documentation remains open under P8.3.

@@ -1,12 +1,7 @@
-//! Baseus earbud model registry
+//! Project typed model/profile metadata into protocol-facing model views.
 //!
-//! Auto-derived from official app com.baseus.intelligent 2.14.1 DEX strings.
-//! Focus: listening devices only (TWS / open-ear / headset / neck).
-//!
-//! SupportLevel:
-//!   Verified     — packet table confirmed on real hardware
-//!   Experimental — listed in official app; try BP1-compatible GATT/framing
-//!   ScanOnly     — recognised in scan UI only
+//! Control support comes from reviewed JSON profiles. Public catalog records are
+//! passive scan metadata and never inherit protocol or capability defaults.
 
 use serde::{Deserialize, Serialize};
 

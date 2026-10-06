@@ -95,9 +95,8 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
             return Err("Custom EQ values do not match the reviewed model schema".into());
         }
     }
-    // Preserve existing wire limits by rejecting invalid intent rather than
-    // silently clamping it into another command. Profile-scoped constraints
-    // will replace these legacy bounds during the profile-v2 migration.
+    // Reject values outside the protocol's reviewed range instead of silently
+    // clamping intent into a different command.
     match &command {
         FeatureCommand::SetBassBoost(level) if *level > 1 => {
             return Err("Bass level is outside the current protocol range".into());
