@@ -5,6 +5,7 @@ interface Props {
   title: string;
   message: string;
   onCancel: () => void;
+  onEscape?: () => void;
   onConfirm: () => void;
   confirmLabel?: string;
   cancelLabel?: string;
@@ -27,7 +28,7 @@ const ConfirmDialog: Component<Props> = (props) => {
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
       event.preventDefault();
-      props.onCancel();
+      (props.onEscape ?? props.onCancel)();
       return;
     }
     if (event.key !== "Tab" || !dialog) return;

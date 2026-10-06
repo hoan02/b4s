@@ -522,3 +522,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Lifecycle DTO validation now requires nonnegative safe-integer counters/timestamps. Snapshot validation also bounds battery readings to 0–100 and hearing levels to the wire byte range before state publication.
 - `npx tsc --noEmit` and `git diff --check` passed; CI verifies cross-platform compilation. No full local suite was run.
+
+## Increment 70 — make Escape stop active find-buds audio
+
+- The active find-buds dialog now maps Escape to its explicit stop command; in the ready/confirmation state Escape still closes through the cancel path. This keeps keyboard dismissal aligned with the visible Stop action and avoids leaving locating audio running after Escape.
+- `npx tsc --noEmit` and `git diff --check` passed. Hardware stop acknowledgement remains unverified.

@@ -504,6 +504,7 @@ const App: Component = () => {
           showCancel={findController.dialogMode() === "confirm"}
           confirmLabel={findController.dialogMode() === "active" ? t("dialog.stopFinding") : t("dialog.ready")}
           onCancel={findController.closeConfirmation}
+          onEscape={() => findController.dialogMode() === "active" ? findController.stop() : findController.closeConfirmation()}
           onConfirm={() => (findController.dialogMode() === "active" ? findController.stop() : findController.start())}
         />
       </Show>
