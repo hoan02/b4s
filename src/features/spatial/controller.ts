@@ -19,7 +19,7 @@ interface Dependencies {
 export function createSpatialController(dependencies: Dependencies) {
   const [pending, setPending] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
-  const [mode, setMode] = createSignal<SpatialMode>("music");
+  const [mode, setMode] = createSignal<SpatialMode | null>(null);
   const operation = createConfirmedOperation({
     session: dependencies.session,
     refresh: dependencies.refreshSnapshot,
@@ -32,16 +32,28 @@ export function createSpatialController(dependencies: Dependencies) {
     pending,
     error,
     mode,
-    reset: operation.reset,
+    reset() {
+      operation.reset();
+      setMode(null);
+    },
     setEnabled(enabled: boolean) {
-      return operation.run(() => setSpatialMode(enabled ? mode() : "off"), () => {
-        if (dependencies.isDemo()) dependencies.setSpatialEnabled(enabled);
+      if (enabled) {
+        const selectedMode = mode();
+        if (selectedMode === null) return;
+        return operation.run(() => setSpatialMode(selectedMode), () => {
+          if (dependencies.isDemo()) dependencies.setSpatialEnabled(true);
+        }, dependencies.notifyError);
+      }
+      return operation.run(() => setSpatialMode("off"), () => {
+        if (dependencies.isDemo()) dependencies.setSpatialEnabled(false);
       }, dependencies.notifyError);
     },
     selectMode(next: SpatialMode) {
       return operation.run(() => setSpatialMode(next), () => {
-        setMode(next);
-        if (dependencies.isDemo()) dependencies.setSpatialEnabled(next !== "off");
+        if (dependencies.isDemo()) {
+          setMode(next);
+          dependencies.setSpatialEnabled(next !== "off");
+        }
       }, dependencies.notifyError);
     },
   };

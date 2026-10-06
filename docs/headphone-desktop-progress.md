@@ -39,7 +39,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | In progress — pending/error states, keyboard dialog semantics and unknown ANC state are explicit; ANC controls use profile availability and disable during confirmed operations; Experimental preference is persisted and backend-gated; full accessibility and eligible experimental feature evidence remain open |
 | P6.1 | ANC/transparency/game, constraints/readback | In progress — BP1 Pro ANC writes now await exact mode+parameter AA34 observation; full ANC snapshot freshness and hardware acceptance remain open |
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
-| P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; per-model hearing policy exists but feature remains disabled; spatial policy outstanding |
+| P6.3 | Bass/spatial/codec/hearing constraints | In progress — bass readback and spatial enable/disable confirmation exist; real-device spatial mode remains unknown because AA42 confirms only enabled state; per-model hearing policy exists but feature remains disabled |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
 | P6.5 | Multipoint/find/device settings | In progress — find start/stop distinguishes transport acceptance from confirmed device state; stop acknowledgement, multipoint and remaining settings require evidence |
 | P7.1 | Classify headphone-only catalog và legacy migration | Complete — 124 current headphone candidates are separated from five regionally consistent speaker products; one-time migration covers 112 exact identities and preserves 12 historical names without a current catalog target as inert data; runtime resolver removed |
@@ -592,3 +592,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - BP1 Pro listening writes now subscribe before TX, write the requested BA34 command, and complete only after an in-session AA34 report matches both requested mode and parameter. No extra query or inferred ACK value is sent; timeout and stale-session behavior use the existing serialized confirmation boundary. The command disposition is now `deviceStateObserved` after successful observation.
 - Added fake-transport and decoder regressions for parameter matching, fast transparency state notification, short ACK, unknown mode/layout, and no speculative query write. The UI starts ANC as unknown, exposes profile-unsupported listening controls as disabled, and shows pending/error state until the command is confirmed or rejected. Snapshot freshness for submode/level and real hardware acceptance remain open.
+
+## Increment 84 — keep spatial mode unconfirmed
+
+- Spatial snapshots only confirm the AA42 enabled bit; AA43 does not provide a mode readback. Real-device mode no longer starts as Music or becomes locally selected after an enabled-bit observation. The UI leaves mode buttons unselected/unknown until there is actual mode evidence, while each explicit mode action still waits for the available enable-state observation. The demo may retain its deterministic selected mode.
+- Re-enable through the on/off switch is blocked while the current real-device mode is unknown; users can choose a mode explicitly to enable the feature. Exact mode query/state evidence and per-firmware hardware acceptance remain open.

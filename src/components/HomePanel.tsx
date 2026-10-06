@@ -55,7 +55,7 @@ interface Props {
   spatialPending?: boolean;
   spatialError?: string | null;
   spatialOn: boolean | null;
-  spatialMode: SpatialMode;
+  spatialMode: SpatialMode | null;
   eqLabel: string;
   onAncMode: (m: AncMode) => void;
   onTransparencyMode: (m: TransparencyMode) => void;
@@ -236,12 +236,16 @@ const HomePanel: Component<Props> = (props) => {
           </span>
           <div class="list-text">
             <span class="list-title">{t("home.spatial")}</span>
-            <span class="list-sub">{props.spatialOn === null ? t("control.unknown") : t("listen.spatialHint")}</span>
+            <span class="list-sub">
+              {props.spatialOn === null || props.spatialMode === null
+                ? t("control.unknown")
+                : t("listen.spatialHint")}
+            </span>
           </div>
           <label class="toggle sm">
             <input
               type="checkbox"
-              disabled={props.spatialPending}
+              disabled={props.spatialPending || (props.spatialOn !== true && props.spatialMode === null)}
               aria-label={t("home.spatial")}
               aria-checked={props.spatialOn === null ? "mixed" : props.spatialOn}
               checked={props.spatialOn === true}
@@ -253,28 +257,26 @@ const HomePanel: Component<Props> = (props) => {
           </label>
         </div>
         <OperationStatus pending={props.spatialPending} error={props.spatialError} />
-        <Show when={props.spatialOn}>
-          <div class="home-seg">
-            <button
-              type="button"
-              disabled={props.spatialPending}
-              class={props.spatialMode === "music" ? "active" : ""}
-              aria-pressed={props.spatialMode === "music"}
-              onClick={() => props.onSpatialMode("music")}
-            >
-              {t("listen.music")}
-            </button>
-            <button
-              type="button"
-              disabled={props.spatialPending}
-              class={props.spatialMode === "cinema" ? "active" : ""}
-              aria-pressed={props.spatialMode === "cinema"}
-              onClick={() => props.onSpatialMode("cinema")}
-            >
-              {t("listen.cinema")}
-            </button>
-          </div>
-        </Show>
+        <div class="home-seg">
+          <button
+            type="button"
+            disabled={props.spatialPending}
+            class={props.spatialMode === "music" ? "active" : ""}
+            aria-pressed={props.spatialMode === "music"}
+            onClick={() => props.onSpatialMode("music")}
+          >
+            {t("listen.music")}
+          </button>
+          <button
+            type="button"
+            disabled={props.spatialPending}
+            class={props.spatialMode === "cinema" ? "active" : ""}
+            aria-pressed={props.spatialMode === "cinema"}
+            onClick={() => props.onSpatialMode("cinema")}
+          >
+            {t("listen.cinema")}
+          </button>
+        </div>
       </div>
 
       </Show>
