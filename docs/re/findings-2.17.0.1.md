@@ -62,8 +62,9 @@ Fetched with `version=1`, `lang=en`, `platform=1`, `appVersion=2.17.0.1`,
 This is all products **published in these category responses** at fetch time.
 It does not establish all historical/hidden/test products, firmware variants,
 or every language/account-dependent result. The APK includes additional
-hardcoded model names and aliases; retain the legacy registry rather than
-replacing it with a snapshot that can omit older products.
+hardcoded model names and aliases, so the public snapshot can omit older
+products. B4S intentionally does not restore those names as an implicit runtime
+registry: an older identity without a reviewed profile remains unsupported.
 
 ### B4S implementation
 
@@ -75,12 +76,12 @@ errors, and only replaces the previous snapshot after all regions succeed.
 It can replay local raw responses with `--input-dir` for reproducibility.
 
 B4S embeds audio discovery records from this snapshot. Reviewed JSON profiles
-and existing support levels remain authoritative; new full identities get
+are the only source of control permissions; new full identities get
 `scanOnly`, protocol `unknown`, no capabilities and no guessed GATT UUIDs.
-Exact model matching precedes legacy substring matching, so a new edition
-does not silently inherit the shorter model's adapter. Connection rejects an
-unknown control protocol before disconnecting the current device or probing
-GATT. Non-audio products remain metadata and are not registered as earbuds.
+Identity resolution uses exact canonical names and aliases. Connection follows
+the selected OS entry and profile UUIDs; unknown protocol does not probe GATT or
+inherit another model's adapter. Non-audio products remain metadata and are not
+registered as earbuds.
 
 CDN URLs are retained for an eventual explicit metadata/image provider.
 Discovery does not fetch images or call Baseus servers at runtime; the current
@@ -125,12 +126,11 @@ all server-listed audio models.
 
 ### Concrete decoder correction
 
-B4S now consumes the two-byte `AA93` hearing state. A short `AA94 01` is a
-write acknowledgement (see `HeadPhoneMainActivity.ResultHandle.E`), not
-proof of an enabled state with level zero. Short/invalid frames no longer
-overwrite the displayed hearing state. Two-byte AA94 state echoes remain
-accepted for compatibility. This is tested offline; no hardware validation
-was performed in this run.
+B4S accepts only the two-byte-minimum `AA93` hearing state. `AA94` is a write
+acknowledgement/error path (see `HeadPhoneMainActivity.ResultHandle.E`), not
+device state; every AA94 payload is excluded from state confirmation. Short and
+invalid frames cannot overwrite the snapshot. This is covered by offline
+decoder tests; no hardware validation was performed in this run.
 
 ## Reproduce
 

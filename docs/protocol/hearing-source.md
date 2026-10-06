@@ -12,8 +12,8 @@ Source evidence only; BP1 Pro's reviewed profile does not enable hearing protect
 | EarSoundSettingsActivity AA94 branch | 388 onward | Result 01 is ACK; failure handled separately, not threshold state |
 | HearingHealthActivity | 420 | BA93 query |
 
-The current B4S AA93 decoder already retains enabled and the raw level byte, while AA94 is excluded from state confirmation. Its setter guard 0–3 and frontend default 1 are legacy assumptions and do not match this consumer contract. They must be replaced by per-model threshold/sentinel constraints before hearing is enabled for a reviewed device. Do not remove the guard globally or interpret FF as 255 dB.
+Source contract: AA93 carries the current enabled flag and raw threshold; AA94 carries ACK/error results and is never device state. The earlier B4S setter guard 0–3/default 1 did not match this consumer contract. Per-model threshold/sentinel constraints are now required before hearing can be enabled. Do not interpret FF as 255 dB.
 
 Remaining work: trace DeviceManager.R and all model/firmware/region guards; determine meaning of -1/FF during readback and whether toggling preserves the current threshold; define profile thresholds/default/sentinel policy; capture each selectable threshold and error path; provide an editor that displays threshold and confirmed state. Snapshot presence does not prove capability or safe threshold application.
 
-Implementation update: the legacy 0–3/default-1 assumptions are replaced by explicit per-model thresholds and FF permission. Toggle uses the observed raw threshold; missing observations reject. No current model is newly enabled by this schema change.
+Implementation: the 0–3/default-1 assumptions are replaced by explicit per-model thresholds and FF permission. Toggle uses the observed raw threshold; missing observations reject. AA94 is not decoded as confirmed state. No current model is newly enabled by this schema change.

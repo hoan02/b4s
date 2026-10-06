@@ -1,23 +1,23 @@
 # Protocol overview
 
-B4S is structured for multiple models, but catalog recognition and working
-device control are separate. Most names in the discovery registry are not
-verified hardware targets. Use the support level in the model registry and the
-app before relying on a command.
+Catalog recognition and working device control are separate. Public metadata
+can identify a nearby product, but only an exact reviewed profile with an
+explicit transport and capabilities can authorize control.
 
 ## Connection and protocol layers
 
-1. Match a BLE advertisement to a model entry in `src-tauri/src/protocol/models.rs`.
-2. Resolve its capabilities, protocol family and transport settings.
-3. Encode a logical command through the selected family adapter.
-4. Apply model-specific framing and send it over the discovered GATT link.
-5. Decode notifications and update the device state exposed to the frontend.
+1. Resolve the selected BLE advertisement through exact canonical names and aliases.
+2. Load the reviewed profile and verify its declared transport and feature permissions.
+3. Encode commands through that profile's explicit protocol family.
+4. Apply only the profile's declared framing and GATT UUIDs.
+5. Decode notifications through the same family and publish confirmed state.
 
-The current verified hardware targets are Baseus Bass BP1 Pro and BP1 Ultra.
-Other Baseus entries may share protocol hints or names without verified control.
-See the [registry overview](models-catalog.md) and [model contribution guide](../model-catalog.md).
+BP1 Pro is the only reviewed active control profile. BP1 Ultra remains
+scan-only while its firmware-specific transport is unresolved. Other catalog
+products are passive until their own profile and evidence exist. See the
+[model catalog](models-catalog.md) and [contribution guide](../model-catalog.md).
 
-## BP1-family wire format
+## BP1 Pro wire format
 
 The logical commands use `BA`; device notifications use `AA`:
 
@@ -26,11 +26,12 @@ App → device:  BA <command> <payload…>
 Device → app:  AA <command> <payload…>
 ```
 
-BP1 Pro uses the bare command format. BP1 Ultra uses the `789C` wrapper with
-length and CRC for the applicable commands. Framing is selected by the device
-profile; do not assume all models in the family use the same transport details.
+The reviewed BP1 Pro profile uses bare commands over the declared BLE GATT
+service. A wrapped format observed in other model/firmware paths does not
+authorize using it for BP1 Pro or BP1 Ultra. Framing is selected only by an
+explicit model profile.
 
-The BP1 custom GATT service and packet reference are documented in
+The BP1 Pro service and packet reference are documented in
 [bp1-pro-anc.md](bp1-pro-anc.md). Other model families may use different UUIDs,
 transports or command formats.
 
@@ -38,16 +39,17 @@ transports or command formats.
 
 | Level | Meaning |
 |---|---|
-| `verified` | The model is explicitly identified as a hardware-tested target. |
-| `experimental` | A best-effort profile exists; model or firmware behavior is not fully verified. |
+| `verified` | Hardware behavior is supported by evidence for the named model scope. |
+| `experimental` | A reviewed profile exists, with incomplete model or firmware evidence. |
 | `scanOnly` | The name can be recognized, but control is not enabled. |
 
 Recognition, a successful GATT connection or a successful write alone does not
-prove that a control is supported. Promote a model only with hardware evidence
-for the relevant behavior.
+prove that a control is supported. Promote a model/feature only with hardware
+evidence for its relevant firmware and transport.
 
 ## Reverse engineering
 
 See the [research notes](../re/README.md) for the evidence workflow. Keep
 proprietary APKs, firmware and decompiled source out of the repository; commit
-only concise, independently useful protocol findings and sanitized captures.
+only concise, independently useful protocol findings and reviewed sanitized
+captures.

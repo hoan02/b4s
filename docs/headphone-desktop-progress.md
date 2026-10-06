@@ -39,7 +39,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P5.3 | Shared controls pending/error/availability/a11y và Experimental policy | Open |
 | P6.1 | ANC/transparency/game, constraints/readback | Open |
 | P6.2 | EQ preset/custom/slot with model schema | In progress |
-| P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; hearing threshold/spatial policy outstanding |
+| P6.3 | Bass/spatial/codec/hearing constraints | In progress — binary bass readback and advanced snapshots; per-model hearing policy exists but feature remains disabled; spatial policy outstanding |
 | P6.4 | Gestures/in-ear, per-side mapping | Open |
 | P6.5 | Multipoint/find/device settings | Open |
 | P7.1 | Classify headphone-only catalog và legacy migration | In progress — static 124-model resolver removed; one-time exact-name ID migration now covers 111 catalog identities; 13 unmatched historical names remain inert and unmapped |
@@ -47,7 +47,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P7.3 | Hardware validation cho family kế tiếp | External evidence required |
 | P8.1 | Windows robustness và accessibility acceptance | External evidence required |
 | P8.2 | Signed installer/update + tray/startup/reconnect theo mục 6.4 | In progress — tray lifecycle, bounded Quit cleanup, and opt-in startup/reconnect preferences; installer/signing and Windows acceptance remain external |
-| P8.3 | README/model matrix/diagnostics guide | In progress — architecture and catalog docs now describe the single modern profile-driven runtime; full model/feature evidence matrix remains open |
+| P8.3 | README/model matrix/diagnostics guide | In progress — architecture, catalog, and protocol guides now describe the single modern profile-driven runtime; full model/feature evidence matrix remains open |
 | P9 | Cloud/AI/SoundFit/OTA và macOS/Linux | Open |
 
 ## Delivery sequence
@@ -440,3 +440,10 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Rewrote the architecture guide around reviewed profiles, passive public metadata, exact identity, explicit family codecs, strict transport selection, snapshot state and versioned runtime DTOs. Updated model-catalog guidance to remove retired legacy-registry/generic-family claims and describe the current `bp1`/`unknown` family boundary.
 - Updated stale Rust module and router comments that still described the removed experimental compatibility path. No build was needed for this documentation/comment-only slice; full per-model evidence documentation remains open under P8.3.
+
+
+## Increment 55 — remove ACK-as-hearing-state compatibility path
+
+- The BP1 decoder now accepts hearing state only on source-traced AA93. AA94 remains an ACK/error opcode and can no longer update the confirmed snapshot even if it carries two payload bytes. Added regression assertions for short and state-shaped AA94 responses.
+- Replaced stale protocol references that claimed BP1 Ultra was a verified target, called the BP1 Pro profile “legacy compatibility,” retained a model registry, or retried an alternate handshake. The strict profile/evidence boundary is now explicit.
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib` is left to PR CI per current guidance; no hardware behavior is claimed.

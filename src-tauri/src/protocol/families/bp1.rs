@@ -63,9 +63,9 @@ impl Bp1ProAnc {
                 [1] => Ok(DeviceEvent::Ldac(false)),
                 _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
             },
-            // App 2.17.0.1 HearingProtectionPopWindow.z consumes AA93 +
-            // enabled + level. AA94 01 is only a write-success acknowledgement.
-            0x93 | 0x94 => {
+            // App 2.17.0.1 consumes AA93 + enabled + level as state. AA94 is
+            // only a write acknowledgement and never updates confirmed state.
+            0x93 => {
                 if frame.payload.len() < 2 {
                     return Err(DecodeError::PayloadTooShort {
                         opcode: frame.cmd,
@@ -437,6 +437,7 @@ mod tests {
         );
         assert!(dec(&[0xAA, 0x93]).is_err());
         assert!(dec(&[0xAA, 0x94, 0x01]).is_err());
+        assert!(dec(&[0xAA, 0x94, 0x01, 85]).is_err());
         assert!(dec(&[0xAA, 0x93, 0x02, 85]).is_err());
     }
 
