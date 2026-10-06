@@ -50,6 +50,10 @@ pub struct Capabilities {
     pub hearing_protection: bool,
     #[serde(default)]
     pub find_buds: bool,
+    #[serde(default)]
+    pub gesture: bool,
+    #[serde(default)]
+    pub in_ear: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -91,6 +95,31 @@ pub struct HearingProfile {
     pub provenance: String,
 }
 
+/// One gesture click layout and the function IDs the reviewed model accepts.
+/// `layout` is the wire layout byte (0 double, 1 triple, 2 long, 3 single,
+/// 4 single-press, 5 penta); `functions` are the allowed wire function IDs.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GestureLayoutProfile {
+    pub layout: u8,
+    pub functions: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GestureProfile {
+    /// True when the model exposes both left and right button mappings.
+    pub dual_button: bool,
+    pub layouts: Vec<GestureLayoutProfile>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct InEarProfile {
+    pub provenance: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelProfile {
@@ -109,5 +138,9 @@ pub struct ModelProfile {
     pub eq: Option<EqProfile>,
     #[serde(default)]
     pub hearing: Option<HearingProfile>,
+    #[serde(default)]
+    pub gesture: Option<GestureProfile>,
+    #[serde(default)]
+    pub in_ear: Option<InEarProfile>,
     pub image: Option<String>,
 }

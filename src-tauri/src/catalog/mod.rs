@@ -50,6 +50,36 @@ fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
                 return Err(format!("invalid hearing constraints in {}", profile.id));
             }
         }
+        if profile.capabilities.gesture && profile.gesture.is_none() {
+            return Err(format!("missing gesture constraints in {}", profile.id));
+        }
+        if let Some(gesture) = &profile.gesture {
+            if gesture.provenance.trim().is_empty() || gesture.layouts.is_empty() {
+                return Err(format!("invalid gesture constraints in {}", profile.id));
+            }
+            let mut layouts = std::collections::HashSet::new();
+            for layout in &gesture.layouts {
+                if layout.layout > 5 || !layouts.insert(layout.layout) {
+                    return Err(format!("invalid gesture layout in {}", profile.id));
+                }
+                if layout.functions.is_empty()
+                    || layout
+                        .functions
+                        .iter()
+                        .any(|function| !matches!(function, 0..=19 | 27 | 28))
+                {
+                    return Err(format!("invalid gesture functions in {}", profile.id));
+                }
+            }
+        }
+        if profile.capabilities.in_ear && profile.in_ear.is_none() {
+            return Err(format!("missing in-ear provenance in {}", profile.id));
+        }
+        if let Some(in_ear) = &profile.in_ear {
+            if in_ear.provenance.trim().is_empty() {
+                return Err(format!("invalid in-ear provenance in {}", profile.id));
+            }
+        }
         if profile.schema_version != 2 {
             return Err(format!("unsupported profile schema in {}", profile.id));
         }
@@ -214,5 +244,51 @@ mod tests {
         assert!(validate_profiles(&[model.clone()]).is_ok());
         model.hearing.as_mut().unwrap().thresholds = vec![1];
         assert!(validate_profiles(&[model]).is_err());
+    }
+
+    #[test]
+    fn gesture_and_in_ear_capabilities_require_valid_source_constraints() {
+        let mut model = profile_for("bass-bp1-pro").unwrap();
+        model.capabilities.gesture = true;
+        model.gesture = None;
+        assert!(validate_profiles(&[model.clone()]).is_err());
+        model.gesture = Some(types::GestureProfile {
+            dual_button: true,
+            layouts: vec![types::GestureLayoutProfile {
+                layout: 0,
+                functions: vec![1, 0],
+            }],
+            provenance: "synthetic validation fixture".into(),
+        });
+        assert!(validate_profiles(&[model.clone()]).is_ok());
+        model
+            .gesture
+            .as_mut()
+            .unwrap()
+            .layouts
+            .push(types::GestureLayoutProfile {
+                layout: 0,
+                functions: vec![1],
+            });
+        assert!(validate_profiles(&[model.clone()]).is_err());
+        model.gesture.as_mut().unwrap().layouts = vec![types::GestureLayoutProfile {
+            layout: 9,
+            functions: vec![1],
+        }];
+        assert!(validate_profiles(&[model.clone()]).is_err());
+        model.gesture.as_mut().unwrap().layouts = vec![types::GestureLayoutProfile {
+            layout: 0,
+            functions: vec![99],
+        }];
+        assert!(validate_profiles(&[model.clone()]).is_err());
+
+        let mut model = profile_for("bass-bp1-pro").unwrap();
+        model.capabilities.in_ear = true;
+        model.in_ear = None;
+        assert!(validate_profiles(&[model.clone()]).is_err());
+        model.in_ear = Some(types::InEarProfile {
+            provenance: "synthetic validation fixture".into(),
+        });
+        assert!(validate_profiles(&[model]).is_ok());
     }
 }

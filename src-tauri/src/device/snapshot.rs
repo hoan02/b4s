@@ -27,6 +27,22 @@ pub struct HearingReading {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct InEarReading {
+    pub enabled: bool,
+    pub observed_at_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GestureReading {
+    pub layout: u8,
+    pub left: u8,
+    pub right: u8,
+    pub observed_at_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AncReading {
     pub mode: AncMode,
     pub parameter: u8,
@@ -51,6 +67,8 @@ pub struct DeviceSnapshot {
     pub spatial_enabled: Option<bool>,
     pub bass_boost: Option<u8>,
     pub hearing: Option<HearingReading>,
+    pub in_ear: Option<InEarReading>,
+    pub gesture: Vec<GestureReading>,
 }
 
 impl DeviceSnapshot {
@@ -71,6 +89,8 @@ impl DeviceSnapshot {
             spatial_enabled: None,
             bass_boost: None,
             hearing: None,
+            in_ear: None,
+            gesture: Vec::new(),
         }
     }
 
@@ -114,6 +134,32 @@ impl DeviceSnapshot {
                     level: *level,
                     observed_at_ms: at_ms,
                 })
+            }
+            DeviceEvent::InEar(enabled) => {
+                self.in_ear = Some(InEarReading {
+                    enabled: *enabled,
+                    observed_at_ms: at_ms,
+                })
+            }
+            DeviceEvent::GestureConfig {
+                layout,
+                left,
+                right,
+            } => {
+                let reading = GestureReading {
+                    layout: *layout,
+                    left: *left,
+                    right: *right,
+                    observed_at_ms: at_ms,
+                };
+                match self
+                    .gesture
+                    .iter_mut()
+                    .find(|existing| existing.layout == *layout)
+                {
+                    Some(existing) => *existing = reading,
+                    None => self.gesture.push(reading),
+                }
             }
             _ => return,
         }
@@ -200,5 +246,62 @@ mod tests {
         assert_eq!(encoded["anc"]["mode"], "anc");
         assert_eq!(encoded["anc"]["parameter"], 103);
         assert_eq!(encoded["anc"]["observedAtMs"], 42);
+    }
+
+    #[test]
+    fn in_ear_and_gesture_observations_replace_by_layout_and_keep_time() {
+        let mut snapshot = DeviceSnapshot::new(5);
+        assert!(snapshot.in_ear.is_none());
+        assert!(snapshot.gesture.is_empty());
+
+        snapshot.observe(0x25, &DeviceEvent::InEar(true), 10);
+        snapshot.observe(
+            0x21,
+            &DeviceEvent::GestureConfig {
+                layout: 3,
+                left: 1,
+                right: 1,
+            },
+            11,
+        );
+        snapshot.observe(
+            0x21,
+            &DeviceEvent::GestureConfig {
+                layout: 0,
+                left: 2,
+                right: 3,
+            },
+            12,
+        );
+        snapshot.observe(
+            0x21,
+            &DeviceEvent::GestureConfig {
+                layout: 3,
+                left: 0,
+                right: 0,
+            },
+            13,
+        );
+
+        assert!(snapshot.in_ear.as_ref().unwrap().enabled);
+        assert_eq!(snapshot.in_ear.as_ref().unwrap().observed_at_ms, 10);
+        assert_eq!(snapshot.gesture.len(), 2);
+        let double = snapshot
+            .gesture
+            .iter()
+            .find(|reading| reading.layout == 0)
+            .unwrap();
+        assert_eq!((double.left, double.right), (2, 3));
+        let single = snapshot
+            .gesture
+            .iter()
+            .find(|reading| reading.layout == 3)
+            .unwrap();
+        assert_eq!((single.left, single.right), (0, 0));
+        assert_eq!(single.observed_at_ms, 13);
+
+        let encoded = serde_json::to_value(snapshot).unwrap();
+        assert_eq!(encoded["inEar"]["enabled"], true);
+        assert_eq!(encoded["gesture"][0]["layout"], 3);
     }
 }

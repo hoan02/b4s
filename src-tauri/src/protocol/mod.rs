@@ -80,6 +80,21 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
             // with the final flag cleared stops the alert.
             Frame::write(0x10, &[0x02, if start { 0x01 } else { 0x00 }]).encode_write()
         }
+        Command::QueryInEar => Frame::write(0x25, &[]).encode_write(),
+        Command::SetInEar(enabled) => {
+            // GestureBleManager.a + EarHeadSetViewModel.o0: BA26 01 on / 00 off.
+            Frame::write(0x26, &[if enabled { 0x01 } else { 0x00 }]).encode_write()
+        }
+        Command::QueryGesture(layout) => Frame::write(0x21, &[layout]).encode_write(),
+        Command::SetGesture {
+            layout,
+            left,
+            right,
+        } => {
+            // GestureSettingViewModel.Z: BA22 <layout> <left|FF> <right|FF>.
+            Frame::write(0x22, &[layout, left.unwrap_or(0xFF), right.unwrap_or(0xFF)])
+                .encode_write()
+        }
     }
 }
 

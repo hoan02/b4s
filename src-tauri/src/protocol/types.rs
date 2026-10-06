@@ -191,6 +191,14 @@ pub enum Command {
     QueryLdac,
     QueryHearingProtection,
     FindBuds(bool),
+    QueryInEar,
+    SetInEar(bool),
+    QueryGesture(u8),
+    SetGesture {
+        layout: u8,
+        left: Option<u8>,
+        right: Option<u8>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -215,6 +223,12 @@ pub enum DeviceEvent {
         enabled: bool,
         level: u8,
     },
+    GestureConfig {
+        layout: u8,
+        left: u8,
+        right: u8,
+    },
+    InEar(bool),
     /// Raw / unknown — forwarded for debug
     Unknown {
         cmd: u8,

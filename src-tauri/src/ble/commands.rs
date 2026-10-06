@@ -285,6 +285,65 @@ pub async fn send_hearing_protection(enabled: bool, level: u8) -> Result<(), Com
     .await
 }
 
+pub async fn send_in_ear(enabled: bool) -> Result<(), CommandError> {
+    let data = encode_connected_feature(protocol::FeatureCommand::SetInEar(enabled)).await?;
+    if BLE.lock().await.mock {
+        return observe_mock_state(DeviceEvent::InEar(enabled), 0x25).await;
+    }
+    with_connected_peripheral(|p| {
+        Box::pin(async move {
+            write_and_readback(
+                &p,
+                &data,
+                &[0xBA, 0x25],
+                crate::device::confirmation::ExpectedState::InEar(enabled),
+            )
+            .await
+        })
+    })
+    .await
+}
+
+pub async fn send_gesture(
+    layout: u8,
+    left: Option<u8>,
+    right: Option<u8>,
+) -> Result<(), CommandError> {
+    let data = encode_connected_feature(protocol::FeatureCommand::SetGesture {
+        layout,
+        left,
+        right,
+    })
+    .await?;
+    if BLE.lock().await.mock {
+        return observe_mock_state(
+            DeviceEvent::GestureConfig {
+                layout,
+                left: left.unwrap_or(0xFF),
+                right: right.unwrap_or(0xFF),
+            },
+            0x21,
+        )
+        .await;
+    }
+    with_connected_peripheral(|p| {
+        Box::pin(async move {
+            write_and_readback(
+                &p,
+                &data,
+                &[0xBA, 0x21, layout],
+                crate::device::confirmation::ExpectedState::Gesture {
+                    layout,
+                    left,
+                    right,
+                },
+            )
+            .await
+        })
+    })
+    .await
+}
+
 async fn encode_connected_feature(command: protocol::FeatureCommand) -> Result<Vec<u8>, String> {
     let state = BLE.lock().await;
     let id = state.connected_id.as_ref().ok_or("Not connected")?;

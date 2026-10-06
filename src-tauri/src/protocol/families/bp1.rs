@@ -59,6 +59,21 @@ impl Bp1ProAnc {
             0x53 => Self::bass_level_from_payload(&frame.payload)
                 .map(DeviceEvent::BassBoost)
                 .ok_or(DecodeError::UnknownOpcode(frame.cmd)),
+            // In-ear switch state: AA 25 [00|01]. AA26 is only the set reply.
+            0x25 => match frame.payload.as_slice() {
+                [0] => Ok(DeviceEvent::InEar(false)),
+                [1] => Ok(DeviceEvent::InEar(true)),
+                _ => Err(DecodeError::UnknownOpcode(0x25)),
+            },
+            // Gesture v1 configuration: AA 21 [layout] [left] [right].
+            0x21 => match frame.payload.as_slice() {
+                [layout, left, right] if *layout <= 5 => Ok(DeviceEvent::GestureConfig {
+                    layout: *layout,
+                    left: *left,
+                    right: *right,
+                }),
+                _ => Err(DecodeError::UnknownOpcode(0x21)),
+            },
             0x74 => match frame.payload.as_slice() {
                 [0] => Ok(DeviceEvent::Ldac(true)),
                 [1] => Ok(DeviceEvent::Ldac(false)),
@@ -537,5 +552,73 @@ mod tests {
             frame.extend(payload);
             assert!(dec(&frame).is_err());
         }
+    }
+
+    #[test]
+    fn in_ear_state_and_set_reply_are_distinguished() {
+        assert_eq!(dec(&[0xAA, 0x25, 0x01]).unwrap(), DeviceEvent::InEar(true));
+        assert_eq!(dec(&[0xAA, 0x25, 0x00]).unwrap(), DeviceEvent::InEar(false));
+        // AA26 is only the set acknowledgement and must not create state.
+        assert!(dec(&[0xAA, 0x26, 0x00]).is_err());
+        assert!(dec(&[0xAA, 0x26, 0x01]).is_err());
+        assert!(dec(&[0xAA, 0x25, 0x02]).is_err());
+        assert!(dec(&[0xAA, 0x25]).is_err());
+    }
+
+    #[test]
+    fn gesture_v1_state_requires_layout_and_two_side_bytes() {
+        assert_eq!(
+            dec(&[0xAA, 0x21, 0x03, 0x01, 0x02]).unwrap(),
+            DeviceEvent::GestureConfig {
+                layout: 0x03,
+                left: 0x01,
+                right: 0x02,
+            }
+        );
+        // AA22 is only the set acknowledgement.
+        assert!(dec(&[0xAA, 0x22, 0x03, 0x01, 0x02]).is_err());
+        assert!(dec(&[0xAA, 0x21, 0x03, 0x01]).is_err());
+        assert!(dec(&[0xAA, 0x21, 0x09, 0x01, 0x02]).is_err());
+    }
+
+    #[test]
+    fn in_ear_and_gesture_command_bytes_match_the_source() {
+        assert_eq!(encode_command(Command::QueryInEar), vec![0xBA, 0x25]);
+        assert_eq!(
+            encode_command(Command::SetInEar(true)),
+            vec![0xBA, 0x26, 0x01]
+        );
+        assert_eq!(
+            encode_command(Command::SetInEar(false)),
+            vec![0xBA, 0x26, 0x00]
+        );
+        assert_eq!(
+            encode_command(Command::QueryGesture(0x03)),
+            vec![0xBA, 0x21, 0x03]
+        );
+        assert_eq!(
+            encode_command(Command::SetGesture {
+                layout: 0x03,
+                left: Some(0x01),
+                right: None,
+            }),
+            vec![0xBA, 0x22, 0x03, 0x01, 0xFF]
+        );
+        assert_eq!(
+            encode_command(Command::SetGesture {
+                layout: 0x00,
+                left: None,
+                right: Some(0x03),
+            }),
+            vec![0xBA, 0x22, 0x00, 0xFF, 0x03]
+        );
+        assert_eq!(
+            encode_command(Command::SetGesture {
+                layout: 0x02,
+                left: Some(0x04),
+                right: Some(0x04),
+            }),
+            vec![0xBA, 0x22, 0x02, 0x04, 0x04]
+        );
     }
 }

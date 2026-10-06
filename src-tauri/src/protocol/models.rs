@@ -31,6 +31,8 @@ pub struct ModelCapabilities {
     pub ldac: bool,
     pub hearing_protection: bool,
     pub spatial: bool,
+    pub gesture: bool,
+    pub in_ear: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,6 +130,8 @@ fn model_info_from_profile(profile: &crate::catalog::ModelProfile) -> ModelInfo 
         ldac: profile.capabilities.ldac,
         hearing_protection: profile.capabilities.hearing_protection,
         spatial: profile.capabilities.spatial,
+        gesture: profile.capabilities.gesture,
+        in_ear: profile.capabilities.in_ear,
     };
     let connection = profile.connection.as_ref();
     let (service_uuid, write_uuid, notify_uuid, use_self_uuid, required_advertised_service) =
@@ -194,6 +198,8 @@ fn scan_only_model(public: &crate::catalog::public::PublicModel) -> ModelInfo {
             ldac: false,
             hearing_protection: false,
             spatial: false,
+            gesture: false,
+            in_ear: false,
         },
         transport: BleTransportConfig {
             service_uuid: None,

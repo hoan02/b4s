@@ -15,14 +15,26 @@ pub struct StateObservation {
 
 pub enum ExpectedState {
     Battery,
-    Anc { mode: AncMode, parameter: u8 },
+    Anc {
+        mode: AncMode,
+        parameter: u8,
+    },
     Eq(EqPreset),
     EqIndex(u8),
     Game(bool),
     Bass(u8),
     SpatialEnabled(bool),
     Ldac(bool),
-    Hearing { enabled: bool, level: u8 },
+    Hearing {
+        enabled: bool,
+        level: u8,
+    },
+    InEar(bool),
+    Gesture {
+        layout: u8,
+        left: Option<u8>,
+        right: Option<u8>,
+    },
 }
 
 /// Transport seam for a write followed by a state query.
@@ -102,6 +114,24 @@ impl ExpectedState {
                     level: actual_level,
                 },
             ) => enabled == actual && level == actual_level,
+            (Self::InEar(expected), 0x25, DeviceEvent::InEar(actual)) => expected == actual,
+            (
+                Self::Gesture {
+                    layout,
+                    left,
+                    right,
+                },
+                0x21,
+                DeviceEvent::GestureConfig {
+                    layout: actual_layout,
+                    left: actual_left,
+                    right: actual_right,
+                },
+            ) => {
+                layout == actual_layout
+                    && left.is_none_or(|value| value == *actual_left)
+                    && right.is_none_or(|value| value == *actual_right)
+            }
             _ => false,
         }
     }
@@ -439,5 +469,56 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(found.opcode, 0x53);
+    }
+
+    #[test]
+    fn gesture_and_in_ear_confirm_only_from_their_state_opcode() {
+        let session = SessionEpoch::default().token();
+        let mut observation = StateObservation {
+            session,
+            opcode: 0x25,
+            event: DeviceEvent::InEar(true),
+        };
+        assert!(ExpectedState::InEar(true).matches(session, &observation));
+        assert!(!ExpectedState::InEar(false).matches(session, &observation));
+        // AA26 set reply is never the state opcode.
+        observation.opcode = 0x26;
+        assert!(!ExpectedState::InEar(true).matches(session, &observation));
+
+        let mut observation = StateObservation {
+            session,
+            opcode: 0x21,
+            event: DeviceEvent::GestureConfig {
+                layout: 3,
+                left: 1,
+                right: 1,
+            },
+        };
+        assert!(ExpectedState::Gesture {
+            layout: 3,
+            left: Some(1),
+            right: Some(1),
+        }
+        .matches(session, &observation));
+        // A None side accepts whatever the device reports (unchanged bud).
+        assert!(ExpectedState::Gesture {
+            layout: 3,
+            left: Some(1),
+            right: None,
+        }
+        .matches(session, &observation));
+        assert!(!ExpectedState::Gesture {
+            layout: 3,
+            left: Some(0),
+            right: Some(0),
+        }
+        .matches(session, &observation));
+        observation.opcode = 0x22;
+        assert!(!ExpectedState::Gesture {
+            layout: 3,
+            left: Some(1),
+            right: Some(1),
+        }
+        .matches(session, &observation));
     }
 }

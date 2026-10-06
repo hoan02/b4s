@@ -43,6 +43,12 @@ pub enum FeatureCommand {
         level: u8,
     },
     FindBuds(bool),
+    SetGesture {
+        layout: u8,
+        left: Option<u8>,
+        right: Option<u8>,
+    },
+    SetInEar(bool),
 }
 
 pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Result<Vec<u8>, String> {
@@ -59,6 +65,8 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::SetLdac(_) => Feature::Ldac,
         FeatureCommand::SetHearingProtection { .. } => Feature::Hearing,
         FeatureCommand::FindBuds(_) => Feature::Find,
+        FeatureCommand::SetGesture { .. } => Feature::Gesture,
+        FeatureCommand::SetInEar(_) => Feature::InEar,
     };
     authorize(profile, feature)?;
     if let FeatureCommand::SetCustomEq {
@@ -114,6 +122,36 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
                 return Err("Hearing threshold is outside the reviewed model schema".into());
             }
         }
+        FeatureCommand::SetGesture {
+            layout,
+            left,
+            right,
+        } => {
+            let gesture = profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.gesture)
+                .ok_or("No reviewed gesture schema")?;
+            let entry = gesture
+                .layouts
+                .iter()
+                .find(|entry| entry.layout == *layout)
+                .ok_or("Gesture layout is not reviewed for this model")?;
+            for function in [left, right].into_iter().flatten() {
+                if !entry.functions.contains(function) {
+                    return Err("Gesture function is not allowed for this layout".into());
+                }
+            }
+        }
+        FeatureCommand::SetInEar(_) => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.in_ear)
+                .ok_or("No reviewed in-ear schema")?;
+        }
         _ => {}
     }
 
@@ -152,6 +190,21 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
                 enabled,
                 level,
             }))
+        }
+        (
+            ProtocolFamily::Bp1Pro,
+            FeatureCommand::SetGesture {
+                layout,
+                left,
+                right,
+            },
+        ) => Ok(encode_command(Command::SetGesture {
+            layout,
+            left,
+            right,
+        })),
+        (ProtocolFamily::Bp1Pro, FeatureCommand::SetInEar(enabled)) => {
+            Ok(encode_command(Command::SetInEar(enabled)))
         }
         (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
@@ -386,5 +439,61 @@ mod tests {
             }
         )
         .is_err());
+    }
+
+    #[test]
+    fn gesture_and_in_ear_require_capability_reviewed_schema_and_allowed_functions() {
+        let mut profile = profile_for(Some("bass-bp1-pro"), None, None);
+        // The profile ships the source schema but keeps the capability disabled
+        // until hardware evidence exists.
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetGesture {
+                layout: 0,
+                left: Some(1),
+                right: Some(1),
+            }
+        )
+        .is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
+
+        profile.capabilities.gesture = true;
+        profile.capabilities.in_ear = true;
+        assert_eq!(
+            encode_feature(
+                &profile,
+                FeatureCommand::SetGesture {
+                    layout: 0,
+                    left: Some(1),
+                    right: Some(6),
+                }
+            )
+            .unwrap(),
+            vec![0xBA, 0x22, 0x00, 0x01, 0x06]
+        );
+        // Layout 4 (single press) is not in the reviewed BP1 Pro schema.
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetGesture {
+                layout: 4,
+                left: Some(1),
+                right: None,
+            }
+        )
+        .is_err());
+        // Single click (layout 3) only allows play/pause and none.
+        assert!(encode_feature(
+            &profile,
+            FeatureCommand::SetGesture {
+                layout: 3,
+                left: Some(2),
+                right: None,
+            }
+        )
+        .is_err());
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetInEar(true)).unwrap(),
+            vec![0xBA, 0x26, 0x01]
+        );
     }
 }

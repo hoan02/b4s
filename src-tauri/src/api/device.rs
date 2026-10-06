@@ -52,6 +52,14 @@ enum DeviceCommand {
     FindBuds {
         start: bool,
     },
+    SetInEar {
+        enabled: bool,
+    },
+    SetGesture {
+        layout: u8,
+        left: Option<u8>,
+        right: Option<u8>,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -197,6 +205,18 @@ pub(crate) async fn apply_device_command(
         DeviceCommand::FindBuds { start } => {
             ble::commands::send_find_buds(start).await?;
             DeviceCommandDisposition::TransportAccepted
+        }
+        DeviceCommand::SetInEar { enabled } => {
+            ble::commands::send_in_ear(enabled).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::SetGesture {
+            layout,
+            left,
+            right,
+        } => {
+            ble::commands::send_gesture(layout, left, right).await?;
+            DeviceCommandDisposition::DeviceStateObserved
         }
     };
     let link = ble::get_link_health().await;

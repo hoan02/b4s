@@ -21,6 +21,8 @@ pub enum Feature {
     Ldac,
     Hearing,
     Find,
+    Gesture,
+    InEar,
 }
 
 pub fn authorize_control(profile: &DeviceProfile) -> Result<(), String> {
@@ -65,6 +67,8 @@ pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String
         Feature::Ldac => capability.ldac,
         Feature::Hearing => capability.hearing_protection,
         Feature::Find => capability.find_buds,
+        Feature::Gesture => capability.gesture,
+        Feature::InEar => capability.in_ear,
     };
     if enabled {
         Ok(())

@@ -18,7 +18,9 @@
     "spatial": true,
     "ldac": false,
     "hearingProtection": false,
-    "findBuds": true
+    "findBuds": true,
+    "gesture": false,
+    "inEar": false
   },
   "noise": {
     "supportsAdaptive": true,
@@ -400,6 +402,31 @@
     ]
   },
   "image": "default_ear_pic",
+  "gesture": {
+    "dualButton": true,
+    "layouts": [
+      {
+        "layout": 0,
+        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+      },
+      {
+        "layout": 1,
+        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+      },
+      {
+        "layout": 2,
+        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+      },
+      {
+        "layout": 3,
+        "functions": [1, 0]
+      }
+    ],
+    "provenance": "assets/gesture/gesture_config_function_list.json (2.17.0.1); firmware/capture acceptance not verified, capability disabled"
+  },
+  "inEar": {
+    "provenance": "GestureBleManager.a and EarHeadSetViewModel (BA25/BA26); model/firmware support not verified, capability disabled"
+  },
   "schemaVersion": 2,
   "connection": {
     "transport": "bleGatt",

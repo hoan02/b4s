@@ -595,6 +595,8 @@ async fn apply_event(event: DeviceEvent, token: crate::device::session::SessionT
         | DeviceEvent::BassBoost(_)
         | DeviceEvent::Ldac(_)
         | DeviceEvent::HearingProtection { .. }
+        | DeviceEvent::GestureConfig { .. }
+        | DeviceEvent::InEar(_)
         | DeviceEvent::Unknown { .. } => {}
     }
 }
