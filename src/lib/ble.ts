@@ -129,7 +129,9 @@ export async function listModelProfiles(): Promise<ModelProfile[]> {
 export type LinkLevel = "live" | "waiting" | "dead" | "demo" | "offline";
 
 export interface LinkHealth {
-  contractVersion: 1;
+  contractVersion: 2;
+  sessionId: number;
+  revision: number;
   connected: boolean;
   mock: boolean;
   peripheralConnected: boolean;
@@ -149,7 +151,7 @@ export interface LinkHealth {
 }
 
 export interface ConnectionState {
-  contractVersion: 1;
+  contractVersion: 2;
   connected: boolean;
   device: BleDevice | null;
   error: string | null;
@@ -157,7 +159,9 @@ export interface ConnectionState {
 }
 
 export interface ScanStatus {
-  contractVersion: 1;
+  contractVersion: 2;
+  generation: number;
+  revision: number;
   scanning: boolean;
   devices: BleDevice[];
   error: string | null;
@@ -177,7 +181,7 @@ function isCounter(value: unknown): value is number {
 
 function isLinkHealth(value: unknown): value is LinkHealth {
   if (!isRecord(value)) return false;
-  return value.contractVersion === 1 &&
+  return value.contractVersion === 2 && isCounter(value.sessionId) && isCounter(value.revision) &&
     ["connected", "mock", "peripheralConnected", "hasWriteUuid", "hasNotifyUuid", "handshakeOk"]
       .every((key) => typeof value[key] === "boolean") &&
     ["notifyCount", "txCount"].every((key) => isCounter(value[key])) &&
@@ -233,7 +237,7 @@ function isDeviceProfile(value: unknown): value is DeviceProfile {
 }
 
 function isConnectionState(value: unknown): value is ConnectionState {
-  return isRecord(value) && value.contractVersion === 1 &&
+  return isRecord(value) && value.contractVersion === 2 &&
     typeof value.connected === "boolean" &&
     isNullable(value.device, isBleDevice) &&
     isNullable(value.error, (item) => typeof item === "string") &&
@@ -241,19 +245,21 @@ function isConnectionState(value: unknown): value is ConnectionState {
 }
 
 function isScanStatus(value: unknown): value is ScanStatus {
-  return isRecord(value) && value.contractVersion === 1 &&
+  return isRecord(value) && value.contractVersion === 2 &&
+    isCounter(value.generation) && isCounter(value.revision) &&
     typeof value.scanning === "boolean" &&
     Array.isArray(value.devices) && value.devices.every(isBleDevice) &&
     isNullable(value.error, (item) => typeof item === "string");
 }
 
-function decodeContractV1<T>(
+function decodeContract<T>(
   payload: unknown,
   contractName: string,
+  version: number,
   guard: (value: unknown) => value is T
 ): T {
   if (
-    !isRecord(payload) || payload.contractVersion !== 1
+    !isRecord(payload) || payload.contractVersion !== version
   ) {
     throw new Error(`Unsupported ${contractName} contract version`);
   }
@@ -261,15 +267,16 @@ function decodeContractV1<T>(
   return payload as T;
 }
 
-function listenContractV1<T>(
+function listenContract<T>(
   eventName: string,
   contractName: string,
+  version: number,
   guard: (value: unknown) => value is T,
   cb: (payload: T) => void
 ): Promise<UnlistenFn> {
   return listen<unknown>(eventName, (event) => {
     try {
-      cb(decodeContractV1(event.payload, contractName, guard));
+      cb(decodeContract(event.payload, contractName, version, guard));
     } catch (error) {
       console.error(`[BLE] rejected ${contractName} event`, error);
     }
@@ -307,15 +314,15 @@ export async function disconnect(): Promise<void> {
 }
 
 export async function getScanStatus(): Promise<ScanStatus> {
-  return decodeContractV1(await invoke<unknown>("ble_get_scan_status"), "scan status", isScanStatus);
+  return decodeContract(await invoke<unknown>("ble_get_scan_status"), "scan status", 2, isScanStatus);
 }
 
 export async function getConnection(): Promise<ConnectionState> {
-  return decodeContractV1(await invoke<unknown>("ble_get_connection"), "connection state", isConnectionState);
+  return decodeContract(await invoke<unknown>("ble_get_connection"), "connection state", 2, isConnectionState);
 }
 
 export async function getLinkHealth(): Promise<LinkHealth> {
-  return decodeContractV1(await invoke<unknown>("ble_get_link_health"), "link health", isLinkHealth);
+  return decodeContract(await invoke<unknown>("ble_get_link_health"), "link health", 2, isLinkHealth);
 }
 
 // ---------------------------------------------------------------------------
@@ -323,25 +330,32 @@ export async function getLinkHealth(): Promise<LinkHealth> {
 // ---------------------------------------------------------------------------
 
 export function onScanStatus(cb: (status: ScanStatus) => void): Promise<UnlistenFn> {
-  return listenContractV1("ble://scan-status", "scan status", isScanStatus, cb);
+  return listenContract("ble://scan-status", "scan status", 2, isScanStatus, cb);
 }
 
 export function onConnection(cb: (state: ConnectionState) => void): Promise<UnlistenFn> {
-  return listenContractV1("ble://connection", "connection state", isConnectionState, cb);
+  return listenContract("ble://connection", "connection state", 2, isConnectionState, cb);
 }
 
 export function onLinkHealth(cb: (link: LinkHealth) => void): Promise<UnlistenFn> {
-  return listenContractV1("ble://link", "link health", isLinkHealth, cb);
+  return listenContract("ble://link", "link health", 2, isLinkHealth, cb);
 }
 
 
-export function onConnecting(cb: (id: string) => void): Promise<UnlistenFn> {
-  return listenContractV1<{ contractVersion: 1; deviceId: string }>(
+export interface ConnectingState {
+  contractVersion: 2;
+  deviceId: string;
+  sessionId: number;
+}
+
+export function onConnecting(cb: (state: ConnectingState) => void): Promise<UnlistenFn> {
+  return listenContract<{ contractVersion: 2; deviceId: string; sessionId: number }>(
     "ble://connecting",
     "connecting state",
-    (value): value is { contractVersion: 1; deviceId: string } =>
-      isRecord(value) && value.contractVersion === 1 && typeof value.deviceId === "string",
-    (state) => cb(state.deviceId)
+    2,
+    (value): value is { contractVersion: 2; deviceId: string; sessionId: number } =>
+      isRecord(value) && value.contractVersion === 2 && typeof value.deviceId === "string" && isCounter(value.sessionId),
+    cb
   );
 }
 
@@ -366,7 +380,9 @@ export function rssiLabel(rssi: number): string {
 
 export function emptyLink(): LinkHealth {
   return {
-    contractVersion: 1,
+    contractVersion: 2,
+    sessionId: 0,
+    revision: 0,
     connected: false,
     mock: false,
     peripheralConnected: false,

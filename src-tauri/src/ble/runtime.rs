@@ -12,6 +12,7 @@ pub(super) struct BleInner {
     pub(super) connected_id: Option<String>,
     pub(super) scanning: bool,
     pub(super) scan_generation: u64,
+    pub(super) scan_revision: u64,
     pub(super) session: crate::device::session::SessionEpoch,
     pub(super) snapshot: crate::device::snapshot::DeviceSnapshot,
     pub(super) devices: HashMap<String, BleDevice>,
@@ -25,6 +26,7 @@ pub(super) struct BleInner {
     /// Live link diagnostics for UI.
     pub(super) has_write_uuid: bool,
     pub(super) has_notify_uuid: bool,
+    pub(super) link_revision: u64,
     pub(super) handshake_ok: bool,
     pub(super) notify_count: u64,
     pub(super) tx_count: u64,
@@ -45,6 +47,7 @@ impl BleInner {
             connected_id: None,
             scanning: false,
             scan_generation: 0,
+            scan_revision: 0,
             session: Default::default(),
             snapshot: crate::device::snapshot::DeviceSnapshot::new(0),
             devices: HashMap::new(),
@@ -54,6 +57,7 @@ impl BleInner {
             mock: false,
             has_write_uuid: false,
             has_notify_uuid: false,
+            link_revision: 0,
             handshake_ok: false,
             notify_count: 0,
             tx_count: 0,
@@ -68,6 +72,7 @@ impl BleInner {
 
     pub(super) fn reset_link(&mut self) {
         self.session.invalidate();
+        self.touch_link();
         self.snapshot = crate::device::snapshot::DeviceSnapshot::new(self.session.token().id());
         self.has_write_uuid = false;
         self.has_notify_uuid = false;
@@ -81,6 +86,10 @@ impl BleInner {
         self.write_char = None;
         self.notify_char = None;
         self.find_requested = false;
+    }
+
+    pub(super) fn touch_link(&mut self) {
+        self.link_revision = self.link_revision.saturating_add(1);
     }
 }
 

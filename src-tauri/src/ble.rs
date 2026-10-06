@@ -93,6 +93,8 @@ pub enum LinkLevel {
 #[serde(rename_all = "camelCase")]
 pub struct LinkHealth {
     pub contract_version: u16,
+    pub session_id: u64,
+    pub revision: u64,
     /// Frontend session thinks we are connected
     pub connected: bool,
     /// True when using mock scan/devices (no real GATT)
@@ -124,7 +126,9 @@ pub struct LinkHealth {
 impl Default for LinkHealth {
     fn default() -> Self {
         Self {
-            contract_version: 1,
+            contract_version: 2,
+            session_id: 0,
+            revision: 0,
             connected: false,
             mock: false,
             peripheral_connected: false,
@@ -160,12 +164,15 @@ pub struct ConnectionState {
 pub struct ConnectingState {
     pub contract_version: u16,
     pub device_id: String,
+    pub session_id: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanStatus {
     pub contract_version: u16,
+    pub generation: u64,
+    pub revision: u64,
     pub scanning: bool,
     pub devices: Vec<BleDevice>,
     pub error: Option<String>,
@@ -355,7 +362,9 @@ pub async fn get_scan_status() -> ScanStatus {
         ))
     });
     ScanStatus {
-        contract_version: 1,
+        contract_version: 2,
+        generation: state.scan_generation,
+        revision: state.scan_revision,
         scanning: state.scanning,
         devices,
         error: None,
@@ -429,13 +438,31 @@ mod scan_tests {
     #[test]
     fn link_contract_is_versioned_and_uses_a_closed_level_enum() {
         let encoded = serde_json::to_value(LinkHealth::default()).unwrap();
-        assert_eq!(encoded["contractVersion"], 1);
+        assert_eq!(encoded["contractVersion"], 2);
+        assert_eq!(encoded["sessionId"], 0);
+        assert_eq!(encoded["revision"], 0);
         assert_eq!(encoded["level"], "offline");
         assert_eq!(
             serde_json::from_value::<LinkLevel>(encoded["level"].clone()).unwrap(),
             LinkLevel::Offline
         );
         assert!(serde_json::from_value::<LinkLevel>(serde_json::json!("unknown")).is_err());
+    }
+
+    #[test]
+    fn scan_contract_carries_generation_and_revision() {
+        let encoded = serde_json::to_value(ScanStatus {
+            contract_version: 2,
+            generation: 7,
+            revision: 12,
+            scanning: true,
+            devices: Vec::new(),
+            error: None,
+        })
+        .unwrap();
+        assert_eq!(encoded["contractVersion"], 2);
+        assert_eq!(encoded["generation"], 7);
+        assert_eq!(encoded["revision"], 12);
     }
 }
 
@@ -452,7 +479,9 @@ pub async fn get_connection_state() -> ConnectionState {
             .as_ref()
             .and_then(|id| state.peripherals.get(id).cloned());
         let partial = LinkHealth {
-            contract_version: 1,
+            contract_version: 2,
+            session_id: state.session.token().id(),
+            revision: state.link_revision,
             connected,
             mock: state.mock,
             peripheral_connected: false, // filled below
@@ -486,7 +515,7 @@ pub async fn get_connection_state() -> ConnectionState {
     link_partial.message = message;
 
     ConnectionState {
-        contract_version: 1,
+        contract_version: 2,
         connected,
         device,
         error: None,
@@ -516,7 +545,11 @@ async fn emit_connection_state(app: &AppHandle) {
 pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
     let mut state = BLE.lock().await;
     state.scanning = true;
-    state.scan_generation = state.scan_generation.wrapping_add(1);
+    state.scan_generation = state
+        .scan_generation
+        .checked_add(1)
+        .expect("scan generation exhausted");
+    state.scan_revision = state.scan_revision.saturating_add(1);
     let scan_generation = state.scan_generation;
     state.mock = true;
     state.devices.clear();
@@ -572,6 +605,7 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
                     return;
                 }
                 s.devices.insert(d.id.clone(), d.clone());
+                s.scan_revision = s.scan_revision.saturating_add(1);
             }
             emit_scan_status(&app2).await;
         });
@@ -585,6 +619,7 @@ pub async fn start_mock_scan(app: AppHandle) -> Result<(), String> {
             return;
         }
         s.scanning = false;
+        s.scan_revision = s.scan_revision.saturating_add(1);
         drop(s);
         emit_scan_status(&app3).await;
     });

@@ -9,6 +9,7 @@ import {
   rssiToBars,
   checkAdapter,
   getScanStatus,
+  type ScanStatus,
 } from "../lib/ble";
 import { findRememberedDevice, readRememberedDevice } from "../lib/reconnect";
 import { resolveDeviceThumb } from "../lib/deviceImages";
@@ -37,6 +38,9 @@ const BlePairing: Component<Props> = (props) => {
   let unsubs: Array<() => void> = [];
   let checkingAdapter = false;
   let disposed = false;
+  let latestScanGeneration = -1;
+  let latestScanRevision = -1;
+  let latestConnectingSession = -1;
   let adapterPoll: number | undefined;
   let handleFocus: (() => void) | undefined;
   let handleVisibility: (() => void) | undefined;
@@ -73,9 +77,7 @@ const BlePairing: Component<Props> = (props) => {
 
     void (async () => {
       const scanUnsub = await onScanStatus((status) => {
-        setScanning(status.scanning);
-        setDevices(status.devices);
-        if (status.error) setError(status.error);
+        acceptScanStatus(status);
       });
       if (disposed) scanUnsub();
       else {
@@ -90,11 +92,25 @@ const BlePairing: Component<Props> = (props) => {
     });
 
     void (async () => {
-      const connectingUnsub = await onConnecting((id) => setConnectingId(id));
+      const connectingUnsub = await onConnecting((state) => {
+        if (state.sessionId < latestConnectingSession) return;
+        latestConnectingSession = state.sessionId;
+        setConnectingId(state.deviceId);
+      });
       if (disposed) connectingUnsub();
       else unsubs.push(connectingUnsub);
     })();
   });
+
+  const acceptScanStatus = (status: ScanStatus) => {
+    if (status.generation < latestScanGeneration ||
+      (status.generation === latestScanGeneration && status.revision < latestScanRevision)) return;
+    latestScanGeneration = status.generation;
+    latestScanRevision = status.revision;
+    setScanning(status.scanning);
+    setDevices(status.devices);
+    if (status.error) setError(status.error);
+  };
 
   onCleanup(() => {
     disposed = true;

@@ -39,7 +39,11 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
         .peripherals
         .retain(|id, _| Some(id.clone()) == connected);
     state.scanning = true;
-    state.scan_generation = state.scan_generation.wrapping_add(1);
+    state.scan_generation = state
+        .scan_generation
+        .checked_add(1)
+        .expect("scan generation exhausted");
+    state.scan_revision = state.scan_revision.saturating_add(1);
     let scan_generation = state.scan_generation;
     state.mock = false;
     drop(state);
@@ -56,7 +60,10 @@ pub async fn start_scan(app: AppHandle) -> Result<(), String> {
         let mut state = BLE.lock().await;
         if state.scan_generation == scan_generation {
             state.scanning = false;
+            state.scan_revision = state.scan_revision.saturating_add(1);
         }
+        drop(state);
+        emit_scan_status(&app).await;
         return Err(error);
     }
     emit_scan_status(&app).await;
@@ -153,6 +160,7 @@ pub(super) async fn process_peripheral(app: &AppHandle, peripheral: Peripheral, 
         }
 
         state.peripherals.insert(id_str, peripheral);
+        state.scan_revision = state.scan_revision.saturating_add(1);
     }
     emit_scan_status(app).await;
 }
@@ -232,6 +240,7 @@ async fn stop_scan_session(app: AppHandle, generation: Option<u64>) -> Result<()
         let _ = a.stop_scan().await;
     }
     state.scanning = false;
+    state.scan_revision = state.scan_revision.saturating_add(1);
     drop(state);
     emit_scan_status(&app).await;
     Ok(())

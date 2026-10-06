@@ -107,6 +107,7 @@ pub(super) async fn write_raw(peripheral: &Peripheral, data: &[u8]) -> Result<()
         state.last_tx_hex = Some(hex_encode(data));
         state.write_char = Some(ch.uuid.to_string());
         state.has_write_uuid = true;
+        state.touch_link();
     }
 
     if let Some(app) = app_handle() {

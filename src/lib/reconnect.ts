@@ -68,8 +68,14 @@ export async function findRememberedDevice(
   signal.addEventListener("abort", cancel, { once: true });
   let unsubscribe: (() => void) | undefined;
   let started = false;
+  let generation = -1;
+  let revision = -1;
   const inspect = (status: ScanStatus) => {
     if (settled || signal.aborted) return;
+    if (status.generation < generation ||
+      (status.generation === generation && status.revision < revision)) return;
+    generation = status.generation;
+    revision = status.revision;
     const match = status.devices.find((device) => matchesRememberedDevice(device, saved));
     if (match) finish(match);
     else if (status.error || (started && !status.scanning)) finish(null);

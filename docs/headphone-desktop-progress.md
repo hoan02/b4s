@@ -32,7 +32,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
 | P4.2 | Capability resolver/readiness/query planner | In progress — backend feature authorization; per-feature evidence/readiness outstanding |
-| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — lifecycle payload shapes, reviewed profile fields and snapshot readings are validated at frontend boundaries; session/sequence envelopes and consistent typed error semantics remain open |
+| P4.3 | Device snapshot/error/event contract thay thế API cũ | In progress — scan generation/revision, connection session, and link session/revision envelopes are versioned and frontend reducers reject stale updates; consistent typed error semantics and remaining command DTO migration remain open |
 | P4.4 | Scoped persistence, migrations, bounded diagnostic cache | In progress — auto-reconnect settings are versioned; custom EQ storage is model/device scoped with legacy-array migration and validation; bounded diagnostic cache remains open |
 | P5.1 | App shell/navigation/session store | In progress — ordered session store, runtime subscriptions, find-buds, listening, EQ, game, spatial and advanced-sound workflows have dedicated owners; navigation/accessibility acceptance remains open |
 | P5.2 | Devices/overview + accurate battery/connect feedback | In progress — battery unknown/zero and link-level status are explicit; duplicate ANC environment controls and hidden dead UI paths removed; device inventory/visual acceptance outstanding |
@@ -547,3 +547,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Removed MAC-based scan de-duplication that discarded the weaker-RSSI OS entry. Scan now updates RSSI only within the same OS entry ID and preserves distinct entries even when they expose the same address; a focused Rust unit test covers independent RSSI and entry retention.
 - Removed a redundant equalizer reset found during the controller review. `git diff --check` passed; the Rust regression is delegated to current-head CI, with no local test suite run.
+
+## Increment 75 — sequence lifecycle events
+
+- Promoted scan, connection, link-health, and connecting contracts to version 2. Scan payloads carry generation/revision; connection attempts carry the owning session; link snapshots carry session/revision. Frontend reducers and bounded reconnect discard older scan/link results, including command snapshots that arrive after newer events.
+- Scan revision advances on new scans, accepted OS-entry changes, scan failure/stop, mock result delivery, and mock completion. Added Rust serialization coverage for the scan cursor. `npx tsc --noEmit`, selected-file `rustfmt --check`, and `git diff --check` pass; no local Rust suite/build was run. P4.3 remains open for consistent typed errors and remaining command DTOs; P3.3 remains open for actor/event ownership.

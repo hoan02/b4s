@@ -70,6 +70,8 @@ const App: Component = () => {
   const [hearingProtect, setHearingProtect] = createSignal<boolean | null>(null);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
   const [controlError, setControlError] = createSignal<string | null>(null);
+  let latestLinkSession = -1;
+  let latestLinkRevision = -1;
   const noiseCaps = () => device()?.deviceProfile.noise;
 
   const applySnapshot = (snapshot: DeviceSnapshot | null) => {
@@ -115,7 +117,13 @@ const App: Component = () => {
   let linkPoll: number | undefined;
   let toastTimers = new Map<number, number>();
 
-  const applyLink = (l: LinkHealth) => setLink(l);
+  const applyLink = (value: LinkHealth) => {
+    if (value.sessionId < latestLinkSession ||
+      (value.sessionId === latestLinkSession && value.revision < latestLinkRevision)) return;
+    latestLinkSession = value.sessionId;
+    latestLinkRevision = value.revision;
+    setLink(value);
+  };
 
   const notify = (
     message: string,
@@ -254,7 +262,6 @@ const App: Component = () => {
             setControlError(null);
             setView("home");
             setBattery({ left: null, right: null, case: null });
-            setLink(emptyLink());
             stopLinkPoll();
             notify(t("toast.disconnected"), "info");
           } else startLinkPoll();
@@ -310,7 +317,6 @@ const App: Component = () => {
     setConnected(false);
     setDevice(null);
     findController.reset();
-    setLink(emptyLink());
     setControlError(null);
     setView("home");
     stopLinkPoll();

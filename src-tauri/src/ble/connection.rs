@@ -81,8 +81,9 @@ pub async fn connect(app: AppHandle, device_id: String) -> Result<BleDevice, Str
     let _ = app.emit(
         "ble://connecting",
         &ConnectingState {
-            contract_version: 1,
+            contract_version: 2,
             device_id: device_id.clone(),
+            session_id: attempt_token.id(),
         },
     );
     let result = tokio::select! {
@@ -199,6 +200,7 @@ async fn connect_one(
         let mut state = BLE.lock().await;
         state.has_write_uuid = true;
         state.has_notify_uuid = true;
+        state.touch_link();
     }
     ensure_session(token).await?;
 
@@ -222,6 +224,7 @@ async fn connect_one(
         }
         // Diagnostic means write accepted, not device ready.
         state.handshake_ok = !connection.handshake.is_empty();
+        state.touch_link();
     }
 
     // Post-connect battery queries keep the canonical BA02 frame.
@@ -255,6 +258,7 @@ async fn connect_one(
         .get(&device_id)
         .and_then(|device| device.model_id.clone());
     state.connected_id = Some(device_id.clone());
+    state.touch_link();
     let device = if let Some(d) = state.devices.get_mut(&device_id) {
         d.connected = true;
         d.clone()
@@ -394,6 +398,7 @@ async fn subscribe_notifications(
         state.notify_char = Some(ch.uuid.to_string());
         state.has_notify_uuid = true;
         state.has_write_uuid = true;
+        state.touch_link();
     }
 
     let mut stream = peripheral
@@ -456,6 +461,7 @@ async fn handle_notification(
         state.notify_count = state.notify_count.saturating_add(1);
         state.last_notify_ms = Some(now_ms());
         state.last_rx_hex = Some(hex_encode(data));
+        state.touch_link();
     }
     let _ = app.emit("ble://link", &get_connection_state().await.link);
 
