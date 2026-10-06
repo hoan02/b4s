@@ -34,6 +34,15 @@ pub(super) async fn ensure_central_listener(
     Ok(())
 }
 
+/// Stop and join the app-scoped adapter event listener during bounded Quit cleanup.
+pub(super) async fn stop_central_listener() {
+    let task = BLE.lock().await.central_task.take();
+    if let Some(task) = task {
+        task.abort();
+        let _ = task.await;
+    }
+}
+
 async fn listen_central_events(
     app: AppHandle,
     adapter: Adapter,

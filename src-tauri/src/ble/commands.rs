@@ -135,6 +135,11 @@ pub async fn shutdown(app: AppHandle) {
         let _ = tokio::time::timeout(Duration::from_secs(1), send_find_buds(false)).await;
     }
     let _ = tokio::time::timeout(Duration::from_secs(2), connection::disconnect(app)).await;
+    let _ = tokio::time::timeout(
+        Duration::from_secs(1),
+        super::discovery::stop_central_listener(),
+    )
+    .await;
 }
 
 pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), String> {

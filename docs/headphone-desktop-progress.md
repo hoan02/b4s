@@ -27,7 +27,7 @@ Updated: 2026-10-06. This tracker records delivered work separately from hardwar
 | P2.3 | Replay harness và scripted fake transport | In progress — synthetic pipeline plus confirmed-transport fake; full GATT/capture replay outstanding |
 | P3.1 | Thay BLE discovery/GATT facade bằng transport/session mới | In progress — BLE mutable state and singleton now have a dedicated runtime owner; scan and connection preserve/select exact OS entry IDs even when entries share an address; demo-only scan/connect logic now lives in `ble/mock.rs`; a disappearing scan entry now fails connection publication instead of fabricating an experimental device; actor lifecycle, injected transport interface, and event ownership remain open |
 | P3.2 | Tách framing/reassembly khỏi feature decoder | In progress — notification reassembly now requires the profile's declared framing |
-| P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards, connect-attempt cancellation lease, session/entry-guarded OS disconnect events, and a per-session task owner for notification plus battery poller are integrated; reset aborts both and stale registration is rejected; central-event lifecycle and session actor remain open |
+| P3.3 | Session lifecycle/generation/cancel/reconnect | In progress — generation guards, connect-attempt cancellation lease, session/entry-guarded OS disconnect events, and a per-session task owner for notification plus battery poller are integrated; reset aborts both and stale registration is rejected; tray Quit now aborts and joins the app-scoped central-event listener; full session actor and lifecycle handling across all app exit paths remain open |
 | P3.4 | Queue/correlation/deadline/readback | In progress — bounded serialization/deadline; confirmation outstanding |
 | P3.5 | Ưu tiên spike Windows SPP/vendor transport khi U01 xác nhận Ultra cần đường đó | External evidence required |
 | P4.1 | Profile v2, validator, migrate BP1 Pro/Ultra explicit | In progress — schema v2 is mandatory; only reviewed profiles authorize control; Ultra remains passive pending transport evidence |
@@ -672,3 +672,8 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 
 - Added a session-generation task owner for the notification stream and battery poller. Session reset aborts both tasks, replacement aborts the previous task of that role, and a task registering against an expired generation is immediately aborted.
 - Added lifecycle regressions for reset cleanup and registration losing a reset race. Selected-file `rustfmt --check` and `git diff --check` pass; no local Rust tests/build were run. Central adapter-event ownership and ordered async join/shutdown remain open under P3.3.
+
+## Increment 100 — join the central listener on tray Quit
+
+- Bounded tray Quit cleanup now removes, aborts and awaits the app-scoped adapter event listener after scan/find/disconnect cleanup. The per-session notification and battery-poller owner remains independent, so session rollover does not stop discovery events.
+- `rustfmt --check` and `git diff --check` are the local gates; no local tests/build were run. Normal close when tray setup fails and a full session actor remain open under P3.3/P8.2.
