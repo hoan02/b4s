@@ -65,7 +65,7 @@ async function start() {
         class="preview-frame"
         ref={(el) => queueMicrotask(() => { el.scrollTop = Number(params.get("scroll") ?? 0); })}
         style={bare
-          ? { width: "400px", height: "800px", overflow: "hidden", background: "var(--bg)" }
+          ? { width: "400px", height: "760px", overflow: "hidden", background: "var(--bg)" }
           : { width: "400px", background: "var(--bg)", height: "860px", overflow: "auto" }}
       >
         <section class="section section-scroll">
