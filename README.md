@@ -24,7 +24,9 @@ Users of 0.1.1/0.1.2 must install 0.1.3 manually once because the updater signin
 BP1 Pro has a reviewed model profile. BP1 Ultra supports experimental BLE/789C
 connection, battery reporting, ANC, game mode, spatial audio, Bass Boost, LDAC,
 hearing protection and gestures. EQ/SoundFit remain unavailable. Other catalog entries may
-be experimental or recognition-only. A name match does not mean that control
+be experimental or recognition-only. EP10 Ultra, Bowie M4s and MS1 reuse the
+BP1 Ultra adapter, and Bowie M3s and EP10 Pro reuse the BP1 Pro adapter, as
+experimental source-reviewed profiles that have not been tested on hardware. A name match does not mean that control
 has been verified; check the support level shown by the app and the model
 catalog before relying on a feature.
 

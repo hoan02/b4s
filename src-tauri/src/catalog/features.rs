@@ -15,6 +15,7 @@ pub enum Feature {
     Multipoint,
     RestoreDefaults,
     AdaptiveLr,
+    WindNoise,
 }
 
 impl Feature {
@@ -26,6 +27,7 @@ impl Feature {
             Feature::Multipoint => "multipoint",
             Feature::RestoreDefaults => "restoreDefaults",
             Feature::AdaptiveLr => "adaptiveLr",
+            Feature::WindNoise => "windNoise",
             Feature::Listening => "anc",
             Feature::Eq => "eq",
             Feature::CustomEq => "customEq",

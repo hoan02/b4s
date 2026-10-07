@@ -222,6 +222,11 @@
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
+    },
+    "windNoise": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
     }
   }
 }

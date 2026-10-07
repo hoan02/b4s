@@ -119,6 +119,14 @@ pub(super) fn validate_feature(
                 .and_then(|model| model.adaptive_lr)
                 .ok_or("No reviewed adaptiveLr schema")?;
         }
+        FeatureCommand::SetWindNoise(_) => {
+            profile
+                .model_id
+                .as_deref()
+                .and_then(crate::catalog::profile_for)
+                .and_then(|model| model.wind_noise)
+                .ok_or("No reviewed windNoise schema")?;
+        }
         _ => {}
     }
 

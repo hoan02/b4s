@@ -34,6 +34,7 @@ pub enum ExpectedState {
     Multipoint(bool),
     RestoreResult(u8),
     AdaptiveLr(bool),
+    WindNoise(bool),
     Gesture {
         layout: u8,
         left: Option<u8>,
@@ -131,6 +132,7 @@ impl ExpectedState {
             (Self::AdaptiveLr(expected), 0x3F, DeviceEvent::AdaptiveLr(actual)) => {
                 expected == actual
             }
+            (Self::WindNoise(expected), 0x51, DeviceEvent::WindNoise(actual)) => expected == actual,
             (
                 Self::Gesture {
                     layout,
@@ -535,6 +537,16 @@ mod tests {
         assert!(!ExpectedState::AdaptiveLr(false).matches(session, &adaptive));
         adaptive.opcode = 0x4A;
         assert!(!ExpectedState::AdaptiveLr(true).matches(session, &adaptive));
+
+        let mut wind = StateObservation {
+            session,
+            opcode: 0x51,
+            event: DeviceEvent::WindNoise(true),
+        };
+        assert!(ExpectedState::WindNoise(true).matches(session, &wind));
+        assert!(!ExpectedState::WindNoise(false).matches(session, &wind));
+        wind.opcode = 0x52;
+        assert!(!ExpectedState::WindNoise(true).matches(session, &wind));
 
         let mut observation = StateObservation {
             session,

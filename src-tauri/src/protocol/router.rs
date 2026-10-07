@@ -53,6 +53,7 @@ pub enum FeatureCommand {
     SetMultipoint(bool),
     RestoreDefaults,
     SetAdaptiveLr(bool),
+    SetWindNoise(bool),
 }
 
 pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Result<Vec<u8>, String> {
@@ -74,6 +75,7 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::SetMultipoint(_) => Feature::Multipoint,
         FeatureCommand::RestoreDefaults => Feature::RestoreDefaults,
         FeatureCommand::SetAdaptiveLr(_) => Feature::AdaptiveLr,
+        FeatureCommand::SetWindNoise(_) => Feature::WindNoise,
     };
     authorize(profile, feature)?;
     super::constraints::validate_feature(profile, &command)?;
@@ -153,6 +155,12 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
             ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
             FeatureCommand::SetAdaptiveLr(enabled),
         ) => Ok(encode_command(Command::SetAdaptiveLr(enabled))),
+        (ProtocolFamily::Bp1Pro, FeatureCommand::SetWindNoise(enabled)) => {
+            Ok(encode_command(Command::SetWindNoise(enabled)))
+        }
+        (ProtocolFamily::Bp1Ultra, FeatureCommand::SetWindNoise(_)) => {
+            Err("Wind-noise reduction is not reviewed for this protocol family".into())
+        }
         (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
 }
@@ -272,6 +280,7 @@ mod tests {
         assert!(encode_feature(&profile, FeatureCommand::SetBassBoost(6)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetEqIndex(0)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetWindNoise(true)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::FindBuds(true)).is_err());
         assert!(encode_feature(
             &profile,
@@ -476,6 +485,7 @@ mod tests {
         assert!(encode_feature(&profile, FeatureCommand::SetMultipoint(true)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::RestoreDefaults).is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetAdaptiveLr(true)).is_err());
+        assert!(encode_feature(&profile, FeatureCommand::SetWindNoise(true)).is_err());
 
         // Isolate the schema/allowlist behaviour from the Experimental gate.
         profile.experimental_features.clear();
@@ -526,6 +536,14 @@ mod tests {
         assert_eq!(
             encode_feature(&profile, FeatureCommand::SetAdaptiveLr(true)).unwrap(),
             vec![0xBA, 0x4A, 0x01]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetWindNoise(true)).unwrap(),
+            vec![0xBA, 0x52, 0x01]
+        );
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetWindNoise(false)).unwrap(),
+            vec![0xBA, 0x52, 0x00]
         );
     }
 }

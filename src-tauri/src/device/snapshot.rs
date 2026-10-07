@@ -48,6 +48,13 @@ pub struct AdaptiveLrReading {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct WindNoiseReading {
+    pub enabled: bool,
+    pub observed_at_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GestureReading {
     pub layout: u8,
     pub left: u8,
@@ -85,6 +92,7 @@ pub struct DeviceSnapshot {
     pub in_ear: Option<InEarReading>,
     pub multipoint: Option<MultipointReading>,
     pub adaptive_lr: Option<AdaptiveLrReading>,
+    pub wind_noise: Option<WindNoiseReading>,
     pub restore_available: Option<bool>,
     pub gesture: Vec<GestureReading>,
 }
@@ -111,6 +119,7 @@ impl DeviceSnapshot {
             in_ear: None,
             multipoint: None,
             adaptive_lr: None,
+            wind_noise: None,
             restore_available: None,
             gesture: Vec::new(),
         }
@@ -179,6 +188,12 @@ impl DeviceSnapshot {
             DeviceEvent::RestoreAvailable(available) => self.restore_available = Some(*available),
             DeviceEvent::AdaptiveLr(enabled) => {
                 self.adaptive_lr = Some(AdaptiveLrReading {
+                    enabled: *enabled,
+                    observed_at_ms: at_ms,
+                })
+            }
+            DeviceEvent::WindNoise(enabled) => {
+                self.wind_noise = Some(WindNoiseReading {
                     enabled: *enabled,
                     observed_at_ms: at_ms,
                 })
@@ -369,6 +384,18 @@ mod tests {
         snapshot.observe(0x36, &DeviceEvent::RestoreAvailable(false), 31);
         assert_eq!(snapshot.restore_available, Some(false));
         assert!(DeviceSnapshot::new(9).restore_available.is_none());
+    }
+
+    #[test]
+    fn wind_noise_observation_is_timestamped_and_resets_with_session() {
+        let mut snapshot = DeviceSnapshot::new(12);
+        assert!(snapshot.wind_noise.is_none());
+        snapshot.observe(0x51, &DeviceEvent::WindNoise(true), 50);
+        assert!(snapshot.wind_noise.as_ref().unwrap().enabled);
+        assert_eq!(snapshot.wind_noise.as_ref().unwrap().observed_at_ms, 50);
+        snapshot.observe(0x51, &DeviceEvent::WindNoise(false), 51);
+        assert!(!snapshot.wind_noise.as_ref().unwrap().enabled);
+        assert!(DeviceSnapshot::new(13).wind_noise.is_none());
     }
 
     #[test]

@@ -46,7 +46,7 @@ export interface BleDevice {
 export interface DeviceProfile {
   sound: { maxBassLevel: number; provenance: string } | null;
   featureEvidence: Record<string, { status: "unknown" | "unsupported" | "sourceReviewed" | "implemented" | "hardwareVerified"; provenance: string; firmwareVersions: string[] }>;
-  capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean; gesture: boolean; inEar: boolean; multipoint: boolean; restoreDefaults: boolean; adaptiveLr: boolean };
+  capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean; gesture: boolean; inEar: boolean; multipoint: boolean; restoreDefaults: boolean; adaptiveLr: boolean; windNoise: boolean };
   experimentalFeatures: string[];
   connection: {
     transport: "bleGatt" | "unresolved";
@@ -265,7 +265,7 @@ function isDeviceProfile(value: unknown): value is DeviceProfile {
     Array.isArray(connection.firmwareVersions) &&
     connection.firmwareVersions.every((item) => typeof item === "string") &&
     typeof connection.provenance === "string");
-  return ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac", "hearingProtection", "findBuds", "gesture", "inEar", "multipoint", "restoreDefaults", "adaptiveLr"]
+  return ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac", "hearingProtection", "findBuds", "gesture", "inEar", "multipoint", "restoreDefaults", "adaptiveLr", "windNoise"]
       .every((key) => typeof capabilities[key] === "boolean") &&
     Array.isArray(value.experimentalFeatures) &&
     value.experimentalFeatures.every((item) => typeof item === "string") &&

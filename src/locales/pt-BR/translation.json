@@ -202,5 +202,7 @@
   "restore.message": "Restaurar as configurações de operação do fone para o padrão de fábrica? Isso não pode ser desfeito.",
   "restore.confirm": "Restaurar",
   "adaptiveLr.title": "Fones adaptáveis L/R",
-  "adaptiveLr.hint": "Áudio adaptável entre os fones esquerdo e direito"
+  "adaptiveLr.hint": "Áudio adaptável entre os fones esquerdo e direito",
+  "windNoise.title": "Redução de ruído do vento",
+  "windNoise.hint": "Reduz o ruído do vento ao usar o cancelamento de ruído"
 }

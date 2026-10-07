@@ -51,6 +51,7 @@ pub const FEATURE_KEYS: &[&str] = &[
     "multipoint",
     "restoreDefaults",
     "adaptiveLr",
+    "windNoise",
     "callEnhancement",
     "batteryEnhancement",
     "soundBalance",

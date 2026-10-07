@@ -1,6 +1,6 @@
 /** Validate model data at the bridge; missing constraints never select defaults. */
 export const featureKeys = ["anc", "eq", "customEq", "gameMode", "bassBoost", "spatial", "ldac",
-  "hearingProtection", "findBuds", "gesture", "inEar", "multipoint", "restoreDefaults", "adaptiveLr",
+  "hearingProtection", "findBuds", "gesture", "inEar", "multipoint", "restoreDefaults", "adaptiveLr", "windNoise",
   "callEnhancement", "batteryEnhancement", "soundBalance", "deviceManagement", "gestureV2",
   "personalizedSound", "firmwareUpdate", "aiServices"] as const;
 

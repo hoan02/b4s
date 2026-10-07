@@ -82,6 +82,7 @@ const App: Component = () => {
   const [multipointOn, setMultipointOn] = createSignal<boolean | null>(null);
   const [restoreAvailable, setRestoreAvailable] = createSignal<boolean | null>(null);
   const [adaptiveLrOn, setAdaptiveLrOn] = createSignal<boolean | null>(null);
+  const [windNoiseOn, setWindNoiseOn] = createSignal<boolean | null>(null);
   const [restorePrompt, setRestorePrompt] = createSignal(false);
   const [gestureState, setGestureState] = createSignal<Array<{ layout: number; left: number; right: number }>>([]);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
@@ -111,6 +112,7 @@ const App: Component = () => {
       setMultipointOn(null);
       setRestoreAvailable(null);
       setAdaptiveLrOn(null);
+      setWindNoiseOn(null);
       setRestorePrompt(false);
       setGestureState([]);
       setSpatialOn(null);
@@ -134,6 +136,7 @@ const App: Component = () => {
     setMultipointOn(snapshot.multipoint?.enabled ?? null);
     setRestoreAvailable(snapshot.restoreAvailable ?? null);
     setAdaptiveLrOn(snapshot.adaptiveLr?.enabled ?? null);
+    setWindNoiseOn(snapshot.windNoise?.enabled ?? null);
     setGestureState(snapshot.gesture.map((value) => ({ layout: value.layout, left: value.left, right: value.right })));
   };
   const session = createDeviceSession(applySnapshot);
@@ -250,6 +253,9 @@ const App: Component = () => {
   const adaptiveLrSupported = () =>
     (device()?.deviceProfile.capabilities.adaptiveLr ?? false) &&
     experimentalUnlocked("adaptiveLr");
+  const windNoiseSupported = () =>
+    (device()?.deviceProfile.capabilities.windNoise ?? false) &&
+    experimentalUnlocked("windNoise");
 
   const findController = createFindBudsController(notify);
 
@@ -596,6 +602,10 @@ const App: Component = () => {
                 adaptiveLrOn={adaptiveLrOn()}
                 adaptiveLrPending={gestures.pending()}
                 adaptiveLrError={gestures.error()}
+                windNoiseSupported={windNoiseSupported()}
+                windNoiseOn={windNoiseOn()}
+                windNoisePending={gestures.pending()}
+                windNoiseError={gestures.error()}
                 moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
                 spatialPending={spatialController.pending()}
                 spatialError={spatialController.error()}
@@ -621,6 +631,7 @@ const App: Component = () => {
                 onInEar={gestures.setInEar}
                 onMultipoint={gestures.setMultipoint}
                 onAdaptiveLr={gestures.setAdaptiveLr}
+                onWindNoise={gestures.setWindNoise}
                 onRestore={() => setRestorePrompt(true)}
                 onSpatialOn={spatialController.setEnabled}
                 onSpatialMode={spatialController.selectMode}

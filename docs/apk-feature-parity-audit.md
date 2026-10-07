@@ -18,7 +18,7 @@ properties. Finding a model name or an opcode must not turn on a capability.
 
 | Area | APK evidence to trace | Current B4S coverage / limitation |
 | --- | --- | --- |
-| Model identity | `DeviceManager.DEVICE_MAP`, exact model branches, public catalog | 124 recognized candidates, two control profiles; extracted alias mappings are evidence, not automatically installed runtime aliases |
+| Model identity | `DeviceManager.DEVICE_MAP`, exact model branches, public catalog | 124 recognized candidates, seven experimental/verified control profiles (BP1 Pro/Ultra plus EP10 Ultra, M4s, MS1, M3s, EP10 Pro, the last five not hardware verified); extracted alias mappings are evidence, not automatically installed runtime aliases |
 | Transport and framing | `BluetoothDataWriteManager.Companion.a/b/c`, `DeviceManager.H0/Q0`, `HeadPhoneDataResolveManager` | BLE GATT with bare AA/BA and 789C framing; no Classic Bluetooth control transport |
 | Battery / device state | Headphone data decoder, model-specific state consumers | Pro/Ultra decoders and startup queries exist; no universal layout for all models |
 | ANC / transparency | `NoiseReduceDataModel`, `NoiseReduceManger2`, `EarPodNewActivity` | Two reviewed layouts; Ultra AA33 differs from Pro; voice write/read normalization implemented, Ultra voice hardware transition still pending |
@@ -119,3 +119,20 @@ Frontend session, preferences, error formatting, reconnect, logging, storage and
 model-contract, ID migration and image cache tests are included in the release checks.
 These checks validate the existing implementation and contracts; they do not
 establish parity with the missing APK features or acceptance on other earbuds.
+
+## Cross-check of suspected mismatches (2026-10-07)
+
+A second pass over the APK compared four B4S assumptions with their consumers:
+
+- **AA37 (restore defaults)**: the settings screens (`EarphoneSettingFragment`
+  receiver) treat `00` as success and `0C`/`0D` as the call/dual-connection
+  conflicts, which matches B4S. The `== 1` test in `HomeBleDataResolvePresenter`
+  is a generic home-screen handler (`BleCommandUtil.f`) that re-queries state; it
+  is not the restore result. No code change.
+- **BA5E**: `PanoramicSoundViewModel.G` writes `BA5E01`/`BA5E00` to declare
+  support; there is no `AA5E` consumer. The wrong "capability query" comment in
+  `protocol/types.rs` was corrected. B4S does not send BA5E.
+- **LDAC polarity**: call sites disagree (activity vs ear fragment), so B4S keeps
+  the polarity read back on BP1 Ultra hardware; do not generalize it.
+- **`#InitState:`**: only used by the add-device flow (`SearchDevicesAddViewModel`),
+  not by connected earbuds. The BP1 Ultra GATT path needs no such write.

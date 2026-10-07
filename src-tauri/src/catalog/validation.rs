@@ -94,6 +94,14 @@ pub(super) fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String>
                 return Err(format!("invalid adaptiveLr provenance in {}", profile.id));
             }
         }
+        if profile.capabilities.wind_noise && profile.wind_noise.is_none() {
+            return Err(format!("missing windNoise provenance in {}", profile.id));
+        }
+        if let Some(wind) = &profile.wind_noise {
+            if wind.provenance.trim().is_empty() {
+                return Err(format!("invalid windNoise provenance in {}", profile.id));
+            }
+        }
         let mut experimental = std::collections::HashSet::new();
         for feature in &profile.experimental_features {
             let capability_enabled = match feature.as_str() {
@@ -104,6 +112,7 @@ pub(super) fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String>
                     profile.capabilities.restore_defaults && profile.restore_defaults.is_some()
                 }
                 "adaptiveLr" => profile.capabilities.adaptive_lr && profile.adaptive_lr.is_some(),
+                "windNoise" => profile.capabilities.wind_noise && profile.wind_noise.is_some(),
                 _ => false,
             };
             if !capability_enabled || !experimental.insert(feature) {

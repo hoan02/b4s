@@ -60,6 +60,8 @@ pub struct Capabilities {
     pub restore_defaults: bool,
     #[serde(default)]
     pub adaptive_lr: bool,
+    #[serde(default)]
+    pub wind_noise: bool,
 }
 
 impl Capabilities {
@@ -79,6 +81,7 @@ impl Capabilities {
             "multipoint" => self.multipoint,
             "restoreDefaults" => self.restore_defaults,
             "adaptiveLr" => self.adaptive_lr,
+            "windNoise" => self.wind_noise,
             _ => return None,
         })
     }
@@ -192,6 +195,12 @@ pub struct AdaptiveLrProfile {
     pub provenance: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WindNoiseProfile {
+    pub provenance: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ModelProfile {
@@ -224,6 +233,8 @@ pub struct ModelProfile {
     pub restore_defaults: Option<RestoreDefaultsProfile>,
     #[serde(default)]
     pub adaptive_lr: Option<AdaptiveLrProfile>,
+    #[serde(default)]
+    pub wind_noise: Option<WindNoiseProfile>,
     /// Capability keys that are implemented from source/replay evidence but
     /// only eligible while the user opts into Experimental mode.
     #[serde(default)]
