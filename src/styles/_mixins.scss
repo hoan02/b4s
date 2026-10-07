@@ -140,3 +140,46 @@
     outline-offset: 2px;
   }
 }
+
+// Native <select> with a custom chevron: same height, radius and focus ring everywhere.
+// The popup follows the theme through `color-scheme` on the root element.
+@mixin select-field {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 36px 0 12px;
+  border-radius: $radius-md;
+  border: 0.5px solid var(--border);
+  background-color: var(--bg-fill-2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  color: var(--text);
+  font: inherit;
+  font-size: $fs-base;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: var(--text-3);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-soft);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  option {
+    background: var(--bg-elevated);
+    color: var(--text);
+  }
+}

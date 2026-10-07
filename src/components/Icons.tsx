@@ -178,3 +178,44 @@ export const IconFlight = (p: IconProps) => (
 );
 
 export type IconComp = (p: IconProps) => JSX.Element;
+
+const line = (p: IconProps, children: JSX.Element) => (
+  <svg class={p.class} width={s(p)} height={s(p)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {children}
+  </svg>
+);
+
+export const IconEar = (p: IconProps) => line(p, <>
+  <path d="M7 10a5 5 0 0 1 10 0c0 3.2-2.5 3.8-2.5 6.2A3 3 0 0 1 9 17.6" />
+  <path d="M10 10a2 2 0 0 1 4 0c0 1.1-.9 1.6-1.4 2.4" />
+</>);
+
+export const IconTouch = (p: IconProps) => line(p, <>
+  <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11" />
+  <path d="M12 10V8.5a1.5 1.5 0 0 1 3 0V12" />
+  <path d="M15 11.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.6a6 6 0 0 1-4.7-2.3L4 14.6a1.5 1.5 0 0 1 2.3-1.9L9 15" />
+</>);
+
+export const IconLink = (p: IconProps) => line(p, <>
+  <rect x="3" y="5" width="11" height="8" rx="1.8" />
+  <rect x="10" y="11" width="11" height="8" rx="1.8" />
+</>);
+
+export const IconBalance = (p: IconProps) => line(p, <>
+  <path d="M4 12h16" />
+  <path d="M8 8l-4 4 4 4" />
+  <path d="M16 8l4 4-4 4" />
+</>);
+
+export const IconWind = (p: IconProps) => line(p, <>
+  <path d="M3 8h10a3 3 0 1 0-3-3" />
+  <path d="M3 12h15a3 3 0 1 1-3 3" />
+  <path d="M3 16h7" />
+</>);
+
+export const IconReset = (p: IconProps) => line(p, <>
+  <path d="M3 12a9 9 0 1 0 3-6.7" />
+  <path d="M3 4v5h5" />
+</>);
+
+export const IconBolt = (p: IconProps) => line(p, <path d="M13 3L5 13h6l-1 8 8-10h-6l1-8z" />);

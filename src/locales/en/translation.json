@@ -297,5 +297,10 @@
   "adaptiveLr.title": "Adaptive L/R earbuds",
   "adaptiveLr.hint": "Adaptive audio between left and right earbuds",
   "windNoise.title": "Wind noise reduction",
-  "windNoise.hint": "Reduce wind noise while ANC is active"
+  "windNoise.hint": "Reduce wind noise while ANC is active",
+  "common.experimental": "Experimental",
+  "home.groupSound": "Sound",
+  "home.groupControls": "Controls & connection",
+  "home.groupDevice": "Device",
+  "home.battery": "Battery"
 }

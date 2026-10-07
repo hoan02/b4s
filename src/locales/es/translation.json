@@ -204,5 +204,10 @@
   "adaptiveLr.title": "Auriculares adaptables L/R",
   "adaptiveLr.hint": "Audio adaptable entre el auricular izquierdo y derecho",
   "windNoise.title": "Reducción de ruido del viento",
-  "windNoise.hint": "Reduce el ruido del viento al usar la cancelación de ruido"
+  "windNoise.hint": "Reduce el ruido del viento al usar la cancelación de ruido",
+  "common.experimental": "Experimental",
+  "home.groupSound": "Sonido",
+  "home.groupControls": "Controles y conexión",
+  "home.groupDevice": "Dispositivo",
+  "home.battery": "Batería"
 }
