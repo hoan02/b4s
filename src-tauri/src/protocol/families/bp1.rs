@@ -88,6 +88,13 @@ impl Bp1ProAnc {
                 [1] => Ok(DeviceEvent::AdaptiveLr(true)),
                 _ => Err(DecodeError::UnknownOpcode(0x3F)),
             },
+            // Wind-noise reduction state: AA 51 [00|01] (ResultHandle.h/j reads the trailing byte).
+            // AA52 is the set reply/error and never creates state.
+            0x51 => match frame.payload.as_slice() {
+                [0] => Ok(DeviceEvent::WindNoise(false)),
+                [1] => Ok(DeviceEvent::WindNoise(true)),
+                _ => Err(DecodeError::UnknownOpcode(0x51)),
+            },
             // Gesture v1 configuration: AA 21 [layout] [left] [right].
             0x21 => match frame.payload.as_slice() {
                 [layout, left, right] if *layout <= 5 => Ok(DeviceEvent::GestureConfig {
@@ -653,6 +660,32 @@ mod tests {
             vec![0xBA, 0x36]
         );
         assert_eq!(encode_command(Command::RestoreDefaults), vec![0xBA, 0x37]);
+    }
+
+    #[test]
+    fn wind_noise_state_and_set_reply_are_distinguished() {
+        assert_eq!(
+            dec(&[0xAA, 0x51, 0x01]).unwrap(),
+            DeviceEvent::WindNoise(true)
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x51, 0x00]).unwrap(),
+            DeviceEvent::WindNoise(false)
+        );
+        assert!(dec(&[0xAA, 0x51, 0x02]).is_err());
+        assert!(dec(&[0xAA, 0x51]).is_err());
+        // AA52 is the set reply or an error code (0A/0B mutual exclusion) and never state.
+        assert!(dec(&[0xAA, 0x52, 0x01]).is_err());
+        assert!(dec(&[0xAA, 0x52, 0x0A]).is_err());
+        assert_eq!(encode_command(Command::QueryWindNoise), vec![0xBA, 0x51]);
+        assert_eq!(
+            encode_command(Command::SetWindNoise(true)),
+            vec![0xBA, 0x52, 0x01]
+        );
+        assert_eq!(
+            encode_command(Command::SetWindNoise(false)),
+            vec![0xBA, 0x52, 0x00]
+        );
     }
 
     #[test]

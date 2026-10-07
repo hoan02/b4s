@@ -53,6 +53,7 @@ export interface DeviceSnapshot {
   inEar: InEarReading | null;
   multipoint: MultipointReading | null;
   adaptiveLr: MultipointReading | null;
+  windNoise: MultipointReading | null;
   restoreAvailable: boolean | null;
   gesture: GestureReading[];
 }
@@ -104,6 +105,9 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
   const adaptiveLr = value.adaptiveLr;
   const validAdaptiveLr = adaptiveLr === null || (isRecord(adaptiveLr) &&
     typeof adaptiveLr.enabled === "boolean" && isCounter(adaptiveLr.observedAtMs));
+  const windNoise = value.windNoise;
+  const validWindNoise = windNoise === null || (isRecord(windNoise) &&
+    typeof windNoise.enabled === "boolean" && isCounter(windNoise.observedAtMs));
   const gesture = value.gesture;
   const validGesture = Array.isArray(gesture) && gesture.every((reading) =>
     isRecord(reading) && Number.isInteger(reading.layout) &&
@@ -124,7 +128,7 @@ function isDeviceSnapshot(value: unknown): value is DeviceSnapshot {
       isNullable(value[key], (item) => typeof item === "boolean")) &&
     (value.spatialMode === undefined || isNullable(value.spatialMode, (item) => ["off", "music", "cinema", "game"].includes(item as string))) &&
     isNullable(value.bassBoost, (item) => Number.isInteger(item)) && validHearing &&
-    validInEar && validMultipoint && validAdaptiveLr && validGesture &&
+    validInEar && validMultipoint && validAdaptiveLr && validWindNoise && validGesture &&
     isNullable(value.restoreAvailable, (item) => typeof item === "boolean");
 }
 

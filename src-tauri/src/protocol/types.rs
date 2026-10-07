@@ -124,7 +124,8 @@ impl EqPreset {
     }
 }
 
-/// Spatial / panoramic sound (app: BA43 + mode byte; BA5E for capability query).
+/// Spatial / panoramic sound (app: BA43 + mode byte; BA5E 01/00 is a support-negotiation write,
+/// not a query, and has no AA5E consumer).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SpatialMode {
@@ -201,6 +202,8 @@ pub enum Command {
     RestoreDefaults,
     QueryAdaptiveLr,
     SetAdaptiveLr(bool),
+    QueryWindNoise,
+    SetWindNoise(bool),
     QueryGesture(u8),
     SetGesture {
         layout: u8,
@@ -242,6 +245,7 @@ pub enum DeviceEvent {
     RestoreAvailable(bool),
     RestoreResult(u8),
     AdaptiveLr(bool),
+    WindNoise(bool),
     /// Raw / unknown — forwarded for debug
     Unknown {
         cmd: u8,

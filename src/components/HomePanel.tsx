@@ -65,6 +65,10 @@ interface Props {
   adaptiveLrOn: boolean | null;
   adaptiveLrPending?: boolean;
   adaptiveLrError?: string | null;
+  windNoiseSupported: boolean;
+  windNoiseOn: boolean | null;
+  windNoisePending?: boolean;
+  windNoiseError?: string | null;
   gameMode: boolean | null;
   gamePending?: boolean;
   gameError?: string | null;
@@ -89,6 +93,7 @@ interface Props {
   onInEar: (enabled: boolean) => void;
   onMultipoint: (enabled: boolean) => void;
   onAdaptiveLr: (enabled: boolean) => void;
+  onWindNoise: (enabled: boolean) => void;
   onRestore: () => void;
   onSpatialOn: (on: boolean) => void;
   onSpatialMode: (m: SpatialMode) => void;
@@ -458,6 +463,27 @@ const HomePanel: Component<Props> = (props) => {
                 checked={props.adaptiveLrOn === true}
                 aria-label={t("adaptiveLr.title")}
                 onChange={(e) => requestToggle(e.currentTarget, props.adaptiveLrOn === true, props.onAdaptiveLr)}
+              />
+              <span class="slider" />
+            </label>
+          </div>
+          </Show>
+          <Show when={props.windNoiseSupported}>
+          <div class="list-row">
+            <span class="list-ico list-ico-text">WN</span>
+            <div class="list-text">
+              <span class="list-title">{t("windNoise.title")}</span>
+              <span class="list-sub">{t("windNoise.hint")}</span>
+              <OperationStatus pending={props.windNoisePending} error={props.windNoiseError} />
+            </div>
+            <label class="toggle sm">
+              <input
+                type="checkbox"
+                disabled={props.windNoisePending}
+                aria-checked={props.windNoiseOn === null ? "mixed" : props.windNoiseOn}
+                checked={props.windNoiseOn === true}
+                aria-label={t("windNoise.title")}
+                onChange={(e) => requestToggle(e.currentTarget, props.windNoiseOn === true, props.onWindNoise)}
               />
               <span class="slider" />
             </label>

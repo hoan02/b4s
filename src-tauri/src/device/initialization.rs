@@ -14,6 +14,7 @@ pub enum StartupQuery {
     Multipoint,
     RestoreSupport,
     AdaptiveLr,
+    WindNoise,
     Gesture(u8),
 }
 
@@ -49,6 +50,7 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
         (Feature::Multipoint, StartupQuery::Multipoint),
         (Feature::RestoreDefaults, StartupQuery::RestoreSupport),
         (Feature::AdaptiveLr, StartupQuery::AdaptiveLr),
+        (Feature::WindNoise, StartupQuery::WindNoise),
     ] {
         if authorize(profile, feature).is_ok() {
             plan.push(query);
@@ -85,6 +87,7 @@ pub fn command_for(query: StartupQuery) -> Option<Command> {
         StartupQuery::Multipoint => Some(Command::QueryMultipoint),
         StartupQuery::RestoreSupport => Some(Command::QueryRestoreSupport),
         StartupQuery::AdaptiveLr => Some(Command::QueryAdaptiveLr),
+        StartupQuery::WindNoise => Some(Command::QueryWindNoise),
         StartupQuery::Gesture(layout) => Some(Command::QueryGesture(layout)),
     }
 }
@@ -116,6 +119,7 @@ mod tests {
                 StartupQuery::Multipoint,
                 StartupQuery::RestoreSupport,
                 StartupQuery::AdaptiveLr,
+                StartupQuery::WindNoise,
                 StartupQuery::Gesture(0),
                 StartupQuery::Gesture(1),
                 StartupQuery::Gesture(2),

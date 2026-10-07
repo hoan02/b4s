@@ -202,5 +202,7 @@
   "restore.message": "¿Restaurar los ajustes de funcionamiento de los auriculares a los valores de fábrica? No se puede deshacer.",
   "restore.confirm": "Restaurar",
   "adaptiveLr.title": "Auriculares adaptables L/R",
-  "adaptiveLr.hint": "Audio adaptable entre el auricular izquierdo y derecho"
+  "adaptiveLr.hint": "Audio adaptable entre el auricular izquierdo y derecho",
+  "windNoise.title": "Reducción de ruido del viento",
+  "windNoise.hint": "Reduce el ruido del viento al usar la cancelación de ruido"
 }

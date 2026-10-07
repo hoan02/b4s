@@ -72,6 +72,9 @@ enum DeviceCommand {
     SetAdaptiveLr {
         enabled: bool,
     },
+    SetWindNoise {
+        enabled: bool,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -240,6 +243,10 @@ pub(crate) async fn apply_device_command(
         }
         DeviceCommand::SetAdaptiveLr { enabled } => {
             ble::commands::send_adaptive_lr(enabled).await?;
+            DeviceCommandDisposition::DeviceStateObserved
+        }
+        DeviceCommand::SetWindNoise { enabled } => {
+            ble::commands::send_wind_noise(enabled).await?;
             DeviceCommandDisposition::DeviceStateObserved
         }
     };

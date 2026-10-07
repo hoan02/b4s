@@ -4,52 +4,122 @@
   "displayName": "Baseus Bowie MS1",
   "aliases": [
     "baseus bowie ms1",
-    "bowie ms1"
+    "bowie ms1",
+    "ms1"
   ],
-  "support": "scanOnly",
-  "protocolFamily": "unknown",
-  "capabilities": {},
-  "connection": {
-    "transport": "unresolved",
-    "framing": "unresolved",
-    "serviceUuid": null,
-    "writeUuid": null,
-    "notifyUuid": null,
-    "handshake": [],
-    "initStateQuery": false,
-    "firmwareVersions": [],
-    "provenance": "docs/model-profile-extraction.md; APK 2.17.0.1 identity extraction; control transport unresolved"
+  "support": "experimental",
+  "protocolFamily": "bp1Ultra",
+  "category": "audio",
+  "group": "In ear series",
+  "capabilities": {
+    "anc": true,
+    "gameMode": true,
+    "spatial": true,
+    "bassBoost": true,
+    "ldac": true,
+    "hearingProtection": true,
+    "gesture": true
+  },
+  "noise": {
+    "supportsAdaptive": true,
+    "environments": [
+      101,
+      102,
+      103,
+      108
+    ],
+    "maxCustomLevel": 5,
+    "supportsTransparencyVoice": true
   },
   "eq": null,
   "image": null,
-  "sound": null,
+  "connection": {
+    "transport": "bleGatt",
+    "framing": "headphone789c",
+    "serviceUuid": "53527aa4-29f7-ae11-4e74-997334782568",
+    "writeUuid": "ee684b1a-1e9b-ed3e-ee55-f894667e92ac",
+    "notifyUuid": "654b749c-e37f-ae1f-ebab-40ca133e3690",
+    "handshake": [],
+    "initStateQuery": false,
+    "firmwareVersions": [],
+    "provenance": "Transport/framing/UUIDs from the APK ble-config dictionary group and Q0 789C guard for this exact model; the profile mirrors the hardware-verified BP1 Ultra path but this model is not hardware verified; docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists"
+  },
+  "hearing": {
+    "thresholds": [
+      75,
+      80,
+      85,
+      90,
+      95,
+      100
+    ],
+    "preserveThresholdSentinel": true,
+    "provenance": "Thresholds from EarSoundSettingViewModel.A/U; listed in the APK listening group for this exact model; not hardware verified; docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists"
+  },
+  "gesture": {
+    "dualButton": true,
+    "layouts": [
+      {
+        "layout": 0,
+        "functions": [
+          11,
+          12,
+          1,
+          6,
+          2,
+          3,
+          4,
+          0
+        ]
+      },
+      {
+        "layout": 1,
+        "functions": [
+          11,
+          12,
+          1,
+          6,
+          2,
+          3,
+          4,
+          0
+        ]
+      },
+      {
+        "layout": 2,
+        "functions": [
+          11,
+          12,
+          1,
+          6,
+          2,
+          3,
+          4,
+          0
+        ]
+      },
+      {
+        "layout": 3,
+        "functions": [
+          1,
+          0
+        ]
+      }
+    ],
+    "provenance": "APK assets/gesture/*_v2.json exact entry for Baseus Bowie MS1; child actions excluded; not hardware verified",
+    "protocol": "legacy"
+  },
+  "sound": {
+    "maxBassLevel": 5,
+    "provenance": "Bass level bound inherited from the reviewed Ultra command contract; docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists"
+  },
   "featureEvidence": {
-    "adaptiveLr": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "aiServices": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
     "anc": {
-      "status": "unknown",
-      "provenance": "",
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
       "firmwareVersions": []
     },
-    "bassBoost": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "batteryEnhancement": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "callEnhancement": {
+    "eq": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
@@ -59,14 +129,29 @@
       "provenance": "",
       "firmwareVersions": []
     },
-    "deviceManagement": {
-      "status": "unknown",
-      "provenance": "",
+    "gameMode": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
       "firmwareVersions": []
     },
-    "eq": {
-      "status": "unknown",
-      "provenance": "",
+    "bassBoost": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
+      "firmwareVersions": []
+    },
+    "spatial": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
+      "firmwareVersions": []
+    },
+    "ldac": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
+      "firmwareVersions": []
+    },
+    "hearingProtection": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
       "firmwareVersions": []
     },
     "findBuds": {
@@ -74,37 +159,12 @@
       "provenance": "",
       "firmwareVersions": []
     },
-    "firmwareUpdate": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "gameMode": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
     "gesture": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "gestureV2": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "hearingProtection": {
-      "status": "unknown",
-      "provenance": "",
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
       "firmwareVersions": []
     },
     "inEar": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "ldac": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
@@ -114,12 +174,22 @@
       "provenance": "",
       "firmwareVersions": []
     },
-    "personalizedSound": {
+    "restoreDefaults": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
     },
-    "restoreDefaults": {
+    "adaptiveLr": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "callEnhancement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "batteryEnhancement": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
@@ -129,18 +199,35 @@
       "provenance": "",
       "firmwareVersions": []
     },
-    "spatial": {
+    "deviceManagement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "gestureV2": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "personalizedSound": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "firmwareUpdate": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "aiServices": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "windNoise": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
     }
-  },
-  "category": "audio",
-  "group": "In ear series",
-  "noise": {
-    "supportsAdaptive": false,
-    "environments": [],
-    "maxCustomLevel": 0,
-    "supportsTransparencyVoice": false
   }
 }

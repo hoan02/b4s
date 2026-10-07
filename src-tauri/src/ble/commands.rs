@@ -424,6 +424,25 @@ pub async fn send_adaptive_lr(enabled: bool) -> Result<(), CommandError> {
     .await
 }
 
+pub async fn send_wind_noise(enabled: bool) -> Result<(), CommandError> {
+    let data = encode_connected_feature(protocol::FeatureCommand::SetWindNoise(enabled)).await?;
+    if BLE.lock().await.mock {
+        return observe_mock_state(DeviceEvent::WindNoise(enabled), 0x51).await;
+    }
+    with_connected_peripheral(|p| {
+        Box::pin(async move {
+            write_and_readback(
+                &p,
+                &data,
+                &[0xBA, 0x51],
+                crate::device::confirmation::ExpectedState::WindNoise(enabled),
+            )
+            .await
+        })
+    })
+    .await
+}
+
 async fn encode_connected_feature(command: protocol::FeatureCommand) -> Result<Vec<u8>, String> {
     let state = BLE.lock().await;
     let id = state.connected_id.as_ref().ok_or("Not connected")?;

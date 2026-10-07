@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add experimental profiles for Bass EP10 Ultra, Bowie M4s and MS1 (BP1 Ultra
+  adapter) and Bowie M3s and Bass EP10 Pro (BP1 Pro adapter). They are derived
+  from exact-name APK evidence and are not hardware verified; M3s has no EQ.
+- Add an Experimental-only wind noise reduction toggle (`BA51`/`BA52`) for BP1 Pro,
+  Bowie M3s and EP10 Pro, confirmed by `BA51` readback.
+- Correct the BA5E protocol comment and record the APK cross-check of AA37,
+  LDAC polarity and `#InitState` in the parity audit.
+
 ## 0.1.3 — 2026-10-07
 
 - Embed 124 headphone profiles: retain BP1 Pro and Ultra controls and add 122

@@ -23,7 +23,8 @@
     "inEar": true,
     "multipoint": true,
     "restoreDefaults": true,
-    "adaptiveLr": true
+    "adaptiveLr": true,
+    "windNoise": true
   },
   "noise": {
     "supportsAdaptive": true,
@@ -489,7 +490,8 @@
     "inEar",
     "multipoint",
     "restoreDefaults",
-    "adaptiveLr"
+    "adaptiveLr",
+    "windNoise"
   ],
   "schemaVersion": 3,
   "connection": {
@@ -621,6 +623,14 @@
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
+    },
+    "windNoise": {
+      "status": "implemented",
+      "provenance": "APK 2.17.0.1: HeadPhoneMainActivity.ResultHandle.h/i and EarPodNewActivity.ResultHandle.j/k (BA51 query, AA51 state with trailing byte 01 = on, BA5201/BA5200 set, AA52 reply or error 0A/0B/0C); function-set type 17 lists the wind-noise card for this exact model; not hardware verified, experimental-only",
+      "firmwareVersions": []
     }
+  },
+  "windNoise": {
+    "provenance": "APK 2.17.0.1: HeadPhoneMainActivity.ResultHandle.h/i and EarPodNewActivity.ResultHandle.j/k (BA51 query, AA51 state with trailing byte 01 = on, BA5201/BA5200 set, AA52 reply or error 0A/0B/0C); function-set type 17 lists the wind-noise card for this exact model; not hardware verified, experimental-only"
   }
 }

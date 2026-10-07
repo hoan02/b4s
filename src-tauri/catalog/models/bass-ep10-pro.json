@@ -1,57 +1,508 @@
 {
-  "schemaVersion": 3,
   "id": "bass-ep10-pro",
   "displayName": "Baseus Bass EP10 Pro",
   "aliases": [
     "baseus bass ep10 pro",
-    "bass ep10 pro"
+    "bass ep10 pro",
+    "ep10 pro"
   ],
-  "support": "scanOnly",
-  "protocolFamily": "unknown",
-  "capabilities": {},
+  "support": "experimental",
+  "protocolFamily": "bp1",
+  "category": "audio",
+  "group": "In ear series",
+  "capabilities": {
+    "anc": true,
+    "eq": true,
+    "customEq": false,
+    "gameMode": true,
+    "bassBoost": true,
+    "spatial": true,
+    "ldac": false,
+    "hearingProtection": false,
+    "findBuds": false,
+    "gesture": true,
+    "inEar": false,
+    "multipoint": false,
+    "restoreDefaults": false,
+    "adaptiveLr": false,
+    "windNoise": true
+  },
+  "noise": {
+    "supportsAdaptive": true,
+    "environments": [
+      101,
+      102,
+      103,
+      108
+    ],
+    "maxCustomLevel": 5,
+    "supportsTransparencyVoice": true
+  },
+  "eq": {
+    "qValues": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "bands": [
+      100,
+      200,
+      400,
+      800,
+      1000,
+      3000,
+      6000,
+      10000
+    ],
+    "minGain": -12,
+    "maxGain": 12,
+    "customSlots": 0,
+    "presets": [
+      {
+        "id": "classic",
+        "label": "Baseus Classic",
+        "description": "",
+        "dictSort": 0,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -5.8,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -9.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 2.0,
+            "gain": -2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 2.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "bass",
+        "label": "Deep Bass",
+        "description": "",
+        "dictSort": 1,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 2.0,
+            "gain": -2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "hifi",
+        "label": "Hi-Fi Live",
+        "description": "",
+        "dictSort": 3,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 100,
+            "qValue": 0.64,
+            "gain": -11.0,
+            "filter": 1
+          },
+          {
+            "frequency": 5500,
+            "qValue": 1.0,
+            "gain": -9.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 2.0,
+            "gain": -2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 8500,
+            "qValue": 6.0,
+            "gain": -10.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "jazz",
+        "label": "Jazz",
+        "description": "",
+        "dictSort": 7,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -3.0,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 0.7,
+            "gain": 2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "classical",
+        "label": "Classical",
+        "description": "",
+        "dictSort": 8,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -3.0,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 3000,
+            "qValue": 0.7,
+            "gain": 1.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "clear",
+        "label": "Treble Boost",
+        "description": "",
+        "dictSort": 9,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -5.8,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 2.0,
+            "gain": -2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -3.0,
+            "filter": 0
+          },
+          {
+            "frequency": 3000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      },
+      {
+        "id": "acoustic",
+        "label": "Acoustic",
+        "description": "",
+        "dictSort": 10,
+        "curve": [],
+        "filters": [
+          {
+            "frequency": 190,
+            "qValue": 0.64,
+            "gain": -5.8,
+            "filter": 1
+          },
+          {
+            "frequency": 5100,
+            "qValue": 4.0,
+            "gain": -7.0,
+            "filter": 1
+          },
+          {
+            "frequency": 2800,
+            "qValue": 1.0,
+            "gain": 2.0,
+            "filter": 1
+          },
+          {
+            "frequency": 9000,
+            "qValue": 6.0,
+            "gain": -5.0,
+            "filter": 1
+          },
+          {
+            "frequency": 130,
+            "qValue": 0.5,
+            "gain": -6.0,
+            "filter": 0
+          },
+          {
+            "frequency": 9000,
+            "qValue": 0.7,
+            "gain": 5.0,
+            "filter": 2
+          },
+          {
+            "frequency": 7500,
+            "qValue": 4.0,
+            "gain": 4.0,
+            "filter": 1
+          }
+        ]
+      }
+    ],
+    "customWrite": {
+      "slot": 101,
+      "ancBank": false
+    }
+  },
+  "image": null,
+  "gesture": {
+    "dualButton": true,
+    "layouts": [
+      {
+        "layout": 0,
+        "functions": [
+          1,
+          6,
+          2,
+          3,
+          4,
+          11,
+          12,
+          0
+        ]
+      },
+      {
+        "layout": 1,
+        "functions": [
+          1,
+          6,
+          2,
+          3,
+          4,
+          11,
+          12,
+          0
+        ]
+      },
+      {
+        "layout": 2,
+        "functions": [
+          1,
+          6,
+          2,
+          3,
+          4,
+          11,
+          12,
+          0
+        ]
+      },
+      {
+        "layout": 3,
+        "functions": [
+          1,
+          0
+        ]
+      }
+    ],
+    "provenance": "APK assets/gesture/gesture_config_function_list.json exact entry for Baseus Bass EP10 Pro; not hardware verified, experimental-only",
+    "protocol": "legacy"
+  },
+  "experimentalFeatures": [
+    "gesture",
+    "windNoise"
+  ],
+  "schemaVersion": 3,
   "connection": {
-    "transport": "unresolved",
-    "framing": "unresolved",
-    "serviceUuid": null,
-    "writeUuid": null,
-    "notifyUuid": null,
+    "transport": "bleGatt",
+    "framing": "bareAaBa",
+    "serviceUuid": "53527aa4-29f7-ae11-4e74-997334782568",
+    "writeUuid": "ee684b1a-1e9b-ed3e-ee55-f894667e92ac",
+    "notifyUuid": "654b749c-e37f-ae1f-ebab-40ca133e3690",
     "handshake": [],
     "initStateQuery": false,
     "firmwareVersions": [],
-    "provenance": "docs/model-profile-extraction.md; APK 2.17.0.1 identity extraction; control transport unresolved"
+    "provenance": "Transport/UUIDs from the APK ble-config dictionary group; bare AA/BA framing (Q0 false) for this exact model; no handshake is sent because the APK shows none for earbuds; mirrors the BP1 Pro path, not hardware verified; docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists"
   },
-  "eq": null,
-  "image": null,
-  "sound": null,
+  "sound": {
+    "maxBassLevel": 1,
+    "provenance": "Existing reviewed bass command contract; docs/apk-feature-parity-audit.md"
+  },
   "featureEvidence": {
-    "adaptiveLr": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "aiServices": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
     "anc": {
-      "status": "unknown",
-      "provenance": "",
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 17, ANC range 1-5, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
       "firmwareVersions": []
     },
-    "bassBoost": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "batteryEnhancement": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "callEnhancement": {
-      "status": "unknown",
-      "provenance": "",
+    "eq": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 17, ANC range 1-5, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
       "firmwareVersions": []
     },
     "customEq": {
@@ -59,37 +510,22 @@
       "provenance": "",
       "firmwareVersions": []
     },
-    "deviceManagement": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "eq": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "findBuds": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
-    "firmwareUpdate": {
-      "status": "unknown",
-      "provenance": "",
-      "firmwareVersions": []
-    },
     "gameMode": {
-      "status": "unknown",
-      "provenance": "",
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 17, ANC range 1-5, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
       "firmwareVersions": []
     },
-    "gesture": {
-      "status": "unknown",
-      "provenance": "",
+    "bassBoost": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 17, ANC range 1-5, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
       "firmwareVersions": []
     },
-    "gestureV2": {
+    "spatial": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 17, ANC range 1-5, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
+      "firmwareVersions": []
+    },
+    "ldac": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
@@ -99,12 +535,17 @@
       "provenance": "",
       "firmwareVersions": []
     },
-    "inEar": {
+    "findBuds": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
     },
-    "ldac": {
+    "gesture": {
+      "status": "implemented",
+      "provenance": "Source-reviewed for this exact model name (function-set type 17, ANC range 1-5, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
+      "firmwareVersions": []
+    },
+    "inEar": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
@@ -114,12 +555,22 @@
       "provenance": "",
       "firmwareVersions": []
     },
-    "personalizedSound": {
+    "restoreDefaults": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
     },
-    "restoreDefaults": {
+    "adaptiveLr": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "callEnhancement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "batteryEnhancement": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
@@ -129,18 +580,38 @@
       "provenance": "",
       "firmwareVersions": []
     },
-    "spatial": {
+    "deviceManagement": {
       "status": "unknown",
       "provenance": "",
       "firmwareVersions": []
+    },
+    "gestureV2": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "personalizedSound": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "firmwareUpdate": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "aiServices": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "windNoise": {
+      "status": "implemented",
+      "provenance": "APK 2.17.0.1: HeadPhoneMainActivity.ResultHandle.h/i and EarPodNewActivity.ResultHandle.j/k (BA51 query, AA51 state with trailing byte 01 = on, BA5201/BA5200 set, AA52 reply or error 0A/0B/0C); function-set type 17 lists the wind-noise card for this exact model; not hardware verified, experimental-only",
+      "firmwareVersions": []
     }
   },
-  "category": "audio",
-  "group": "In ear series",
-  "noise": {
-    "supportsAdaptive": false,
-    "environments": [],
-    "maxCustomLevel": 0,
-    "supportsTransparencyVoice": false
+  "windNoise": {
+    "provenance": "APK 2.17.0.1: HeadPhoneMainActivity.ResultHandle.h/i and EarPodNewActivity.ResultHandle.j/k (BA51 query, AA51 state with trailing byte 01 = on, BA5201/BA5200 set, AA52 reply or error 0A/0B/0C); function-set type 17 lists the wind-noise card for this exact model; not hardware verified, experimental-only"
   }
 }

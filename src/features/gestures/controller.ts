@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { restoreDefaults, setAdaptiveLr, setGesture, setInEar, setMultipoint } from "../../lib/device";
+import { restoreDefaults, setAdaptiveLr, setGesture, setInEar, setMultipoint, setWindNoise } from "../../lib/device";
 import { createConfirmedOperation } from "../shared/confirmedOperation";
 import type { createDeviceSession } from "../../stores/deviceSession";
 
@@ -55,6 +55,13 @@ export function createGestureController(dependencies: Dependencies) {
     setAdaptiveLr(enabled: boolean) {
       return operation.run(
         () => setAdaptiveLr(enabled),
+        () => {},
+        dependencies.notifyError
+      );
+    },
+    setWindNoise(enabled: boolean) {
+      return operation.run(
+        () => setWindNoise(enabled),
         () => {},
         dependencies.notifyError
       );
