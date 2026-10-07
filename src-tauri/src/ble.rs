@@ -1,6 +1,7 @@
 //! Bluetooth LE manager for multi-model earbuds (B4S).
 
 mod adapter;
+pub mod audio;
 pub mod commands;
 pub mod connection;
 mod contracts;
@@ -33,19 +34,19 @@ use btleplug::api::{
 };
 use btleplug::platform::{Adapter, Manager, Peripheral, PeripheralId};
 use futures::stream::StreamExt;
-use once_cell::sync::{Lazy, OnceCell};
 use std::collections::HashMap;
+use std::sync::{LazyLock, OnceLock};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
 /// Set once from lib.rs setup for event emit helpers.
-static OBSERVATIONS: Lazy<
+static OBSERVATIONS: LazyLock<
     tokio::sync::broadcast::Sender<crate::device::confirmation::StateObservation>,
-> = Lazy::new(|| tokio::sync::broadcast::channel(64).0);
+> = LazyLock::new(|| tokio::sync::broadcast::channel(64).0);
 
 static CONNECT_ATTEMPT: Mutex<()> = Mutex::const_new(());
-static APP: OnceCell<AppHandle> = OnceCell::new();
+static APP: OnceLock<AppHandle> = OnceLock::new();
 
 pub fn set_app_handle(app: AppHandle) {
     let _ = APP.set(app);

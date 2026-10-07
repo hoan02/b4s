@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "B4S",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "identifier": "com.hoan02.b4s",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -29,7 +29,13 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPCACHE/product-images/**"
+        ]
+      }
     }
   },
   "bundle": {
@@ -67,7 +73,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBNjYzRTUyQTk3Q0M4RgpSV1NQekpjcTVXT21Dd0FaZUlmazUvSi90UkFoU1BDb05MLzRmc3hVb2pzWS9NOGJqN1lKbXpUdQo=",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc0ODA2RTkwQjg0QkREMEMKUldRTTNVdTRrRzZBZEUyZGE4ZzhCY0d5bVNSQXRPUmd5TS8zZUNjdFBkcDErTUpRd0VhekRhWkgK",
       "endpoints": [
         "https://github.com/hoan02/b4s/releases/latest/download/latest.json"
       ]

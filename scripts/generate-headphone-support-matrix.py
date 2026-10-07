@@ -61,10 +61,12 @@ def model_row(model: dict, profile: dict | None) -> str:
     capabilities = profile.get("capabilities", {})
     enabled = [label for key, label in CAPABILITY_LABELS if capabilities.get(key) is True]
     feature_text = ", ".join(enabled) if enabled else "—"
-    note = profile.get("connection", {}).get("provenance") or "No connection evidence."
+    note = ("Embedded runtime profile; control transport unresolved."
+            if profile["support"] == "scanOnly" else
+            profile.get("connection", {}).get("provenance") or "No connection evidence.")
     note = note.replace("|", "\\|").replace("\n", " ")
     return (
-        f"| `{model['id']}` | {model_name} | {profile['category']} | `" 
+        f"| `{model['id']}` | {model_name} | {profile['group']} | `"
         f"{profile['support']}` | `{profile['protocolFamily']}` | {feature_text} | {note} |"
     )
 
@@ -93,7 +95,7 @@ def main() -> None:
     )
     document = f"""# Headphone model support matrix
 
-Generated from `src-tauri/catalog/baseus-public.json` (fetched {snapshot['fetchedAt']}) and reviewed JSON profiles in `src-tauri/catalog/models/` by `scripts/generate-headphone-support-matrix.py`.
+Generated from `src-tauri/catalog/baseus-public.json` (fetched {snapshot['fetchedAt']}) and runtime JSON profiles in `src-tauri/catalog/models/` by `scripts/generate-headphone-support-matrix.py`.
 
 The public snapshot has {len(snapshot['models'])} products, of which {len(audio)} are audio products. Category data consistently classifies {len(speakers)} audio products as speakers; the remaining {len(headphones)} identities are candidates for headphone discovery. Recognition is metadata only. `scanOnly` and `unknown` mean no feature can be controlled.
 

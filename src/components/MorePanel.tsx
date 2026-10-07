@@ -1,3 +1,4 @@
+import { requestToggle } from "../lib/confirmedToggle";
 /**
  * “Âm thanh khác” — NOT EQ (EQ is its own screen).
  * Bass boost, LDAC, hearing protection, extras.
@@ -48,7 +49,7 @@ const MorePanel: Component<Props> = (props) => {
         <div class="setting-row" classList={{ "setting-row-stacked": props.bassMaxLevel > 1 }}>
           <div>
             <span class="setting-title">{t("more.bassBoost")}</span>
-            <span class="setting-desc">{props.bassBoost === null ? t("control.unknown") : t("more.bassBoost")}</span>
+            <span class="setting-desc">{t("more.bassBoost")}</span>
           </div>
           <div class="level-pills" aria-label={t("listen.bassLevel")}>
             <For each={bassLevels()}>
@@ -79,7 +80,7 @@ const MorePanel: Component<Props> = (props) => {
         <div class="setting-row">
           <div>
             <span class="setting-title">LDAC</span>
-            <span class="setting-desc">{props.ldac === null ? t("control.unknown") : t("more.hiRes")}</span>
+            <span class="setting-desc">{t("more.hiRes")}</span>
           </div>
           <label class="toggle sm">
             <input
@@ -89,7 +90,7 @@ const MorePanel: Component<Props> = (props) => {
               aria-checked={props.ldac === null ? "mixed" : props.ldac}
               checked={props.ldac === true}
               onChange={(e) =>
-                props.onLdac((e.currentTarget as HTMLInputElement).checked)
+                requestToggle(e.currentTarget, props.ldac === true, props.onLdac)
               }
             />
             <span class="slider" />
@@ -100,7 +101,7 @@ const MorePanel: Component<Props> = (props) => {
         <div class="setting-row">
           <div>
             <span class="setting-title">{t("more.hearingProtection")}</span>
-            <span class="setting-desc">{props.hearingProtect === null ? t("control.unknown") : t("more.hearingProtection")}</span>
+            <span class="setting-desc">{t("more.hearingProtection")}</span>
           </div>
           <label class="toggle sm">
             <input
@@ -110,27 +111,37 @@ const MorePanel: Component<Props> = (props) => {
               aria-checked={props.hearingProtect === null ? "mixed" : props.hearingProtect}
               checked={props.hearingProtect === true}
               onChange={(e) =>
-                props.onHearingProtect(
-                  (e.currentTarget as HTMLInputElement).checked
-                )
+                requestToggle(e.currentTarget, props.hearingProtect === true, props.onHearingProtect)
               }
             />
             <span class="slider" />
           </label>
         </div>
         </Show>
-      </div>
       <Show when={props.hearingSupported}>
-        <label class="setting-row">
-          <span class="setting-title">{t("more.hearingThreshold")}</span>
-          <select aria-label={t("more.hearingThreshold")} disabled={props.pending || props.hearingProtect === null}
-            value={props.hearingThreshold ?? ""}
-            onChange={(event) => props.onHearingThreshold(Number(event.currentTarget.value))}>
-            <option value="" disabled>{t("control.unknown")}</option>
-            <For each={props.hearingThresholds}>{(value) => <option value={value}>{value} dB</option>}</For>
-          </select>
-        </label>
+        <div class="hearing-threshold" aria-busy={props.pending}>
+          <div class="hearing-threshold-heading">
+            <span class="setting-title">{t("more.hearingThreshold")}</span>
+            <span class="hearing-threshold-value">
+              {props.hearingThreshold === null ? "—" : `${props.hearingThreshold} dB`}
+            </span>
+          </div>
+          <div class="hearing-threshold-options" role="group" aria-label={t("more.hearingThreshold")}>
+            <For each={props.hearingThresholds}>
+              {(value) => (
+                <button type="button"
+                  classList={{ active: props.hearingThreshold === value }}
+                  aria-pressed={props.hearingThreshold === value}
+                  disabled={props.pending || props.hearingProtect === null}
+                  onClick={() => props.onHearingThreshold(value)}>
+                  <span>{value}</span><span class="hearing-threshold-unit">dB</span>
+                </button>
+              )}
+            </For>
+          </div>
+        </div>
       </Show>
+      </div>
       <p class="eq-footnote">
         {t("more.osCodecNote")}
       </p>

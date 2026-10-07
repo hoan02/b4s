@@ -1,4 +1,5 @@
-import type { BleDevice, ScanStatus } from "./ble";
+import { storage } from "./storage";
+import type { AudioTarget, BleDevice, ScanStatus } from "./ble";
 
 const KEY = "b4s.last-device.v2";
 const LEGACY_KEY = "b4s.last-device";
@@ -58,19 +59,19 @@ export function rememberDevice(device: BleDevice): void {
     },
   };
   try {
-    localStorage.setItem(KEY, JSON.stringify(envelope));
-    localStorage.removeItem(LEGACY_KEY);
+    storage.setItem(KEY, JSON.stringify(envelope));
+    storage.removeItem(LEGACY_KEY);
   } catch { /* Storage is optional. */ }
 }
 
 export function readRememberedDevice(): RememberedDevice | null {
   try {
-    const current = localStorage.getItem(KEY);
+    const current = storage.getItem(KEY);
     if (current !== null) return decodeCurrentDevice(current);
 
     // The legacy key is read only when the current key is absent, then removed
     // after a one-time migration. A corrupt current value never revives it.
-    const legacy = localStorage.getItem(LEGACY_KEY);
+    const legacy = storage.getItem(LEGACY_KEY);
     if (legacy === null) return null;
     let legacyDevice: RememberedDevice | null = null;
     try {
@@ -79,12 +80,12 @@ export function readRememberedDevice(): RememberedDevice | null {
       legacyDevice = null;
     }
     if (!legacyDevice) {
-      try { localStorage.removeItem(LEGACY_KEY); } catch { /* Recovery is best effort. */ }
+      try { storage.removeItem(LEGACY_KEY); } catch { /* Recovery is best effort. */ }
       return null;
     }
     try {
-      localStorage.setItem(KEY, JSON.stringify({ version: STORAGE_VERSION, device: legacyDevice }));
-      localStorage.removeItem(LEGACY_KEY);
+      storage.setItem(KEY, JSON.stringify({ version: STORAGE_VERSION, device: legacyDevice }));
+      storage.removeItem(LEGACY_KEY);
     } catch {
       // Keep the migrated in-memory value if storage is temporarily read-only.
     }
@@ -107,6 +108,26 @@ interface ReconnectApi {
   stopScan: () => Promise<void>;
   getScanStatus: () => Promise<ScanStatus>;
   onScanStatus: (callback: (status: ScanStatus) => void) => Promise<() => void>;
+}
+
+/** Prefer the selected audio output before the legacy remembered-device scan. */
+export async function findReconnectTarget(
+  saved: RememberedDevice,
+  api: ReconnectApi & {
+    getAudioTarget: () => Promise<AudioTarget | null>;
+    prepareAudioTarget: (endpointId: string) => Promise<BleDevice>;
+  },
+  signal: AbortSignal,
+): Promise<{ device: BleDevice; audioEndpointId?: string } | null> {
+  if (signal.aborted) return null;
+  const audio = await api.getAudioTarget().catch(() => null);
+  if (signal.aborted) return null;
+  if (audio) {
+    const device = await api.prepareAudioTarget(audio.endpointId);
+    return signal.aborted ? null : { device, audioEndpointId: audio.endpointId };
+  }
+  const device = await findRememberedDevice(saved, api, signal);
+  return device ? { device } : null;
 }
 
 /** One bounded scan for the previous device; releases its listener and scan before returning. */

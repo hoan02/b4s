@@ -272,7 +272,11 @@ const Settings: Component<Props> = (props) => {
           <button
             type="button"
             class="settings-row action"
-            onClick={() => openExternal("https://github.com/hoan02/b4s")}
+            onClick={() => {
+              void openExternal("https://github.com/hoan02/b4s").catch(error => {
+                setStatus({ kind: "err", text: formatError(error) });
+              });
+            }}
           >
             <span class="settings-source">
               <IconGithub size={19} />

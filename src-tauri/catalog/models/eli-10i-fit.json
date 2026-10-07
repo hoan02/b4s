@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 3,
+  "id": "eli-10i-fit",
+  "displayName": "Eli 10i Fit",
+  "aliases": [
+    "eli 10i fit"
+  ],
+  "support": "scanOnly",
+  "protocolFamily": "unknown",
+  "capabilities": {},
+  "connection": {
+    "transport": "unresolved",
+    "framing": "unresolved",
+    "serviceUuid": null,
+    "writeUuid": null,
+    "notifyUuid": null,
+    "handshake": [],
+    "initStateQuery": false,
+    "firmwareVersions": [],
+    "provenance": "docs/model-profile-extraction.md; APK 2.17.0.1 identity extraction; control transport unresolved"
+  },
+  "eq": null,
+  "image": null,
+  "sound": null,
+  "featureEvidence": {
+    "adaptiveLr": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "aiServices": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "anc": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "bassBoost": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "batteryEnhancement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "callEnhancement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "customEq": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "deviceManagement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "eq": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "findBuds": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "firmwareUpdate": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "gameMode": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "gesture": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "gestureV2": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "hearingProtection": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "inEar": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "ldac": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "multipoint": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "personalizedSound": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "restoreDefaults": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "soundBalance": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "spatial": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    }
+  },
+  "category": "audio",
+  "group": "Open ended",
+  "noise": {
+    "supportsAdaptive": false,
+    "environments": [],
+    "maxCustomLevel": 0,
+    "supportsTransparencyVoice": false
+  }
+}

@@ -1,5 +1,22 @@
 # Model catalog
 
+See the [identity and presentation contract](model-identity-presentation.md) for
+canonical IDs, APK metadata boundaries, regional image selection and saved-data migration.
+
+Use the [model profile extraction pipeline](model-profile-extraction.md) to
+collect APK/API evidence and recognition-only drafts for other headphones.
+The [APK feature parity audit](apk-feature-parity-audit.md) records current
+implementation gaps and the requirements for a fuller standard catalog.
+Reviewed profiles now require [schema 3 and explicit feature contracts](model-standardization.md).
+
+All 124 headphone candidates now have embedded schema-3 profiles in
+`src-tauri/catalog/models/`: the two existing BP1 profiles and 122 promoted
+identity profiles. Each promoted profile includes explicit aliases, catalog
+group, unknown feature evidence and unresolved transport. Edit that model's
+JSON as its transport and controls are implemented; no registry change is needed.
+`python scripts/promote-model-profiles.py` imports missing identities from local
+drafts and never replaces an existing profile.
+
 The offline catalog also embeds `src-tauri/catalog/baseus-public.json`,
 a public metadata snapshot merged across Baseus CN/US/EU category APIs. Run
 `python scripts/sync-baseus-catalog.py` to refresh it explicitly. It records
@@ -7,8 +24,12 @@ server identities, categories, regional image URLs and color codes; it does
 not supply protocol capabilities. New headphone identities remain `scanOnly`
 with an `unknown` protocol and cannot initiate a control connection. Pairing
 filters catalog products whose category paths in every region identify them as
-speakers; unclassified or regionally mixed products stay visible. CDN images
-are not fetched automatically. Reviewed profiles remain separate from this
+speakers; unclassified or regionally mixed products stay visible. Product images
+are resolved from the offline snapshot (US, then EU, then CN). Device rows use
+thumbnails and the home view uses large images through the [local cache](product-image-cache.md). An explicit profile image
+takes priority. Missing or unavailable images use the bundled placeholder.
+Color codes are catalog variants, not the detected color of a connected device.
+Reviewed profiles remain separate from this
 public metadata snapshot. See [2.17.0.1 findings](re/findings-2.17.0.1.md) for
 scope and completeness limits.
 
@@ -33,7 +54,7 @@ The profile's `protocolFamily` must be an existing family such as `bp1`. The
 router then reuses that family adapter. A profile alone does not implement new
 wire behavior or guarantee that every UI control works on the model.
 
-Current family values are `bp1` and `unknown`. Support values are `verified`,
+Current family values are `bp1`, `bp1Ultra` and `unknown`. Support values are `verified`,
 `experimental`, and `scanOnly`. For recognition-only, use `scanOnly` and
 `unknown`. A JSON profile supplies explicit runtime transport, ANC settings and
 capabilities; no registry fallback or transport default authorizes control. See

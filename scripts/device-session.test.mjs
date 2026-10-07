@@ -1,7 +1,23 @@
-import { test } from "node:test";
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+
+const toggleSource = readFileSync(new URL("../src/lib/confirmedToggle.ts", import.meta.url), "utf8");
+const toggleCompiled = ts.transpileModule(toggleSource, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+}).outputText;
+const { requestToggle } = await import(`data:text/javascript;base64,${Buffer.from(toggleCompiled).toString("base64")}`);
+
+test("toggle submits intent while keeping the last confirmed value visible", () => {
+  for (const confirmed of [false, true]) {
+    const input = { checked: !confirmed };
+    let requested;
+    requestToggle(input, confirmed, value => { requested = value; });
+    assert.equal(input.checked, confirmed);
+    assert.equal(requested, !confirmed);
+  }
+});
 
 const source = readFileSync(new URL("../src/stores/deviceSession.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, {

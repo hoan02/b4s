@@ -2,7 +2,7 @@
  * App metadata + auto-update helpers
  */
 
-import { invoke } from "./tauri";
+import { invoke, isTauri } from "./tauri";
 
 export interface AppInfo {
   name: string;
@@ -54,10 +54,10 @@ export async function installUpdate(): Promise<void> {
 }
 
 export async function openExternal(url: string): Promise<void> {
-  try {
-    const { open } = await import("@tauri-apps/plugin-shell");
-    await open(url);
-  } catch {
-    window.open(url, "_blank");
+  if (!isTauri()) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
   }
+  const { openUrl } = await import("@tauri-apps/plugin-opener");
+  await openUrl(url);
 }

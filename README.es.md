@@ -12,6 +12,14 @@ SolidJS, Tauri y Rust.
 
 Las capturas muestran la interfaz en vietnamita.
 
+## Novedades de 0.1.3
+
+El catálogo incluye 124 perfiles, con 122 modelos solo de reconocimiento. Los nombres e imágenes usan metadatos públicos; las fotos se guardan en una caché local de 64 MiB para reutilizarlas sin conexión. Los identificadores y los datos guardados del dispositivo/EQ se migran automáticamente.
+
+Los usuarios de 0.1.1/0.1.2 deben instalar 0.1.3 manualmente una vez porque cambió la clave de firma del actualizador.
+
+[Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
+
 ## Compatibilidad
 
 BP1 Pro tiene un perfil de modelo revisado. BP1 Ultra admite conexión BLE/789C
@@ -42,12 +50,12 @@ del firmware.
 
 Si no puedes buscar o conectar, consulta la [guía de solución de problemas de escritorio](docs/desktop-troubleshooting.md).
 
-Necesitas Node.js 20, Rust estable, los requisitos de Tauri para tu plataforma y
+Necesitas Bun 1.4.0, Rust estable, los requisitos de Tauri para tu plataforma y
 auriculares Bluetooth para probar el dispositivo:
 
 ```sh
-npm ci
-npm run tauri:dev
+bun install --frozen-lockfile
+bun run tauri:dev
 ```
 
 La aplicación se inicia en inglés e incluye vietnamita, chino simplificado,

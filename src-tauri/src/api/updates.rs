@@ -135,11 +135,14 @@ pub(crate) async fn install_update(app: AppHandle) -> Result<(), ApiError> {
     app.restart()
 }
 
+fn github_client() -> Result<reqwest::Client, reqwest::Error> {
+    // reqwest 0.13 requires an explicitly installed provider with rustls-no-provider.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    reqwest::Client::builder().user_agent("B4S-Desktop").build()
+}
+
 async fn github_latest_version() -> Result<String, String> {
-    let client = reqwest::Client::builder()
-        .user_agent("B4S-Desktop")
-        .build()
-        .map_err(|error| error.to_string())?;
+    let client = github_client().map_err(|error| error.to_string())?;
     let response = client
         .get("https://api.github.com/repos/hoan02/b4s/releases/latest")
         .header("Accept", "application/vnd.github+json")
@@ -161,21 +164,30 @@ async fn github_latest_version() -> Result<String, String> {
 }
 
 fn is_remote_newer(remote: &str, current: &str) -> bool {
-    let parse = |value: &str| -> Vec<u64> {
-        value
-            .trim_start_matches('v')
-            .split(|character: char| !character.is_ascii_digit())
-            .filter_map(|part| part.parse().ok())
-            .collect()
-    };
-    let remote = parse(remote);
-    let current = parse(current);
-    for index in 0..remote.len().max(current.len()) {
-        let remote_part = remote.get(index).copied().unwrap_or(0);
-        let current_part = current.get(index).copied().unwrap_or(0);
-        if remote_part != current_part {
-            return remote_part > current_part;
-        }
+    match (
+        semver::Version::parse(remote.trim_start_matches('v')),
+        semver::Version::parse(current.trim_start_matches('v')),
+    ) {
+        (Ok(remote), Ok(current)) => remote.cmp_precedence(&current).is_gt(),
+        _ => false,
     }
-    false
+}
+
+#[cfg(test)]
+mod version_tests {
+    use super::is_remote_newer;
+
+    #[test]
+    fn http_client_has_a_usable_tls_provider() {
+        assert!(super::github_client().is_ok());
+    }
+
+    #[test]
+    fn release_order_follows_semver_including_prereleases_and_metadata() {
+        assert!(is_remote_newer("v0.1.10", "0.1.9"));
+        assert!(!is_remote_newer("0.2.0-beta.1", "0.2.0"));
+        assert!(is_remote_newer("0.2.0", "0.2.0-beta.1"));
+        assert!(!is_remote_newer("0.2.0+build.2", "0.2.0+build.1"));
+        assert!(!is_remote_newer("bad", "0.1.2"));
+    }
 }

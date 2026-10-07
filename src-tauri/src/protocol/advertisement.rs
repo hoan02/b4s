@@ -144,7 +144,8 @@ mod tests {
     #[test]
     fn keeps_model_catalog_fields_for_product_presentation() {
         let model: ModelInfo = identify_model("Baseus Bass BP1 Pro").unwrap();
-        assert_eq!(model.image_provenance, "reviewed-profile");
+        assert_eq!(model.image_provenance, "offline-public-metadata");
+        assert!(model.image_url.as_deref().unwrap().starts_with("https://"));
         assert!(model.capabilities.bass_boost);
         assert_eq!(
             model

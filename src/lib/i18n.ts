@@ -1,3 +1,4 @@
+import { storage } from "./storage";
 import i18next from "i18next";
 import { createSignal } from "solid-js";
 import en from "../locales/en/translation.json";
@@ -21,7 +22,7 @@ const normalizeLocale = (value: string | null): Locale =>
   LOCALES.find((locale) => locale === value) ?? "en";
 const initialLocale = normalizeLocale((() => {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    return storage.getItem(STORAGE_KEY);
   } catch {
     return null;
   }
@@ -50,7 +51,7 @@ i18next.on("languageChanged", (language) => {
   document.documentElement.lang = locale;
   document.documentElement.dir = "ltr";
   try {
-    localStorage.setItem(STORAGE_KEY, locale);
+    storage.setItem(STORAGE_KEY, locale);
   } catch {
     // Language changes still work for this session when storage is unavailable.
   }
@@ -76,7 +77,10 @@ export function formatError(error: unknown): string {
     : isVersionedApiError
       ? payload.message
       : String(error);
-  return `${t("error.operationFailed")}: ${details}`;
+  const message = typeof details === "string" && details.includes("Experimental control is disabled")
+    ? t("error.experimentalControlDisabled")
+    : details;
+  return `${t("error.operationFailed")}: ${message}`;
 }
 
 export async function setLocale(language: Locale): Promise<void> {

@@ -60,9 +60,10 @@ pub fn update_tray_status(app: &AppHandle, state: &ConnectionState) {
     let _ = status.0.set_text(label);
 }
 
-fn show_main_window(app: &AppHandle) {
+pub(crate) fn show_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
+        let _ = window.unminimize();
         let _ = window.set_focus();
     }
 }

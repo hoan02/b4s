@@ -62,6 +62,28 @@ pub struct Capabilities {
     pub adaptive_lr: bool,
 }
 
+impl Capabilities {
+    pub fn enabled(&self, key: &str) -> Option<bool> {
+        Some(match key {
+            "anc" => self.anc,
+            "eq" => self.eq,
+            "customEq" => self.custom_eq,
+            "gameMode" => self.game_mode,
+            "bassBoost" => self.bass_boost,
+            "spatial" => self.spatial,
+            "ldac" => self.ldac,
+            "hearingProtection" => self.hearing_protection,
+            "findBuds" => self.find_buds,
+            "gesture" => self.gesture,
+            "inEar" => self.in_ear,
+            "multipoint" => self.multipoint,
+            "restoreDefaults" => self.restore_defaults,
+            "adaptiveLr" => self.adaptive_lr,
+            _ => return None,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct EqPresetProfile {
@@ -75,8 +97,10 @@ pub struct EqPresetProfile {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EqProfile {
+    /// Reviewed write contract; saved frontend curves are not device slots.
+    pub custom_write: CustomEqWriteProfile,
     pub bands: Vec<u16>,
     #[serde(default)]
     pub q_values: Vec<f32>,
@@ -84,6 +108,20 @@ pub struct EqProfile {
     pub max_gain: f32,
     pub custom_slots: u8,
     pub presets: Vec<EqPresetProfile>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CustomEqWriteProfile {
+    pub slot: u8,
+    pub anc_bank: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SoundProfile {
+    pub max_bass_level: u8,
+    pub provenance: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -116,10 +154,18 @@ pub struct GestureLayoutProfile {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GestureProfile {
+    pub protocol: GestureProtocol,
     /// True when the model exposes both left and right button mappings.
     pub dual_button: bool,
     pub layouts: Vec<GestureLayoutProfile>,
     pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum GestureProtocol {
+    Legacy,
+    V2,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -147,8 +193,12 @@ pub struct AdaptiveLrProfile {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ModelProfile {
+    #[serde(default)]
+    pub sound: Option<SoundProfile>,
+    #[serde(default)]
+    pub feature_evidence: std::collections::BTreeMap<String, super::evidence::FeatureEvidence>,
     pub schema_version: u8,
     #[serde(default)]
     pub connection: Option<ConnectionProfile>,

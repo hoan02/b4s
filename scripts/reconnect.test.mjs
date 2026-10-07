@@ -1,18 +1,63 @@
-import { test } from "node:test";
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 
 // Exercise the hardware-independent controller without a browser or BLE adapter.
-const source = readFileSync(new URL("../src/lib/reconnect.ts", import.meta.url), "utf8");
+const source = readFileSync(new URL("../src/lib/reconnect.ts", import.meta.url), "utf8").replace('import { storage } from "./storage";', 'const storage = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value), removeItem: key => localStorage.removeItem(key) };');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;
-const { rememberDevice, readRememberedDevice, matchesRememberedDevice, findRememberedDevice } =
+const { rememberDevice, readRememberedDevice, matchesRememberedDevice, findRememberedDevice, findReconnectTarget } =
   await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 
 const saved = { id: "old-id", address: "AA:BB:CC:DD:EE:FF", name: "My earbuds", modelId: "bass-bp1-pro" };
 const device = { ...saved, id: "new-id", support: "verified", isBaseus: true, connected: false, rssi: -50 };
+
+test("automatic reconnect prefers the active audio output without starting a scan", async () => {
+  const control = scanner();
+  const result = await findReconnectTarget(saved, {
+    ...control.api,
+    getAudioTarget: async () => ({ endpointId: "output" }),
+    prepareAudioTarget: async (id) => { assert.equal(id, "output"); return device; },
+  }, new AbortController().signal);
+  assert.deepEqual(result, { device, audioEndpointId: "output" });
+  assert.equal(control.counts().starts, 0);
+});
+
+test("audio target failure cannot silently reconnect to the previous earbuds", async () => {
+  const control = scanner();
+  await assert.rejects(findReconnectTarget(saved, {
+    ...control.api,
+    getAudioTarget: async () => ({ endpointId: "output" }),
+    prepareAudioTarget: async () => { throw new Error("output changed"); },
+  }, new AbortController().signal), /output changed/);
+  assert.equal(control.counts().starts, 0);
+});
+
+test("cancellation during audio lookup never prepares or scans a device", async () => {
+  const control = scanner();
+  const abort = new AbortController();
+  const result = await findReconnectTarget(saved, {
+    ...control.api,
+    getAudioTarget: async () => { abort.abort(); return { endpointId: "output" }; },
+    prepareAudioTarget: async () => { throw new Error("must not prepare"); },
+  }, abort.signal);
+  assert.equal(result, null);
+  assert.equal(control.counts().starts, 0);
+});
+
+test("missing audio identity retains the remembered-device fallback", async () => {
+  const control = scanner([device]);
+  const result = await findReconnectTarget(saved, {
+    ...control.api,
+    getAudioTarget: async () => null,
+    prepareAudioTarget: async () => { throw new Error("must not prepare"); },
+  }, new AbortController().signal);
+  assert.deepEqual(result, { device });
+  assert.equal(control.counts().starts, 1);
+  assert.equal(control.counts().stops, 1);
+});
 
 function scanner(devices = [], overrides = {}) {
   let listener;

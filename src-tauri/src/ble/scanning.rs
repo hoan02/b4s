@@ -115,29 +115,63 @@ pub(super) async fn process_peripheral(
         .values()
         .flat_map(|bytes| bytes.iter().copied())
         .collect();
-    let resolved = DeviceRegistry::resolve(DeviceIdentity {
-        address: address.clone(),
-        name: name.clone(),
-        advertised_service: advertised_services.first().cloned(),
-        manufacturer_data: manufacturer.clone(),
-    });
+    let device = device_from_identity(
+        id_str.clone(),
+        rssi,
+        advertised_services,
+        DeviceIdentity {
+            address: address.clone(),
+            name: name.clone(),
+            advertised_service: props
+                .services
+                .first()
+                .map(|uuid| uuid.to_string().to_uppercase()),
+            manufacturer_data: manufacturer.clone(),
+        },
+    );
+
+    {
+        let mut state = BLE.lock().await;
+        if !scan_generation_is_current(state.scanning, state.scan_generation, scan_generation) {
+            return;
+        }
+        if !insert_scan_device(&mut state.devices, device) {
+            return;
+        }
+
+        state.peripherals.insert(id_str, peripheral);
+        state.scan_revision = state.scan_revision.saturating_add(1);
+    }
+    emit_scan_status(app).await;
+}
+
+/// Resolve both advertised and OS-enumerated identities through the same reviewed catalog.
+pub(super) fn device_from_identity(
+    id: String,
+    rssi: i16,
+    advertised_services: Vec<String>,
+    identity: DeviceIdentity,
+) -> BleDevice {
+    let address = identity.address.clone();
+    let name = identity.name.clone();
+    let serial = protocol::advertisement::canonical_serial(&identity.manufacturer_data, false);
+    let resolved = DeviceRegistry::resolve(identity);
     let is_baseus = resolved.model.is_some();
     let model_id = resolved.model.as_ref().map(|model| model.id.clone());
     let model_name = resolved
         .model
         .as_ref()
-        .map(|model| model.display_name.clone());
+        .map(|model| model.product_name.clone());
     let support = resolved.model.as_ref().map(|model| match model.support {
         protocol::SupportLevel::Verified => "verified".into(),
         protocol::SupportLevel::Experimental => "experimental".into(),
         protocol::SupportLevel::ScanOnly => "scanOnly".into(),
     });
     let (image_url, image_provenance, color_variants) = model_presentation(model_id.as_deref());
-    let serial = protocol::advertisement::canonical_serial(&manufacturer, false);
     let device_profile = resolved.profile;
 
-    let device = BleDevice {
-        id: id_str.clone(),
+    BleDevice {
+        id,
         name: name.clone(),
         address: address.clone(),
         rssi,
@@ -158,21 +192,7 @@ pub(super) async fn process_peripheral(
         color_variants,
         serial,
         advertised_services,
-    };
-
-    {
-        let mut state = BLE.lock().await;
-        if !scan_generation_is_current(state.scanning, state.scan_generation, scan_generation) {
-            return;
-        }
-        if !insert_scan_device(&mut state.devices, device) {
-            return;
-        }
-
-        state.peripherals.insert(id_str, peripheral);
-        state.scan_revision = state.scan_revision.saturating_add(1);
     }
-    emit_scan_status(app).await;
 }
 
 #[cfg(test)]

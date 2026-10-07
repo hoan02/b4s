@@ -1,3 +1,4 @@
+import { storage } from "./storage";
 import type { EqPresetId } from "./device";
 
 export type { EqPresetId };
@@ -38,7 +39,7 @@ export function defaultCustomBands(bandCount: number): number[] {
 export function loadCustomEqPresets(storageKey: string, bandCount: number, minGain: number, maxGain: number): CustomEqPreset[] {
   try {
     const key = `b4s.eq.custom.${storageKey}`;
-    const raw = localStorage.getItem(key);
+    const raw = storage.getItem(key);
     const parsed: unknown = raw ? JSON.parse(raw) : [];
     const isLegacy = Array.isArray(parsed);
     const stored: unknown[] = isLegacy
@@ -56,7 +57,7 @@ export function loadCustomEqPresets(storageKey: string, bandCount: number, minGa
     ).slice(0, MAX_CUSTOM_PRESETS);
     if (isLegacy) {
       try {
-        localStorage.setItem(key, JSON.stringify({ version: 1, presets } satisfies StoredCustomEqPresets));
+        storage.setItem(key, JSON.stringify({ version: 1, presets } satisfies StoredCustomEqPresets));
       } catch {
         // Keep valid legacy data usable when storage is read-only or unavailable.
       }
@@ -69,5 +70,5 @@ export function loadCustomEqPresets(storageKey: string, bandCount: number, minGa
 
 export function saveCustomEqPresets(storageKey: string, presets: CustomEqPreset[]): void {
   const value: StoredCustomEqPresets = { version: 1, presets: presets.slice(0, MAX_CUSTOM_PRESETS) };
-  localStorage.setItem(`b4s.eq.custom.${storageKey}`, JSON.stringify(value));
+  storage.setItem(`b4s.eq.custom.${storageKey}`, JSON.stringify(value));
 }

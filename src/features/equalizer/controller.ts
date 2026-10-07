@@ -73,8 +73,6 @@ export function createEqualizerController(dependencies: Dependencies) {
     () => setEqPreset(preset),
     () => {
       if (dependencies.isDemo()) setCustomActive(false);
-      const label = dependencies.model()?.presets.find((item) => item.id === preset)?.label ?? preset;
-      dependencies.notify(`EQ · ${label}`, "success");
     },
     (message) => dependencies.notify(message, "error"),
   );
@@ -87,11 +85,10 @@ export function createEqualizerController(dependencies: Dependencies) {
         throw new Error("Custom EQ draft does not match the model schema");
       }
       return setCustomEq(bands.map((gain, index) => ({
-        frequency: schema.bands[index], qValue: schema.qValues?.[index] ?? 1, gain, filter: 1,
-      })), 101, false);
+        frequency: schema.bands[index], qValue: schema.qValues[index], gain, filter: 1,
+      })), schema.customWrite.slot, schema.customWrite.ancBank);
     }, () => {
       if (dependencies.isDemo()) setCustomActive(true);
-      dependencies.notify(t("toast.customEqSaved"), "success", `EQ custom · ${customLabel}`);
     }, (message) => dependencies.notify(message, "error", customLabel));
   };
 
@@ -100,7 +97,6 @@ export function createEqualizerController(dependencies: Dependencies) {
     () => {
       setCustomBands(defaultCustomBands(dependencies.model()?.bands.length ?? 0));
       if (dependencies.isDemo()) setCustomActive(false);
-      dependencies.notify(t("toast.resetEq"), "info");
     },
     (message) => dependencies.notify(message, "error"),
   );

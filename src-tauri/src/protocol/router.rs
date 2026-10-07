@@ -76,122 +76,7 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::SetAdaptiveLr(_) => Feature::AdaptiveLr,
     };
     authorize(profile, feature)?;
-    if let FeatureCommand::SetCustomEq {
-        bands,
-        dict_sort,
-        anc,
-    } = &command
-    {
-        if profile.protocol != ProtocolFamily::Bp1Pro || *dict_sort != 101 || *anc {
-            return Err("Custom EQ slot/ANC selector is not reviewed for this model".into());
-        }
-        let eq = profile
-            .model_id
-            .as_deref()
-            .and_then(crate::catalog::profile_for)
-            .and_then(|profile| profile.eq)
-            .ok_or("No reviewed custom EQ schema")?;
-        if bands.len() != eq.bands.len()
-            || bands
-                .iter()
-                .zip(&eq.bands)
-                .enumerate()
-                .any(|(index, (band, frequency))| {
-                    band.frequency != *frequency
-                        || band.q_value != eq.q_values.get(index).copied().unwrap_or(1.0)
-                        || band.filter != 1
-                        || !band.q_value.is_finite()
-                        || band.q_value <= 0.0
-                        || !band.gain.is_finite()
-                        || band.gain < eq.min_gain
-                        || band.gain > eq.max_gain
-                })
-        {
-            return Err("Custom EQ values do not match the reviewed model schema".into());
-        }
-    }
-    // Reject values outside the protocol's reviewed range instead of silently
-    // clamping intent into a different command.
-    match &command {
-        FeatureCommand::SetBassBoost(level)
-            if *level
-                > if profile.protocol == ProtocolFamily::Bp1Ultra {
-                    5
-                } else {
-                    1
-                } =>
-        {
-            return Err("Bass level is outside the current protocol range".into());
-        }
-        FeatureCommand::SetHearingProtection { level, .. } => {
-            let hearing = profile
-                .model_id
-                .as_deref()
-                .and_then(crate::catalog::profile_for)
-                .and_then(|model| model.hearing)
-                .ok_or("No reviewed hearing threshold schema")?;
-            if !hearing.thresholds.contains(level)
-                && !(*level == 0xFF && hearing.preserve_threshold_sentinel)
-            {
-                return Err("Hearing threshold is outside the reviewed model schema".into());
-            }
-        }
-        FeatureCommand::SetGesture {
-            layout,
-            left,
-            right,
-        } => {
-            let gesture = profile
-                .model_id
-                .as_deref()
-                .and_then(crate::catalog::profile_for)
-                .and_then(|model| model.gesture)
-                .ok_or("No reviewed gesture schema")?;
-            let entry = gesture
-                .layouts
-                .iter()
-                .find(|entry| entry.layout == *layout)
-                .ok_or("Gesture layout is not reviewed for this model")?;
-            for function in [left, right].into_iter().flatten() {
-                if !entry.functions.contains(function) {
-                    return Err("Gesture function is not allowed for this layout".into());
-                }
-            }
-        }
-        FeatureCommand::SetInEar(_) => {
-            profile
-                .model_id
-                .as_deref()
-                .and_then(crate::catalog::profile_for)
-                .and_then(|model| model.in_ear)
-                .ok_or("No reviewed in-ear schema")?;
-        }
-        FeatureCommand::SetMultipoint(_) => {
-            profile
-                .model_id
-                .as_deref()
-                .and_then(crate::catalog::profile_for)
-                .and_then(|model| model.multipoint)
-                .ok_or("No reviewed multipoint schema")?;
-        }
-        FeatureCommand::RestoreDefaults => {
-            profile
-                .model_id
-                .as_deref()
-                .and_then(crate::catalog::profile_for)
-                .and_then(|model| model.restore_defaults)
-                .ok_or("No reviewed restore-defaults schema")?;
-        }
-        FeatureCommand::SetAdaptiveLr(_) => {
-            profile
-                .model_id
-                .as_deref()
-                .and_then(crate::catalog::profile_for)
-                .and_then(|model| model.adaptive_lr)
-                .ok_or("No reviewed adaptiveLr schema")?;
-        }
-        _ => {}
-    }
+    super::constraints::validate_feature(profile, &command)?;
 
     match (profile.protocol, command) {
         (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetEq(preset)) => {
@@ -297,12 +182,26 @@ pub fn encode_listening(
     crate::device::capability::authorize(profile, crate::device::capability::Feature::Listening)?;
     let (mode, parameter) = match command {
         ListeningCommand::Normal => (AncMode::Off, 0xFF),
-        ListeningCommand::TransparencyFull => (AncMode::Transparency, 0xFF),
+        ListeningCommand::TransparencyFull => (
+            AncMode::Transparency,
+            if profile.protocol == ProtocolFamily::Bp1Ultra {
+                1
+            } else {
+                0xFF
+            },
+        ),
         ListeningCommand::TransparencyVoice => {
             if !profile.noise.supports_transparency_voice {
                 return Err("Transparency voice mode is not supported by this model".into());
             }
-            (AncMode::Transparency, 0x01)
+            (
+                AncMode::Transparency,
+                if profile.protocol == ProtocolFamily::Bp1Ultra {
+                    2
+                } else {
+                    1
+                },
+            )
         }
         ListeningCommand::CustomLevel(level) => {
             let max = profile.noise.max_custom_level;
@@ -354,7 +253,14 @@ mod tests {
             vec![0xBA, 0x34, 1, 5]
         );
         assert!(encode_listening(&profile, ListeningCommand::CustomLevel(6)).is_err());
-        assert!(encode_listening(&profile, ListeningCommand::TransparencyVoice).is_err());
+        assert_eq!(
+            encode_listening(&profile, ListeningCommand::TransparencyFull).unwrap(),
+            vec![0xBA, 0x34, 2, 1]
+        );
+        assert_eq!(
+            encode_listening(&profile, ListeningCommand::TransparencyVoice).unwrap(),
+            vec![0xBA, 0x34, 2, 2]
+        );
         assert_eq!(
             encode_feature(&profile, FeatureCommand::SetBassBoost(3)).unwrap(),
             vec![0xBA, 0x54, 1, 3]

@@ -52,6 +52,8 @@ pub struct BleTransportConfig {
 pub struct ModelInfo {
     pub id: String,
     pub display_name: String,
+    pub product_name: String,
+    pub presentation: Option<crate::catalog::public::ProductPresentation>,
     pub name_patterns: Vec<String>,
     pub support: SupportLevel,
     pub protocol: ProtocolFamily,
@@ -80,6 +82,9 @@ pub struct NoiseCapability {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceProfile {
+    pub sound: Option<crate::catalog::SoundProfile>,
+    pub feature_evidence:
+        std::collections::BTreeMap<String, crate::catalog::evidence::FeatureEvidence>,
     pub capabilities: crate::catalog::Capabilities,
     pub connection: Option<crate::catalog::ConnectionProfile>,
     pub model_id: Option<String>,
@@ -94,6 +99,8 @@ pub struct DeviceProfile {
 
 pub fn unknown_profile(model_id: Option<&str>, model_name: Option<&str>) -> DeviceProfile {
     DeviceProfile {
+        sound: None,
+        feature_evidence: crate::catalog::evidence::unknown_features(),
         connection: None,
         capabilities: Default::default(),
         model_id: model_id.map(str::to_owned),
@@ -115,7 +122,8 @@ fn support_level(value: &str) -> SupportLevel {
     match value {
         "verified" => SupportLevel::Verified,
         "experimental" => SupportLevel::Experimental,
-        _ => SupportLevel::ScanOnly,
+        "scanOnly" => SupportLevel::ScanOnly,
+        _ => panic!("Unvalidated catalog support level: {value}"),
     }
 }
 
@@ -123,7 +131,8 @@ fn protocol_family(value: &str) -> ProtocolFamily {
     match value {
         "bp1" => ProtocolFamily::Bp1Pro,
         "bp1Ultra" => ProtocolFamily::Bp1Ultra,
-        _ => ProtocolFamily::Unknown,
+        "unknown" => ProtocolFamily::Unknown,
+        _ => panic!("Unvalidated catalog protocol family: {value}"),
     }
 }
 
@@ -158,6 +167,8 @@ fn model_info_from_profile(profile: &crate::catalog::ModelProfile) -> ModelInfo 
     ModelInfo {
         id: profile.id.clone(),
         display_name: profile.display_name.clone(),
+        product_name: profile.display_name.clone(),
+        presentation: None,
         name_patterns: profile
             .aliases
             .iter()
@@ -179,7 +190,10 @@ fn model_info_from_profile(profile: &crate::catalog::ModelProfile) -> ModelInfo 
             required_advertised_service,
         },
         color_variants: Vec::new(),
-        image_url: profile.image.clone(),
+        image_url: profile
+            .image
+            .clone()
+            .filter(|image| image != "default_ear_pic"),
         image_provenance: "reviewed-profile".into(),
     }
 }
@@ -188,6 +202,8 @@ fn scan_only_model(public: &crate::catalog::public::PublicModel) -> ModelInfo {
     ModelInfo {
         id: public.id.clone(),
         display_name: public.model.clone(),
+        product_name: public.presentation_name(),
+        presentation: public.presentation(),
         name_patterns: public.name_patterns(),
         support: SupportLevel::ScanOnly,
         protocol: ProtocolFamily::Unknown,
@@ -215,7 +231,7 @@ fn scan_only_model(public: &crate::catalog::public::PublicModel) -> ModelInfo {
             required_advertised_service: false,
         },
         color_variants: public.color_codes(),
-        image_url: None,
+        image_url: public.product_image(),
         image_provenance: "offline-public-metadata".into(),
     }
 }
@@ -229,12 +245,9 @@ pub fn profile_for(
         return unknown_profile(None, model_name);
     };
     if let Some(profile) = crate::catalog::profile_for(id) {
-        if profile.support == "scanOnly" {
-            let mut passive = unknown_profile(Some(&profile.id), Some(&profile.display_name));
-            passive.firmware = firmware.map(str::to_owned);
-            return passive;
-        }
         return DeviceProfile {
+            sound: profile.sound,
+            feature_evidence: profile.feature_evidence,
             connection: profile.connection,
             capabilities: profile.capabilities,
             model_id: Some(profile.id),
@@ -258,6 +271,8 @@ pub fn profile_for(
         return unknown_profile(Some(id), Some(&model.display_name));
     }
     DeviceProfile {
+        sound: None,
+        feature_evidence: crate::catalog::evidence::unknown_features(),
         connection: None,
         capabilities: crate::catalog::Capabilities::default(),
         model_id: Some(model.id),
@@ -303,6 +318,12 @@ fn merge_public_models(models: &mut Vec<ModelInfo>) {
                 }
             }
             existing.color_variants = public.color_codes();
+            existing.product_name = public.presentation_name();
+            existing.presentation = public.presentation();
+            if existing.image_url.is_none() {
+                existing.image_url = public.product_image();
+                existing.image_provenance = "offline-public-metadata".into();
+            }
         } else {
             models.push(scan_only_model(public));
         }
@@ -330,6 +351,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn public_product_images_and_colors_reach_the_runtime_catalog() {
+        for public in crate::catalog::public::headphone_models() {
+            let model = identify(&public.model).unwrap();
+            assert_eq!(model.color_variants, public.color_codes());
+            assert_eq!(model.product_name, public.presentation_name());
+            let profile = crate::catalog::profile_for(&model.id).unwrap();
+            if profile.image.is_none() || profile.image.as_deref() == Some("default_ear_pic") {
+                assert_eq!(model.image_url, public.product_image());
+                assert_eq!(model.image_provenance, "offline-public-metadata");
+            }
+        }
+    }
+
+    #[test]
     fn reviewed_profile_is_the_only_control_source() {
         let model = identify("Baseus Bass BP1 Pro").unwrap();
         assert_eq!(model.id, "bass-bp1-pro");
@@ -354,7 +389,10 @@ mod tests {
         let profile = profile_for(Some(&model.id), None, None);
         assert!(!profile.verified);
         assert_eq!(profile.protocol, ProtocolFamily::Unknown);
-        assert_eq!(profile.connection, None);
+        assert_eq!(
+            profile.connection.as_ref().unwrap().transport,
+            crate::catalog::ControlTransport::Unresolved
+        );
         assert!(!profile.capabilities.eq);
         assert!(profile.noise.environments.is_empty());
         assert!(crate::protocol::encode_feature(

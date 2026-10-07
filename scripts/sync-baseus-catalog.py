@@ -30,7 +30,7 @@ def model_id(model: str) -> str:
     name = name.replace("+", " plus ")
     slug = re.sub(r"[^a-z0-9]+", "-", name).strip("-")
     # Unicode/punctuation-only names must still have a stable, nonempty ID.
-    return "server-" + (slug or hashlib.sha256(model.encode()).hexdigest()[:12])
+    return slug or hashlib.sha256(model.encode()).hexdigest()[:12]
 
 
 def public_url(value: object) -> str | None:

@@ -174,7 +174,7 @@ fn model_fields(name: &str) -> (bool, Option<String>, Option<String>, Option<Str
         (
             true,
             Some(model.id),
-            Some(model.display_name),
+            Some(model.product_name),
             Some(support.into()),
         )
     } else {

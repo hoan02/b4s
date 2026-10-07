@@ -11,6 +11,14 @@ earbuds on Windows, macOS and Linux. It is built with SolidJS, Tauri and Rust.
 
 Screenshots show the Vietnamese interface.
 
+## What is new in 0.1.3
+
+The catalog embeds 124 headphone profiles, including 122 recognition-only models. Product names and images use public metadata; thumbnails and large photos are cached locally (64 MiB) for reuse offline. Model IDs are normalized and saved identities/EQ are migrated automatically.
+
+Users of 0.1.1/0.1.2 must install 0.1.3 manually once because the updater signing key changed.
+
+[Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
+
 ## Device support
 
 BP1 Pro has a reviewed model profile. BP1 Ultra supports experimental BLE/789C
@@ -49,12 +57,12 @@ when the profile does not provide the required capability.
 
 ## Development
 
-Requirements: Node.js 20, Rust stable, the Tauri platform prerequisites, and
+Requirements: Bun 1.4.0, Rust stable, the Tauri platform prerequisites, and
 Bluetooth hardware for device testing. Install dependencies and start the app:
 
 ```sh
-npm ci
-npm run tauri:dev
+bun install --frozen-lockfile
+bun run tauri:dev
 ```
 
 Before submitting changes, run the checks in [Contributing](CONTRIBUTING.md).

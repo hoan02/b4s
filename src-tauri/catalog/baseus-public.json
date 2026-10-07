@@ -26,7 +26,7 @@
   ],
   "models": [
     {
-      "id": "server-aequr-30-air",
+      "id": "aequr-30-air",
       "model": "AeQur 30 Air",
       "audio": true,
       "variants": [
@@ -57,7 +57,7 @@
       ]
     },
     {
-      "id": "server-aequr-ds10",
+      "id": "aequr-ds10",
       "model": "AeQur DS10",
       "audio": true,
       "variants": [
@@ -100,7 +100,7 @@
       ]
     },
     {
-      "id": "server-aequr-g10",
+      "id": "aequr-g10",
       "model": "AeQur G10",
       "audio": true,
       "variants": [
@@ -143,7 +143,7 @@
       ]
     },
     {
-      "id": "server-aequr-gh02",
+      "id": "aequr-gh02",
       "model": "AeQur GH02",
       "audio": true,
       "variants": [
@@ -186,7 +186,7 @@
       ]
     },
     {
-      "id": "server-aequr-n10",
+      "id": "aequr-n10",
       "model": "AeQur N10",
       "audio": true,
       "variants": [
@@ -229,7 +229,7 @@
       ]
     },
     {
-      "id": "server-aequr-vo20",
+      "id": "aequr-vo20",
       "model": "AeQur VO20",
       "audio": true,
       "variants": [
@@ -260,7 +260,7 @@
       ]
     },
     {
-      "id": "server-airgo-1-ring",
+      "id": "airgo-1-ring",
       "model": "AirGo 1 Ring",
       "audio": true,
       "variants": [
@@ -303,7 +303,7 @@
       ]
     },
     {
-      "id": "server-airgo-ag20",
+      "id": "airgo-ag20",
       "model": "AirGo AG20",
       "audio": true,
       "variants": [
@@ -346,7 +346,7 @@
       ]
     },
     {
-      "id": "server-airgo-as01",
+      "id": "airgo-as01",
       "model": "AirGo AS01",
       "audio": true,
       "variants": [
@@ -389,7 +389,7 @@
       ]
     },
     {
-      "id": "server-airnora-2",
+      "id": "airnora-2",
       "model": "AirNora 2",
       "audio": true,
       "variants": [
@@ -432,7 +432,7 @@
       ]
     },
     {
-      "id": "server-airnora-3",
+      "id": "airnora-3",
       "model": "AirNora 3",
       "audio": true,
       "variants": [
@@ -485,7 +485,7 @@
       ]
     },
     {
-      "id": "server-airnora",
+      "id": "airnora",
       "model": "Baseus AirNora",
       "audio": true,
       "variants": [
@@ -528,7 +528,7 @@
       ]
     },
     {
-      "id": "server-as01",
+      "id": "as01",
       "model": "Baseus AS01",
       "audio": true,
       "variants": [
@@ -552,7 +552,7 @@
       ]
     },
     {
-      "id": "server-as01-air",
+      "id": "as01-air",
       "model": "Baseus AS01 Air",
       "audio": true,
       "variants": [
@@ -576,7 +576,7 @@
       ]
     },
     {
-      "id": "server-bass-1-plus",
+      "id": "bass-1-plus",
       "model": "Baseus Bass 1+",
       "audio": true,
       "variants": [
@@ -595,7 +595,7 @@
       ]
     },
     {
-      "id": "server-bass-bc1-b0f249a2",
+      "id": "bass-bc1-b0f249a2",
       "model": "Baseus Bass BC1",
       "audio": true,
       "variants": [
@@ -653,7 +653,7 @@
       ]
     },
     {
-      "id": "server-bass-bc1-lite",
+      "id": "bass-bc1-lite",
       "model": "Baseus Bass BC1 Lite",
       "audio": true,
       "variants": [
@@ -711,7 +711,7 @@
       ]
     },
     {
-      "id": "server-bass-bc1-ec048a8e",
+      "id": "bass-bc1-ec048a8e",
       "model": "Baseus Bass BC1 星光版",
       "audio": true,
       "variants": [
@@ -747,7 +747,7 @@
       ]
     },
     {
-      "id": "server-bass-bc2",
+      "id": "bass-bc2",
       "model": "Baseus Bass BC2",
       "audio": true,
       "variants": [
@@ -829,7 +829,7 @@
       ]
     },
     {
-      "id": "server-bass-bc2s",
+      "id": "bass-bc2s",
       "model": "Baseus Bass BC2s",
       "audio": true,
       "variants": [
@@ -911,7 +911,7 @@
       ]
     },
     {
-      "id": "server-bass-bd1",
+      "id": "bass-bd1",
       "model": "Baseus Bass BD1",
       "audio": true,
       "variants": [
@@ -954,7 +954,7 @@
       ]
     },
     {
-      "id": "server-bass-bf1",
+      "id": "bass-bf1",
       "model": "Baseus Bass BF1",
       "audio": true,
       "variants": [
@@ -986,7 +986,7 @@
       ]
     },
     {
-      "id": "server-bass-bf1-lite",
+      "id": "bass-bf1-lite",
       "model": "Baseus Bass BF1 Lite",
       "audio": true,
       "variants": [
@@ -1068,7 +1068,7 @@
       ]
     },
     {
-      "id": "server-bass-bh1",
+      "id": "bass-bh1",
       "model": "Baseus Bass BH1",
       "audio": true,
       "variants": [
@@ -1126,7 +1126,7 @@
       ]
     },
     {
-      "id": "server-bass-bh1-air",
+      "id": "bass-bh1-air",
       "model": "Baseus Bass BH1 Air",
       "audio": true,
       "variants": [
@@ -1208,7 +1208,7 @@
       ]
     },
     {
-      "id": "server-bass-bh1-lite",
+      "id": "bass-bh1-lite",
       "model": "Baseus Bass BH1 Lite",
       "audio": true,
       "variants": [
@@ -1266,7 +1266,7 @@
       ]
     },
     {
-      "id": "server-bass-bh1-nc",
+      "id": "bass-bh1-nc",
       "model": "Baseus Bass BH1 NC",
       "audio": true,
       "variants": [
@@ -1324,7 +1324,7 @@
       ]
     },
     {
-      "id": "server-bass-bp1-nc",
+      "id": "bass-bp1-nc",
       "model": "Baseus Bass BP1 NC",
       "audio": true,
       "variants": [
@@ -1418,7 +1418,7 @@
       ]
     },
     {
-      "id": "server-bass-bp1-pro",
+      "id": "bass-bp1-pro",
       "model": "Baseus Bass BP1 Pro",
       "audio": true,
       "variants": [
@@ -1476,7 +1476,7 @@
       ]
     },
     {
-      "id": "server-bass-bp1-ultra",
+      "id": "bass-bp1-ultra",
       "model": "Baseus Bass BP1 Ultra",
       "audio": true,
       "variants": [
@@ -1549,7 +1549,7 @@
       ]
     },
     {
-      "id": "server-bass-bs1",
+      "id": "bass-bs1",
       "model": "Baseus Bass BS1",
       "audio": true,
       "variants": [
@@ -1607,7 +1607,7 @@
       ]
     },
     {
-      "id": "server-bass-bs1-nc",
+      "id": "bass-bs1-nc",
       "model": "Baseus Bass BS1 NC",
       "audio": true,
       "variants": [
@@ -1665,7 +1665,7 @@
       ]
     },
     {
-      "id": "server-bass-bs2-lite",
+      "id": "bass-bs2-lite",
       "model": "Baseus Bass BS2 Lite",
       "audio": true,
       "variants": [
@@ -1723,7 +1723,7 @@
       ]
     },
     {
-      "id": "server-bass-e19s",
+      "id": "bass-e19s",
       "model": "Baseus Bass E19s",
       "audio": true,
       "variants": [
@@ -1764,7 +1764,7 @@
       ]
     },
     {
-      "id": "server-bass-eh10-nc",
+      "id": "bass-eh10-nc",
       "model": "Baseus Bass EH10 NC",
       "audio": true,
       "variants": [
@@ -1805,7 +1805,7 @@
       ]
     },
     {
-      "id": "server-bass-ep10-nc",
+      "id": "bass-ep10-nc",
       "model": "Baseus Bass EP10 NC",
       "audio": true,
       "variants": [
@@ -1870,7 +1870,7 @@
       ]
     },
     {
-      "id": "server-bass-ep10-pro",
+      "id": "bass-ep10-pro",
       "model": "Baseus Bass EP10 Pro",
       "audio": true,
       "variants": [
@@ -1911,7 +1911,7 @@
       ]
     },
     {
-      "id": "server-bass-ep10-ultra",
+      "id": "bass-ep10-ultra",
       "model": "Baseus Bass EP10 Ultra",
       "audio": true,
       "variants": [
@@ -1984,7 +1984,7 @@
       ]
     },
     {
-      "id": "server-bass-w04",
+      "id": "bass-w04",
       "model": "Baseus Bass W04",
       "audio": true,
       "variants": [
@@ -2008,7 +2008,7 @@
       ]
     },
     {
-      "id": "server-bass-wm01s",
+      "id": "bass-wm01s",
       "model": "Baseus Bass WM01s",
       "audio": true,
       "variants": [
@@ -2044,7 +2044,7 @@
       ]
     },
     {
-      "id": "server-bass-wm02s",
+      "id": "bass-wm02s",
       "model": "Baseus Bass WM02s",
       "audio": true,
       "variants": [
@@ -2150,7 +2150,7 @@
       ]
     },
     {
-      "id": "server-bh1-nc-lite",
+      "id": "bh1-nc-lite",
       "model": "Baseus BH1 NC Lite",
       "audio": true,
       "variants": [
@@ -2220,7 +2220,7 @@
       ]
     },
     {
-      "id": "server-bowie-e3-2025",
+      "id": "bowie-e3-2025",
       "model": "Baseus Bowie E3 2025",
       "audio": true,
       "variants": [
@@ -2244,7 +2244,7 @@
       ]
     },
     {
-      "id": "server-bowie-m3s",
+      "id": "bowie-m3s",
       "model": "Baseus Bowie M3s",
       "audio": true,
       "variants": [
@@ -2268,7 +2268,7 @@
       ]
     },
     {
-      "id": "server-bowie-m4s",
+      "id": "bowie-m4s",
       "model": "Baseus Bowie M4s",
       "audio": true,
       "variants": [
@@ -2308,7 +2308,7 @@
       ]
     },
     {
-      "id": "server-bowie-ma10s",
+      "id": "bowie-ma10s",
       "model": "Baseus Bowie MA10s",
       "audio": true,
       "variants": [
@@ -2339,7 +2339,7 @@
       ]
     },
     {
-      "id": "server-bowie-mc1",
+      "id": "bowie-mc1",
       "model": "Baseus Bowie MC1",
       "audio": true,
       "variants": [
@@ -2397,7 +2397,7 @@
       ]
     },
     {
-      "id": "server-bowie-mc1-pro",
+      "id": "bowie-mc1-pro",
       "model": "Baseus Bowie MC1 Pro",
       "audio": true,
       "variants": [
@@ -2463,7 +2463,7 @@
       ]
     },
     {
-      "id": "server-bowie-mc2",
+      "id": "bowie-mc2",
       "model": "Baseus Bowie MC2",
       "audio": true,
       "variants": [
@@ -2557,7 +2557,7 @@
       ]
     },
     {
-      "id": "server-bowie-mc2-air",
+      "id": "bowie-mc2-air",
       "model": "Baseus Bowie MC2 Air",
       "audio": true,
       "variants": [
@@ -2639,7 +2639,7 @@
       ]
     },
     {
-      "id": "server-bowie-mc2-nc",
+      "id": "bowie-mc2-nc",
       "model": "Baseus Bowie MC2 NC",
       "audio": true,
       "variants": [
@@ -2709,7 +2709,7 @@
       ]
     },
     {
-      "id": "server-bowie-mc2-s-713196ac",
+      "id": "bowie-mc2-s-713196ac",
       "model": "Baseus Bowie MC2 S",
       "audio": true,
       "variants": [
@@ -2803,7 +2803,7 @@
       ]
     },
     {
-      "id": "server-bowie-mc2-s-ef41b558",
+      "id": "bowie-mc2-s-ef41b558",
       "model": "Baseus Bowie MC2 S 先锋版",
       "audio": true,
       "variants": [
@@ -2827,7 +2827,7 @@
       ]
     },
     {
-      "id": "server-bowie-mf1",
+      "id": "bowie-mf1",
       "model": "Baseus Bowie MF1",
       "audio": true,
       "variants": [
@@ -2870,7 +2870,7 @@
       ]
     },
     {
-      "id": "server-bowie-mh1",
+      "id": "bowie-mh1",
       "model": "Baseus Bowie MH1",
       "audio": true,
       "variants": [
@@ -2940,7 +2940,7 @@
       ]
     },
     {
-      "id": "server-bowie-mp1",
+      "id": "bowie-mp1",
       "model": "Baseus Bowie MP1",
       "audio": true,
       "variants": [
@@ -3022,7 +3022,7 @@
       ]
     },
     {
-      "id": "server-bowie-ms1",
+      "id": "bowie-ms1",
       "model": "Baseus Bowie MS1",
       "audio": true,
       "variants": [
@@ -3104,7 +3104,7 @@
       ]
     },
     {
-      "id": "server-bowiee2",
+      "id": "bowiee2",
       "model": "Baseus BowieE2",
       "audio": true,
       "variants": [
@@ -3147,7 +3147,7 @@
       ]
     },
     {
-      "id": "server-bowiee3",
+      "id": "bowiee3",
       "model": "Baseus BowieE3",
       "audio": true,
       "variants": [
@@ -3190,7 +3190,7 @@
       ]
     },
     {
-      "id": "server-bowiee8",
+      "id": "bowiee8",
       "model": "Baseus BowieE8",
       "audio": true,
       "variants": [
@@ -3233,7 +3233,7 @@
       ]
     },
     {
-      "id": "server-bpm600w",
+      "id": "bpm600w",
       "model": "Baseus BPM600W",
       "audio": false,
       "variants": [
@@ -3264,7 +3264,7 @@
       ]
     },
     {
-      "id": "server-e9",
+      "id": "e9",
       "model": "Baseus E9",
       "audio": true,
       "variants": [
@@ -3307,7 +3307,7 @@
       ]
     },
     {
-      "id": "server-editor",
+      "id": "editor",
       "model": "Baseus Editor",
       "audio": false,
       "variants": [
@@ -3365,7 +3365,7 @@
       ]
     },
     {
-      "id": "server-eh10-nc-lite",
+      "id": "eh10-nc-lite",
       "model": "Baseus EH10 NC Lite",
       "audio": true,
       "variants": [
@@ -3414,7 +3414,7 @@
       ]
     },
     {
-      "id": "server-eli-15i-fit",
+      "id": "eli-15i-fit",
       "model": "Baseus Eli 15i Fit",
       "audio": true,
       "variants": [
@@ -3472,7 +3472,7 @@
       ]
     },
     {
-      "id": "server-eli-sport2",
+      "id": "eli-sport2",
       "model": "Baseus Eli Sport2",
       "audio": true,
       "variants": [
@@ -3529,7 +3529,7 @@
       ]
     },
     {
-      "id": "server-ex",
+      "id": "ex",
       "model": "Baseus EX",
       "audio": true,
       "variants": [
@@ -3572,7 +3572,7 @@
       ]
     },
     {
-      "id": "server-f02-mouse",
+      "id": "f02-mouse",
       "model": "Baseus F02 Mouse",
       "audio": false,
       "variants": [
@@ -3620,7 +3620,7 @@
       ]
     },
     {
-      "id": "server-f02-pro",
+      "id": "f02-pro",
       "model": "Baseus F02 Pro",
       "audio": false,
       "variants": [
@@ -3644,7 +3644,7 @@
       ]
     },
     {
-      "id": "server-f02-xs",
+      "id": "f02-xs",
       "model": "Baseus F02-XS",
       "audio": false,
       "variants": [
@@ -3663,7 +3663,7 @@
       ]
     },
     {
-      "id": "server-inspire-xc1",
+      "id": "inspire-xc1",
       "model": "Baseus Inspire XC1",
       "audio": true,
       "variants": [
@@ -3781,7 +3781,7 @@
       ]
     },
     {
-      "id": "server-inspire-xh1",
+      "id": "inspire-xh1",
       "model": "Baseus Inspire XH1",
       "audio": true,
       "variants": [
@@ -3875,7 +3875,7 @@
       ]
     },
     {
-      "id": "server-inspire-xp1",
+      "id": "inspire-xp1",
       "model": "Baseus Inspire XP1",
       "audio": true,
       "variants": [
@@ -3969,7 +3969,7 @@
       ]
     },
     {
-      "id": "server-p1",
+      "id": "p1",
       "model": "Baseus P1",
       "audio": true,
       "variants": [
@@ -4012,7 +4012,7 @@
       ]
     },
     {
-      "id": "server-p1-lite",
+      "id": "p1-lite",
       "model": "Baseus P1 Lite",
       "audio": true,
       "variants": [
@@ -4055,7 +4055,7 @@
       ]
     },
     {
-      "id": "server-p1x",
+      "id": "p1x",
       "model": "Baseus P1x",
       "audio": true,
       "variants": [
@@ -4098,7 +4098,7 @@
       ]
     },
     {
-      "id": "server-pes600w",
+      "id": "pes600w",
       "model": "Baseus PES600W",
       "audio": false,
       "variants": [
@@ -4141,7 +4141,7 @@
       ]
     },
     {
-      "id": "server-pps140",
+      "id": "pps140",
       "model": "Baseus PPS140",
       "audio": false,
       "variants": [
@@ -4172,7 +4172,7 @@
       ]
     },
     {
-      "id": "server-pps140w",
+      "id": "pps140w",
       "model": "Baseus PPS140W",
       "audio": false,
       "variants": [
@@ -4191,7 +4191,7 @@
       ]
     },
     {
-      "id": "server-pps420w",
+      "id": "pps420w",
       "model": "Baseus PPS420W",
       "audio": false,
       "variants": [
@@ -4210,7 +4210,7 @@
       ]
     },
     {
-      "id": "server-pps450w",
+      "id": "pps450w",
       "model": "Baseus PPS450W",
       "audio": false,
       "variants": [
@@ -4241,7 +4241,7 @@
       ]
     },
     {
-      "id": "server-sleep-sk1",
+      "id": "sleep-sk1",
       "model": "Baseus Sleep SK1",
       "audio": true,
       "variants": [
@@ -4299,7 +4299,7 @@
       ]
     },
     {
-      "id": "server-storm-1",
+      "id": "storm-1",
       "model": "Baseus Storm 1",
       "audio": true,
       "variants": [
@@ -4342,7 +4342,7 @@
       ]
     },
     {
-      "id": "server-storm-3",
+      "id": "storm-3",
       "model": "Baseus Storm 3",
       "audio": true,
       "variants": [
@@ -4385,7 +4385,7 @@
       ]
     },
     {
-      "id": "server-t1",
+      "id": "t1",
       "model": "Baseus T1",
       "audio": false,
       "variants": [
@@ -4428,7 +4428,7 @@
       ]
     },
     {
-      "id": "server-t2",
+      "id": "t2",
       "model": "Baseus T2",
       "audio": false,
       "variants": [
@@ -4471,7 +4471,7 @@
       ]
     },
     {
-      "id": "server-t2-pro",
+      "id": "t2-pro",
       "model": "Baseus T2 Pro",
       "audio": false,
       "variants": [
@@ -4514,7 +4514,7 @@
       ]
     },
     {
-      "id": "server-t3",
+      "id": "t3",
       "model": "Baseus T3",
       "audio": false,
       "variants": [
@@ -4557,7 +4557,7 @@
       ]
     },
     {
-      "id": "server-w04-pro",
+      "id": "w04-pro",
       "model": "Baseus W04 Pro",
       "audio": true,
       "variants": [
@@ -4600,7 +4600,7 @@
       ]
     },
     {
-      "id": "server-w04-plus-pro",
+      "id": "w04-plus-pro",
       "model": "Baseus W04+Pro",
       "audio": true,
       "variants": [
@@ -4643,7 +4643,7 @@
       ]
     },
     {
-      "id": "server-w05lite",
+      "id": "w05lite",
       "model": "Baseus W05Lite",
       "audio": true,
       "variants": [
@@ -4686,7 +4686,7 @@
       ]
     },
     {
-      "id": "server-wm02",
+      "id": "wm02",
       "model": "Baseus WM02",
       "audio": true,
       "variants": [
@@ -4729,7 +4729,7 @@
       ]
     },
     {
-      "id": "server-wm02-plus",
+      "id": "wm02-plus",
       "model": "Baseus WM02+",
       "audio": true,
       "variants": [
@@ -4772,7 +4772,7 @@
       ]
     },
     {
-      "id": "server-x3",
+      "id": "x3",
       "model": "Baseus X3",
       "audio": false,
       "variants": [
@@ -4815,7 +4815,7 @@
       ]
     },
     {
-      "id": "server-baseus-b0004c",
+      "id": "baseus-b0004c",
       "model": "Baseus-B0004C",
       "audio": false,
       "variants": [
@@ -4839,7 +4839,7 @@
       ]
     },
     {
-      "id": "server-baseus-b0004ca",
+      "id": "baseus-b0004ca",
       "model": "Baseus-B0004CA",
       "audio": false,
       "variants": [
@@ -4863,7 +4863,7 @@
       ]
     },
     {
-      "id": "server-baseus-ps1-pro",
+      "id": "baseus-ps1-pro",
       "model": "Baseus-PS1 Pro",
       "audio": false,
       "variants": [
@@ -4882,7 +4882,7 @@
       ]
     },
     {
-      "id": "server-baseus-ps2-pro",
+      "id": "baseus-ps2-pro",
       "model": "Baseus-PS2 Pro",
       "audio": false,
       "variants": [
@@ -4901,7 +4901,7 @@
       ]
     },
     {
-      "id": "server-baseus-ps3-pro",
+      "id": "baseus-ps3-pro",
       "model": "Baseus-PS3 Pro",
       "audio": false,
       "variants": [
@@ -4920,7 +4920,7 @@
       ]
     },
     {
-      "id": "server-baseusencokw04",
+      "id": "baseusencokw04",
       "model": "BaseusEncokW04",
       "audio": true,
       "variants": [
@@ -4963,7 +4963,7 @@
       ]
     },
     {
-      "id": "server-baseusencokw11",
+      "id": "baseusencokw11",
       "model": "BaseusEncokW11",
       "audio": true,
       "variants": [
@@ -5006,7 +5006,7 @@
       ]
     },
     {
-      "id": "server-baseusencokw12",
+      "id": "baseusencokw12",
       "model": "BaseusEncokW12",
       "audio": true,
       "variants": [
@@ -5049,7 +5049,7 @@
       ]
     },
     {
-      "id": "server-bass-e12x",
+      "id": "bass-e12x",
       "model": "Bass E12x",
       "audio": true,
       "variants": [
@@ -5068,7 +5068,7 @@
       ]
     },
     {
-      "id": "server-blade-2",
+      "id": "blade-2",
       "model": "Blade 2",
       "audio": false,
       "variants": [
@@ -5111,7 +5111,7 @@
       ]
     },
     {
-      "id": "server-blade-2-140",
+      "id": "blade-2-140",
       "model": "Blade 2-140",
       "audio": false,
       "variants": [
@@ -5154,7 +5154,7 @@
       ]
     },
     {
-      "id": "server-bowie-h1s-be5ff335",
+      "id": "bowie-h1s-be5ff335",
       "model": "Bowie  H1S",
       "audio": true,
       "variants": [
@@ -5185,7 +5185,7 @@
       ]
     },
     {
-      "id": "server-bowie-10-max",
+      "id": "bowie-10-max",
       "model": "Bowie 10 Max",
       "audio": true,
       "variants": [
@@ -5216,7 +5216,7 @@
       ]
     },
     {
-      "id": "server-bowie-30",
+      "id": "bowie-30",
       "model": "Bowie 30",
       "audio": true,
       "variants": [
@@ -5259,7 +5259,7 @@
       ]
     },
     {
-      "id": "server-bowie-30-max",
+      "id": "bowie-30-max",
       "model": "Bowie 30 Max",
       "audio": true,
       "variants": [
@@ -5302,7 +5302,7 @@
       ]
     },
     {
-      "id": "server-bowie-35",
+      "id": "bowie-35",
       "model": "Bowie 35",
       "audio": true,
       "variants": [
@@ -5345,7 +5345,7 @@
       ]
     },
     {
-      "id": "server-bowie-d05",
+      "id": "bowie-d05",
       "model": "Bowie D05",
       "audio": true,
       "variants": [
@@ -5388,7 +5388,7 @@
       ]
     },
     {
-      "id": "server-bowie-e10",
+      "id": "bowie-e10",
       "model": "Bowie E10",
       "audio": true,
       "variants": [
@@ -5431,7 +5431,7 @@
       ]
     },
     {
-      "id": "server-bowie-e12",
+      "id": "bowie-e12",
       "model": "Bowie E12",
       "audio": true,
       "variants": [
@@ -5474,7 +5474,7 @@
       ]
     },
     {
-      "id": "server-bowie-e13",
+      "id": "bowie-e13",
       "model": "Bowie E13",
       "audio": true,
       "variants": [
@@ -5517,7 +5517,7 @@
       ]
     },
     {
-      "id": "server-bowie-e5",
+      "id": "bowie-e5",
       "model": "Bowie E5",
       "audio": true,
       "variants": [
@@ -5560,7 +5560,7 @@
       ]
     },
     {
-      "id": "server-bowie-e5x",
+      "id": "bowie-e5x",
       "model": "Bowie E5x",
       "audio": true,
       "variants": [
@@ -5603,7 +5603,7 @@
       ]
     },
     {
-      "id": "server-bowie-ez10",
+      "id": "bowie-ez10",
       "model": "Bowie EZ10",
       "audio": true,
       "variants": [
@@ -5646,7 +5646,7 @@
       ]
     },
     {
-      "id": "server-bowie-h1",
+      "id": "bowie-h1",
       "model": "Bowie H1",
       "audio": true,
       "variants": [
@@ -5689,7 +5689,7 @@
       ]
     },
     {
-      "id": "server-bowie-h1-pro",
+      "id": "bowie-h1-pro",
       "model": "Bowie H1 Pro",
       "audio": true,
       "variants": [
@@ -5732,7 +5732,7 @@
       ]
     },
     {
-      "id": "server-bowie-h1i",
+      "id": "bowie-h1i",
       "model": "Bowie H1i",
       "audio": true,
       "variants": [
@@ -5775,7 +5775,7 @@
       ]
     },
     {
-      "id": "server-bowie-h1s-e19e2d01",
+      "id": "bowie-h1s-e19e2d01",
       "model": "Bowie H1s",
       "audio": true,
       "variants": [
@@ -5818,7 +5818,7 @@
       ]
     },
     {
-      "id": "server-bowie-h1s-pro",
+      "id": "bowie-h1s-pro",
       "model": "Bowie H1s Pro",
       "audio": true,
       "variants": [
@@ -5837,7 +5837,7 @@
       ]
     },
     {
-      "id": "server-bowie-h2",
+      "id": "bowie-h2",
       "model": "Bowie H2",
       "audio": true,
       "variants": [
@@ -5880,7 +5880,7 @@
       ]
     },
     {
-      "id": "server-bowie-m1",
+      "id": "bowie-m1",
       "model": "Bowie M1",
       "audio": true,
       "variants": [
@@ -5923,7 +5923,7 @@
       ]
     },
     {
-      "id": "server-bowie-m2",
+      "id": "bowie-m2",
       "model": "Bowie M2",
       "audio": true,
       "variants": [
@@ -5966,7 +5966,7 @@
       ]
     },
     {
-      "id": "server-bowie-m2-plus",
+      "id": "bowie-m2-plus",
       "model": "Bowie M2+",
       "audio": true,
       "variants": [
@@ -6009,7 +6009,7 @@
       ]
     },
     {
-      "id": "server-bowie-m2s",
+      "id": "bowie-m2s",
       "model": "Bowie M2s",
       "audio": true,
       "variants": [
@@ -6052,7 +6052,7 @@
       ]
     },
     {
-      "id": "server-bowie-m2s-pro",
+      "id": "bowie-m2s-pro",
       "model": "Bowie M2s Pro",
       "audio": true,
       "variants": [
@@ -6095,7 +6095,7 @@
       ]
     },
     {
-      "id": "server-bowie-m3",
+      "id": "bowie-m3",
       "model": "Bowie M3",
       "audio": true,
       "variants": [
@@ -6138,7 +6138,7 @@
       ]
     },
     {
-      "id": "server-bowie-ma10",
+      "id": "bowie-ma10",
       "model": "Bowie MA10",
       "audio": true,
       "variants": [
@@ -6181,7 +6181,7 @@
       ]
     },
     {
-      "id": "server-bowie-ma10-pro",
+      "id": "bowie-ma10-pro",
       "model": "Bowie MA10 Pro",
       "audio": true,
       "variants": [
@@ -6224,7 +6224,7 @@
       ]
     },
     {
-      "id": "server-bowie-ma20",
+      "id": "bowie-ma20",
       "model": "Bowie MA20",
       "audio": true,
       "variants": [
@@ -6267,7 +6267,7 @@
       ]
     },
     {
-      "id": "server-bowie-ma20-pro",
+      "id": "bowie-ma20-pro",
       "model": "Bowie MA20 Pro",
       "audio": true,
       "variants": [
@@ -6310,7 +6310,7 @@
       ]
     },
     {
-      "id": "server-bowie-mz10",
+      "id": "bowie-mz10",
       "model": "Bowie MZ10",
       "audio": true,
       "variants": [
@@ -6353,7 +6353,7 @@
       ]
     },
     {
-      "id": "server-bowie-u2",
+      "id": "bowie-u2",
       "model": "Bowie U2",
       "audio": true,
       "variants": [
@@ -6396,7 +6396,7 @@
       ]
     },
     {
-      "id": "server-bowie-u2-pro",
+      "id": "bowie-u2-pro",
       "model": "Bowie U2 Pro",
       "audio": true,
       "variants": [
@@ -6439,7 +6439,7 @@
       ]
     },
     {
-      "id": "server-bowie-w04",
+      "id": "bowie-w04",
       "model": "Bowie W04",
       "audio": true,
       "variants": [
@@ -6482,7 +6482,7 @@
       ]
     },
     {
-      "id": "server-bowie-w04-plus-13faaa6c",
+      "id": "bowie-w04-plus-13faaa6c",
       "model": "Bowie W04 Plus",
       "audio": true,
       "variants": [
@@ -6525,7 +6525,7 @@
       ]
     },
     {
-      "id": "server-bowie-w04-pro",
+      "id": "bowie-w04-pro",
       "model": "Bowie W04 Pro",
       "audio": true,
       "variants": [
@@ -6568,7 +6568,7 @@
       ]
     },
     {
-      "id": "server-bowie-w04-plus-2153e749",
+      "id": "bowie-w04-plus-2153e749",
       "model": "Bowie W04+",
       "audio": true,
       "variants": [
@@ -6611,7 +6611,7 @@
       ]
     },
     {
-      "id": "server-bowie-wm01",
+      "id": "bowie-wm01",
       "model": "Bowie WM01",
       "audio": true,
       "variants": [
@@ -6654,7 +6654,7 @@
       ]
     },
     {
-      "id": "server-bowie-wm01plus",
+      "id": "bowie-wm01plus",
       "model": "Bowie WM01Plus",
       "audio": true,
       "variants": [
@@ -6697,7 +6697,7 @@
       ]
     },
     {
-      "id": "server-bowie-wm03",
+      "id": "bowie-wm03",
       "model": "Bowie WM03",
       "audio": true,
       "variants": [
@@ -6740,7 +6740,7 @@
       ]
     },
     {
-      "id": "server-bowie-wm05",
+      "id": "bowie-wm05",
       "model": "Bowie WM05",
       "audio": true,
       "variants": [
@@ -6783,7 +6783,7 @@
       ]
     },
     {
-      "id": "server-bowie-wx5",
+      "id": "bowie-wx5",
       "model": "Bowie WX5",
       "audio": true,
       "variants": [
@@ -6826,7 +6826,7 @@
       ]
     },
     {
-      "id": "server-bs-aiac71",
+      "id": "bs-aiac71",
       "model": "BS-AIAC71",
       "audio": false,
       "variants": [
@@ -6845,7 +6845,7 @@
       ]
     },
     {
-      "id": "server-bs-aiac72",
+      "id": "bs-aiac72",
       "model": "BS-AIAC72",
       "audio": false,
       "variants": [
@@ -6864,7 +6864,7 @@
       ]
     },
     {
-      "id": "server-bs-b08",
+      "id": "bs-b08",
       "model": "BS-B08",
       "audio": false,
       "variants": [
@@ -6907,7 +6907,7 @@
       ]
     },
     {
-      "id": "server-bs-cm033",
+      "id": "bs-cm033",
       "model": "BS-CM033",
       "audio": false,
       "variants": [
@@ -6948,7 +6948,7 @@
       ]
     },
     {
-      "id": "server-bs-cm034",
+      "id": "bs-cm034",
       "model": "BS-CM034",
       "audio": false,
       "variants": [
@@ -6989,7 +6989,7 @@
       ]
     },
     {
-      "id": "server-bs-cm035",
+      "id": "bs-cm035",
       "model": "BS-CM035",
       "audio": false,
       "variants": [
@@ -7030,7 +7030,7 @@
       ]
     },
     {
-      "id": "server-bs-cx007",
+      "id": "bs-cx007",
       "model": "BS-CX007",
       "audio": false,
       "variants": [
@@ -7073,7 +7073,7 @@
       ]
     },
     {
-      "id": "server-bs-gan240",
+      "id": "bs-gan240",
       "model": "BS-GaN240",
       "audio": false,
       "variants": [
@@ -7116,7 +7116,7 @@
       ]
     },
     {
-      "id": "server-bs-ha007-a1",
+      "id": "bs-ha007-a1",
       "model": "BS-HA007 A1",
       "audio": false,
       "variants": [
@@ -7159,7 +7159,7 @@
       ]
     },
     {
-      "id": "server-bs-ha007-j1",
+      "id": "bs-ha007-j1",
       "model": "BS-HA007 J1",
       "audio": false,
       "variants": [
@@ -7202,7 +7202,7 @@
       ]
     },
     {
-      "id": "server-bs-py001",
+      "id": "bs-py001",
       "model": "BS-PY001",
       "audio": false,
       "variants": [
@@ -7245,7 +7245,7 @@
       ]
     },
     {
-      "id": "server-bs-ts015",
+      "id": "bs-ts015",
       "model": "BS-TS015",
       "audio": false,
       "variants": [
@@ -7276,7 +7276,7 @@
       ]
     },
     {
-      "id": "server-bs-xm002",
+      "id": "bs-xm002",
       "model": "BS-XM002",
       "audio": false,
       "variants": [
@@ -7295,7 +7295,7 @@
       ]
     },
     {
-      "id": "server-bs-xm003",
+      "id": "bs-xm003",
       "model": "BS-XM003",
       "audio": false,
       "variants": [
@@ -7314,7 +7314,7 @@
       ]
     },
     {
-      "id": "server-bs-xm005",
+      "id": "bs-xm005",
       "model": "BS-XM005",
       "audio": false,
       "variants": [
@@ -7333,7 +7333,7 @@
       ]
     },
     {
-      "id": "server-bs-xm006",
+      "id": "bs-xm006",
       "model": "BS-XM006",
       "audio": false,
       "variants": [
@@ -7352,7 +7352,7 @@
       ]
     },
     {
-      "id": "server-bs-xy001",
+      "id": "bs-xy001",
       "model": "BS-XY001",
       "audio": false,
       "variants": [
@@ -7371,7 +7371,7 @@
       ]
     },
     {
-      "id": "server-bs-xy002",
+      "id": "bs-xy002",
       "model": "BS-XY002",
       "audio": false,
       "variants": [
@@ -7395,7 +7395,7 @@
       ]
     },
     {
-      "id": "server-bs-xy003",
+      "id": "bs-xy003",
       "model": "BS-XY003",
       "audio": false,
       "variants": [
@@ -7419,7 +7419,7 @@
       ]
     },
     {
-      "id": "server-c-mic-cm10",
+      "id": "c-mic-cm10",
       "model": "C-Mic CM10",
       "audio": true,
       "variants": [
@@ -7462,7 +7462,7 @@
       ]
     },
     {
-      "id": "server-eli-10i-fit",
+      "id": "eli-10i-fit",
       "model": "Eli 10i Fit",
       "audio": true,
       "variants": [
@@ -7493,7 +7493,7 @@
       ]
     },
     {
-      "id": "server-eli-1i-fit",
+      "id": "eli-1i-fit",
       "model": "Eli 1i Fit",
       "audio": true,
       "variants": [
@@ -7512,7 +7512,7 @@
       ]
     },
     {
-      "id": "server-eli-fit",
+      "id": "eli-fit",
       "model": "Eli Fit",
       "audio": true,
       "variants": [
@@ -7555,7 +7555,7 @@
       ]
     },
     {
-      "id": "server-eli-sport-1",
+      "id": "eli-sport-1",
       "model": "Eli Sport 1",
       "audio": true,
       "variants": [
@@ -7598,7 +7598,7 @@
       ]
     },
     {
-      "id": "server-ipbm82-26",
+      "id": "ipbm82-26",
       "model": "IPBM82-26",
       "audio": false,
       "variants": [
@@ -7641,7 +7641,7 @@
       ]
     },
     {
-      "id": "server-ipbm82-26s",
+      "id": "ipbm82-26s",
       "model": "IPBM82-26S",
       "audio": false,
       "variants": [
@@ -7684,7 +7684,7 @@
       ]
     },
     {
-      "id": "server-m2s-ultra",
+      "id": "m2s-ultra",
       "model": "M2s Ultra",
       "audio": true,
       "variants": [
@@ -7727,7 +7727,7 @@
       ]
     },
     {
-      "id": "server-vd1-pro-4k",
+      "id": "vd1-pro-4k",
       "model": "VD1 Pro 4K",
       "audio": false,
       "variants": [
@@ -7768,7 +7768,7 @@
       ]
     },
     {
-      "id": "server-vd1-pro-4ks",
+      "id": "vd1-pro-4ks",
       "model": "VD1 Pro 4Ks",
       "audio": false,
       "variants": [

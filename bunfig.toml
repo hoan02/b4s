@@ -1,0 +1,3 @@
+[run]
+# Run tool shebangs (Vite, TypeScript and Tauri CLI) with Bun as well.
+bun = true

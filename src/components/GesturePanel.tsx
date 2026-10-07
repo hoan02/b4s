@@ -1,3 +1,4 @@
+import { requestToggle } from "../lib/confirmedToggle";
 import { Component, For, Show } from "solid-js";
 import { t } from "../lib/i18n";
 import OperationStatus from "./OperationStatus";
@@ -59,7 +60,7 @@ const GesturePanel: Component<Props> = (props) => {
           <div class="list-text">
             <span class="list-title">{t("gesture.inEar")}</span>
             <span class="list-sub">
-              {props.inEarOn === null ? t("control.unknown") : t("gesture.inEarHint")}
+              {t("gesture.inEarHint")}
             </span>
           </div>
           <label class="toggle sm">
@@ -69,7 +70,7 @@ const GesturePanel: Component<Props> = (props) => {
               aria-checked={props.inEarOn === null ? "mixed" : props.inEarOn}
               checked={props.inEarOn === true}
               aria-label={t("gesture.inEar")}
-              onChange={(e) => props.onInEar((e.currentTarget as HTMLInputElement).checked)}
+              onChange={(e) => requestToggle(e.currentTarget, props.inEarOn === true, props.onInEar)}
             />
             <span class="slider" />
           </label>
@@ -96,7 +97,7 @@ const GesturePanel: Component<Props> = (props) => {
                     )
                   }
                 >
-                  <option value="">{t("control.unknown")}</option>
+                  <option value="">—</option>
                   <For each={layout.functions}>
                     {(functionId) => (
                       <option value={String(functionId)}>{t(gestureFunctionLabelKey(functionId))}</option>
@@ -118,7 +119,7 @@ const GesturePanel: Component<Props> = (props) => {
                       )
                     }
                   >
-                    <option value="">{t("control.unknown")}</option>
+                    <option value="">—</option>
                     <For each={layout.functions}>
                       {(functionId) => (
                         <option value={String(functionId)}>{t(gestureFunctionLabelKey(functionId))}</option>

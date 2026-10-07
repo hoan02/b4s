@@ -15,8 +15,6 @@ interface Dependencies {
     maxCustomLevel: number;
     environments: number[];
   } | undefined>;
-  clearError(): void;
-  setError(error: string | null): void;
   refreshLink(): Promise<void>;
   notify(message: string, kind: "error", title: string): void;
 }
@@ -35,7 +33,6 @@ export function createListeningController(dependencies: Dependencies) {
     pending: setPending,
     error: (value) => {
       setError(value);
-      dependencies.setError(value);
     },
     formatError,
   });
@@ -50,7 +47,6 @@ export function createListeningController(dependencies: Dependencies) {
       level: number;
     }> = {},
   ) => {
-    dependencies.clearError();
     setError(null);
     await operation.run(
       () => setListeningState({
@@ -116,7 +112,6 @@ export function createListeningController(dependencies: Dependencies) {
     },
     noiseProfile: () => profileNoise(dependencies.noiseCapabilities()),
     async setMode(mode: AncMode) {
-      dependencies.clearError();
       setError(null);
       await apply(mode, 0xff);
     },

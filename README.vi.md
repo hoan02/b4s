@@ -11,6 +11,14 @@ trên Windows, macOS và Linux. Ứng dụng được xây dựng bằng SolidJS
 
 Ảnh chụp màn hình hiện giao diện tiếng Việt.
 
+## Điểm mới trong 0.1.3
+
+Catalog có 124 profile tai nghe, gồm 122 model chỉ nhận diện. Tên và ảnh sản phẩm dùng metadata công khai; ảnh nhỏ và ảnh lớn được lưu cache trên máy (64 MiB) để dùng lại khi offline. ID model được thống nhất và dữ liệu thiết bị/EQ đã lưu được chuyển đổi tự động.
+
+Người dùng 0.1.1/0.1.2 cần cài thủ công 0.1.3 một lần vì khóa ký updater đã đổi.
+
+[Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
+
 ## Hỗ trợ thiết bị
 
 BP1 Pro có profile model đã được rà soát. BP1 Ultra hỗ trợ kết nối BLE/789C và
@@ -50,12 +58,12 @@ Nếu không thể quét hoặc kết nối, xem [hướng dẫn xử lý sự c
 
 ## Phát triển
 
-Cần Node.js 20, Rust stable, các thành phần cần thiết của Tauri trên hệ điều hành
+Cần Bun 1.4.0, Rust stable, các thành phần cần thiết của Tauri trên hệ điều hành
 và tai nghe Bluetooth để kiểm thử thiết bị. Cài dependencies rồi chạy ứng dụng:
 
 ```sh
-npm ci
-npm run tauri:dev
+bun install --frozen-lockfile
+bun run tauri:dev
 ```
 
 Trước khi gửi thay đổi, hãy chạy các bước trong [hướng dẫn đóng góp](CONTRIBUTING.md).

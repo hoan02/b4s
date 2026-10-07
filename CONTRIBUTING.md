@@ -6,17 +6,17 @@ are welcome. Start with [the architecture](docs/architecture.md) and
 
 ## Local development
 
-Install Node.js (CI uses 20), Rust stable and the platform prerequisites for
-Tauri 2. Run `npm ci`, then `npm run tauri:dev`. Bluetooth hardware is only
+Install Bun 1.4.0, Rust stable and the platform prerequisites for
+Tauri 2. Run `bun install --frozen-lockfile`, then `bun run tauri:dev`. Bluetooth hardware is only
 needed for integration testing; Rust frame and catalog tests run without it.
 
 Before submitting a pull request, run:
 
 ```sh
-npx tsc --noEmit
-npm run build
+bun x --bun tsc --noEmit
+bun run build
 cargo check --manifest-path src-tauri/Cargo.toml
-cargo test --manifest-path src-tauri/Cargo.toml --lib
+cargo test --manifest-path src-tauri/Cargo.toml --lib -- --test-threads=1
 ```
 
 ## Choose the right contribution
@@ -27,6 +27,11 @@ cargo test --manifest-path src-tauri/Cargo.toml --lib
 - UI changes: include screenshots and check supported and unsupported features.
 
 Keep changes focused. Do not duplicate a screen or copy an adapter for each model.
+Run `bun run test:models` for model contracts, saved-ID migration and image cache
+requests. Model IDs and profile filenames follow the
+[identity and presentation contract](docs/model-identity-presentation.md).
+Some authorization tests share experimental-mode state; run Rust tests serially
+until that test state is isolated.
 Use two-space indentation in TypeScript and standard rustfmt formatting in Rust.
 Avoid repository-wide formatting in an unrelated change.
 
@@ -45,7 +50,7 @@ commit APKs, decompiled proprietary source, firmware, secrets or generated files
 ## Translations
 
 Follow the [translation guide](docs/translations.md) when adding or changing UI
-text. Run `npm run check:i18n` and `npm run build`; include native-speaker review
+text. Run `bun run check:i18n` and `bun run build`; include native-speaker review
 and a screenshot of the changed view when possible.
 
 ## Pull requests

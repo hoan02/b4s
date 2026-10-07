@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn public_metadata_model_is_scan_only_without_a_protocol_profile() {
+    fn promoted_model_is_scan_only_with_unresolved_transport() {
         let resolved = DeviceRegistry::resolve(identity("Baseus Bowie MA10"));
 
         assert_eq!(resolved.source, ResolutionSource::CatalogName);
@@ -112,7 +112,10 @@ mod tests {
             SupportLevel::ScanOnly
         );
         assert_eq!(resolved.profile.protocol, ProtocolFamily::Unknown);
-        assert!(resolved.profile.connection.is_none());
+        assert_eq!(
+            resolved.profile.connection.as_ref().unwrap().transport,
+            crate::catalog::ControlTransport::Unresolved
+        );
     }
 
     #[test]

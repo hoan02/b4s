@@ -26,10 +26,13 @@ import {
   getLinkHealth,
   emptyLink,
   listModelProfiles,
+  listModels,
 } from "./lib/ble";
 import { queryBattery } from "./lib/device";
 import { readDesktopPreferences, writeAutoReconnect, writeExperimentalMode } from "./lib/desktopPreferences";
 import { migrateModelIdsOnce } from "./lib/modelIdMigration";
+import { readRememberedDevice } from "./lib/reconnect";
+import { loadDeviceImage, registerDeviceImages } from "./lib/deviceImages";
 import { getAppInfo, setExperimentalMode } from "./lib/app";
 import {
   applyTheme,
@@ -82,7 +85,6 @@ const App: Component = () => {
   const [restorePrompt, setRestorePrompt] = createSignal(false);
   const [gestureState, setGestureState] = createSignal<Array<{ layout: number; left: number; right: number }>>([]);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
-  const [controlError, setControlError] = createSignal<string | null>(null);
   let latestLinkSession = -1;
   let latestLinkRevision = -1;
   const noiseCaps = () => device()?.deviceProfile.noise;
@@ -184,8 +186,6 @@ const App: Component = () => {
     session,
     refreshSnapshot,
     noiseCapabilities: noiseCaps,
-    clearError: () => setControlError(null),
-    setError: setControlError,
     refreshLink: async () => {
       applyLink(await getLinkHealth());
     },
@@ -209,7 +209,6 @@ const App: Component = () => {
     isDemo: () => link().mock,
     setGameMode: setGameOn,
     formatError,
-    notifyChanged: (enabled) => notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info"),
     notifyError: (message) => notify(message, "error"),
   });
   const spatialController = createSpatialController({
@@ -281,6 +280,14 @@ const App: Component = () => {
   };
 
   onMount(async () => {
+    const remembered = readRememberedDevice();
+    void listModels().then(models => {
+      registerDeviceImages(models);
+      if (remembered?.modelId) {
+        const image = models.find(model => model.id === remembered.modelId)?.imageUrl;
+        if (image) void loadDeviceImage(image);
+      }
+    }).catch(() => { /* Image warmup is optional. */ });
     try {
       await setExperimentalMode(savedDesktopPreferences.experimentalMode);
       setExperimentalModeReady(true);
@@ -294,7 +301,7 @@ const App: Component = () => {
     applyTheme(storedTheme);
     setTheme(storedTheme);
 
-    try { setModelProfiles(await listModelProfiles()); } catch { /* unavailable outside Tauri */ }
+    try { setModelProfiles(await listModelProfiles()); } catch (error) { notify(formatError(error), "error"); }
     try {
       const info = await getAppInfo();
       setAppVersion(info.version);
@@ -331,7 +338,6 @@ const App: Component = () => {
           setConnected(state.connected);
           setDevice(state.device);
           if (!state.connected) {
-            setControlError(null);
             setView("home");
             setBattery({ left: null, right: null, case: null });
             stopLinkPoll();
@@ -362,7 +368,6 @@ const App: Component = () => {
     setConnected(true);
     findController.reset();
     gestures.reset();
-    setControlError(null);
     setView("home");
     startLinkPoll();
     notify(t("toast.connected", { name: dev.modelName || dev.name }), "success");
@@ -391,7 +396,6 @@ const App: Component = () => {
     setDevice(null);
     findController.reset();
     gestures.reset();
-    setControlError(null);
     setView("home");
     stopLinkPoll();
   };
@@ -493,7 +497,7 @@ const App: Component = () => {
           <section class="section section-scroll">
             <MorePanel
               bassSupported={device()?.deviceProfile.capabilities.bassBoost ?? false}
-              bassMaxLevel={device()?.deviceProfile.protocol === "bp1Ultra" ? 5 : 1}
+              bassMaxLevel={device()?.deviceProfile.sound?.maxBassLevel ?? 0}
               ldacSupported={device()?.deviceProfile.capabilities.ldac ?? false}
               pending={sound.pending()}
               error={sound.error()}
@@ -550,11 +554,6 @@ const App: Component = () => {
             }
           >
             <section class="section section-scroll">
-              <Show when={controlError()}>
-                <div class="control-error" role="alert" aria-live="assertive" style={{ "margin-bottom": "12px" }}>
-                  {controlError()}
-                </div>
-              </Show>
               <HomePanel
                 name={device()?.modelName || device()?.name || "Device"}
                 modelId={device()?.modelId}

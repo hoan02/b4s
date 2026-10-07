@@ -33,7 +33,7 @@ service, so connecting to the wrong entry fails.
   a **Control** tag and sorts it first. Try that entry first.
 - If both entries look identical, try the other one. The app shows a tip when two
   entries share a name.
-- Run `npm run tauri:dev` to see the Rust log in the terminal. On each connect
+- Run `bun run tauri:dev` to see the Rust log in the terminal. On each connect
   attempt it prints the selected entry name/address/advertised services and, after
   service discovery, the exact services and characteristics that entry exposes.
   A connection to the audio entry typically reports "Reviewed control service is
@@ -50,6 +50,21 @@ both entry names before reporting.
 
 ## Startup and the system tray
 
+The window-state plugin restores only the main window's position. B4S keeps its
+fixed window size and opens visibly rather than restoring a hidden/minimized state.
+
+Desktop preferences, remembered earbuds, custom EQ presets, theme and locale are
+stored in `settings.json` in Tauri's app data directory. Startup waits for this
+store before loading preference consumers and rendering the interface. Existing
+`localStorage` settings are imported on the first launch; the old entries remain
+as a backup and are not imported again when a native snapshot already exists.
+Browser preview continues to use `localStorage`.
+
+A temporary `b4s.store.pending.v1` entry is retained in `localStorage` until native
+saving completes. If saving fails, the next launch replays this recovery journal.
+Unreadable or corrupt configuration files stop startup with an error instead of
+being silently overwritten. Back up the original file before attempting recovery.
+
 **Start B4S at sign-in** and **Reconnect automatically** are separate settings;
 both are off by default. Closing the main window hides the app to the system
 tray when tray setup is available. Choose **Quit B4S** in the tray menu to exit
@@ -57,6 +72,15 @@ and let the app make bounded best-effort cleanup of scanning, find-earbuds, and
 the BLE connection.
 
 ## Reporting a problem
+
+Rust logs and frontend console messages are written by `tauri-plugin-log` to
+the platform's Tauri app log directory, with the file prefix `b4s`. Each file
+rotates at approximately 5 MB and up to three rotated files are retained.
+Unhandled frontend errors and promise rejections are recorded too. Browser
+preview keeps ordinary console output without native logging.
+
+Launching B4S again restores and focuses the existing window, including when
+it was hidden in the tray or minimized. It does not start another BLE runtime.
 
 B4S does not currently provide a diagnostic bundle or upload diagnostic data.
 When reporting an issue, include only the details needed to reproduce it:

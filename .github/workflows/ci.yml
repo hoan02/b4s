@@ -21,7 +21,7 @@ jobs:
         include:
           - platform: windows-latest
             args: ""
-          - platform: ubuntu-22.04
+          - platform: ubuntu-24.04
             args: ""
           # macOS is slower/costlier — enable when needed
           # - platform: macos-latest
@@ -33,17 +33,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
+          bun-version: 1.4.0
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
       - name: Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -52,28 +51,41 @@ jobs:
             pkg-config build-essential curl wget file
 
       - name: Install frontend deps
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Typecheck frontend
-        run: npx tsc --noEmit
+        run: bun x --bun tsc --noEmit
 
       - name: Validate translation resources
-        run: npm run check:i18n
+        run: bun run check:i18n
 
       - name: Build frontend
-        run: npm run build
+        run: bun run build
 
       - name: Frontend session controller tests
-        run: npm run test:session
+        run: bun run test:session
+
+      - name: Model contract tests
+        run: bun run test:models
+
+      - name: Desktop logging tests
+        run: bun run test:logging
+
+      - name: Native settings migration tests
+        run: bun run test:storage
 
       - name: Desktop preference migration tests
-        run: npm run test:preferences
+        run: bun run test:preferences
 
       - name: Bounded reconnect scan tests
-        run: npm run test:reconnect
+        run: bun run test:reconnect
+
 
       - name: Public catalog parser tests
         run: python scripts/test-sync-baseus-catalog.py
+
+      - name: Model profile extraction tests
+        run: python scripts/test-extract-model-profile-drafts.py
 
       - name: Verify generated support matrix is current
         run: |
@@ -86,7 +98,7 @@ jobs:
 
       - name: Rust tests (no Bluetooth hardware required)
         working-directory: src-tauri
-        run: cargo test --lib
+        run: cargo test --lib -- --test-threads=1
 
       # Full Tauri bundle without updater signing (CI only)
       - name: Tauri build (no updater artifacts)
@@ -94,4 +106,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tauriScript: bun run tauri
           args: ${{ matrix.args }} --config src-tauri/tauri.ci.conf.json

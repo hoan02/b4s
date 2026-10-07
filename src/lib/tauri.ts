@@ -3,22 +3,12 @@
  * (e.g. plain `vite` / browser preview).
  */
 
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke, isTauri as hasTauri } from "@tauri-apps/api/core";
 import { listen as tauriListen, type UnlistenFn, type EventCallback, type EventName } from "@tauri-apps/api/event";
-
-declare global {
-  interface Window {
-    __TAURI_INTERNALS__?: {
-      transformCallback: (callback: unknown, once?: boolean) => number;
-      invoke: (...args: unknown[]) => Promise<unknown>;
-      [key: string]: unknown;
-    };
-  }
-}
 
 /** True when running inside a Tauri webview with IPC available. */
 export function isTauri(): boolean {
-  return typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
+  return typeof window !== "undefined" && hasTauri();
 }
 
 const noopUnlisten: UnlistenFn = () => {};

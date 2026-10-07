@@ -1,17 +1,17 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * One-shot release helper for B4S.
  *
  * Bumps version → commit → tag vX.Y.Z → push (triggers GitHub Actions "Release").
  *
  * Usage:
- *   npm run release                 # patch (0.1.0 → 0.1.1)
- *   npm run release -- minor
- *   npm run release -- major
- *   npm run release -- 0.2.0
- *   npm run release -- patch --dry-run
- *   npm run release -- --no-bump    # tag current package.json version only
- *   npm run release -- patch --no-push
+ *   bun run release                 # patch (0.1.0 → 0.1.1)
+ *   bun run release minor
+ *   bun run release major
+ *   bun run release 0.2.0
+ *   bun run release patch --dry-run
+ *   bun run release --no-bump    # tag current package.json version only
+ *   bun run release patch --no-push
  *
  * Flags:
  *   --dry-run   Print steps, do not write / commit / push
@@ -30,7 +30,6 @@ const bumpScript = path.join(root, "scripts", "bump-version.mjs");
 
 const VERSION_FILES = [
   "package.json",
-  "package-lock.json",
   "src-tauri/tauri.conf.json",
   "src-tauri/Cargo.toml",
   "src-tauri/Cargo.lock",
@@ -58,7 +57,7 @@ if (positionals.length > 1) {
 function usage() {
   return `
 Usage:
-  npm run release [-- patch|minor|major|X.Y.Z] [--dry-run] [--no-bump] [--no-push] [--force]
+  bun run release [patch|minor|major|X.Y.Z] [--dry-run] [--no-bump] [--no-push] [--force]
 `.trim();
 }
 
@@ -199,12 +198,12 @@ if (!noBump) {
       else if (bumpKind === "minor") nextVersion = `${a}.${b + 1}.0`;
       else nextVersion = `${a}.${b}.${c + 1}`;
       log(`  [dry-run] ${prevVersion} → ${nextVersion}`);
-      log(`  [dry-run] node scripts/bump-version.mjs ${bumpKind}`);
+      log(`  [dry-run] bun scripts/bump-version.mjs ${bumpKind}`);
     } catch {
-      log(`  [dry-run] node scripts/bump-version.mjs ${bumpKind}`);
+      log(`  [dry-run] bun scripts/bump-version.mjs ${bumpKind}`);
     }
   } else {
-    run("node", [bumpScript, bumpKind], { stdio: "inherit", mutate: true });
+    run(process.execPath, [bumpScript, bumpKind], { stdio: "inherit", mutate: true });
     nextVersion = readPkgVersion();
   }
 } else {
