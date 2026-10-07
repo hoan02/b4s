@@ -67,6 +67,13 @@ Do not replace the existing 0.1.2 release; publish a new version for migration.
 
 ## Publish (recommended)
 
+`main` is protected: prepare the version bump and changes on a branch, open a
+pull request, and wait for the required Windows/Ubuntu checks before merging.
+After merging, update the local `main`, tag the merge commit and push that tag.
+Do not tag an unmerged feature commit or bypass branch protection. The helper
+below is suitable for a clean, already merged version with `--no-bump`; a direct
+version-bump push to protected `main` will be rejected.
+
 Working tree must be clean. Script bumps version files, commits, tags `vX.Y.Z`, and pushes — that triggers the **Release** workflow.
 
 ```bash
