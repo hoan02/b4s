@@ -1,3 +1,4 @@
+import { storage } from "./storage";
 /** One-time data migration only; never used to resolve live devices. */
 export const LEGACY_MODEL_ID_MAP = {
   "bass-bc1": "server-bass-bc1-ec048a8e",
@@ -119,9 +120,9 @@ const CUSTOM_EQ_PREFIX = "b4s.eq.custom.";
 
 export function migrateModelIdsOnce(): void {
   try {
-    if (localStorage.getItem(MIGRATION_KEY) === "complete") return;
+    if (storage.getItem(MIGRATION_KEY) === "complete") return;
 
-    const rememberedRaw = localStorage.getItem("b4s.last-device");
+    const rememberedRaw = storage.getItem("b4s.last-device");
     if (rememberedRaw) {
       try {
         const remembered: unknown = JSON.parse(rememberedRaw);
@@ -129,7 +130,7 @@ export function migrateModelIdsOnce(): void {
           "modelId" in remembered && typeof remembered.modelId === "string") {
           const modelId = LEGACY_MODEL_ID_MAP[remembered.modelId as keyof typeof LEGACY_MODEL_ID_MAP];
           if (modelId && modelId !== remembered.modelId) {
-            localStorage.setItem("b4s.last-device", JSON.stringify({ ...remembered, modelId }));
+            storage.setItem("b4s.last-device", JSON.stringify({ ...remembered, modelId }));
           }
         }
       } catch {
@@ -137,7 +138,7 @@ export function migrateModelIdsOnce(): void {
       }
     }
 
-    const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+    const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index))
       .filter((key): key is string => key !== null && key.startsWith(CUSTOM_EQ_PREFIX));
     for (const key of keys) {
       const [address, oldModelId, ...layout] = key.slice(CUSTOM_EQ_PREFIX.length).split(".");
@@ -145,13 +146,13 @@ export function migrateModelIdsOnce(): void {
       const modelId = LEGACY_MODEL_ID_MAP[oldModelId as keyof typeof LEGACY_MODEL_ID_MAP];
       if (!modelId || modelId === oldModelId) continue;
       const target = `${CUSTOM_EQ_PREFIX}${address}.${modelId}.${layout.join(".")}`;
-      const raw = localStorage.getItem(key);
+      const raw = storage.getItem(key);
       if (raw === null) continue;
-      if (localStorage.getItem(target) === null) localStorage.setItem(target, raw);
-      localStorage.removeItem(key);
+      if (storage.getItem(target) === null) storage.setItem(target, raw);
+      storage.removeItem(key);
     }
 
-    localStorage.setItem(MIGRATION_KEY, "complete");
+    storage.setItem(MIGRATION_KEY, "complete");
   } catch {
     // Storage denial leaves the migration retryable on the next launch.
   }

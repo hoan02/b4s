@@ -91,6 +91,10 @@
       background: white;
     }
   }
+  input:disabled + .slider {
+    opacity: 0.6;
+    cursor: default;
+  }
 }
 
 // Device header battery strip

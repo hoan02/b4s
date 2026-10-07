@@ -42,12 +42,12 @@ del firmware.
 
 Si no puedes buscar o conectar, consulta la [guía de solución de problemas de escritorio](docs/desktop-troubleshooting.md).
 
-Necesitas Node.js 20, Rust estable, los requisitos de Tauri para tu plataforma y
+Necesitas Bun 1.4.0, Rust estable, los requisitos de Tauri para tu plataforma y
 auriculares Bluetooth para probar el dispositivo:
 
 ```sh
-npm ci
-npm run tauri:dev
+bun install --frozen-lockfile
+bun run tauri:dev
 ```
 
 La aplicación se inicia en inglés e incluye vietnamita, chino simplificado,

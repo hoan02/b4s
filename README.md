@@ -49,12 +49,12 @@ when the profile does not provide the required capability.
 
 ## Development
 
-Requirements: Node.js 20, Rust stable, the Tauri platform prerequisites, and
+Requirements: Bun 1.4.0, Rust stable, the Tauri platform prerequisites, and
 Bluetooth hardware for device testing. Install dependencies and start the app:
 
 ```sh
-npm ci
-npm run tauri:dev
+bun install --frozen-lockfile
+bun run tauri:dev
 ```
 
 Before submitting changes, run the checks in [Contributing](CONTRIBUTING.md).

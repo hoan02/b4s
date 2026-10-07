@@ -18,49 +18,75 @@ Pushing code to `main` alone does **not** create installers or a Release.
 | File | Field |
 |------|--------|
 | `package.json` | `version` |
-| `package-lock.json` | root package `version` fields |
+| `bun.lock` | Dependency lockfile (no app version field) |
 | `src-tauri/tauri.conf.json` | `version` |
 | `src-tauri/Cargo.toml` | `version` |
 | `src-tauri/Cargo.lock` | `b4s` package version |
 
 ```bash
-npm run version:bump          # patch
-npm run version:bump -- minor
-npm run version:bump -- major
-npm run version:bump -- 1.4.0
+bun run version:bump          # patch
+bun run version:bump minor
+bun run version:bump major
+bun run version:bump 1.4.0
 ```
 
 ## One-time: signing key
 
-1. Generate (if needed): `npx tauri signer generate -w .tauri/b4s.key`  
+1. Generate (if needed): `bun x --bun tauri signer generate -w .tauri/b4s.key`
 2. GitHub → **Settings → Secrets → Actions**  
 3. `TAURI_SIGNING_PRIVATE_KEY` = contents of `.tauri/b4s.key`  
 4. Put public key in `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`  
 
 `.tauri/` private keys are **gitignored**.
 
+### Updater key recovery (2026-10-07)
+
+The updater key was replaced after the original key was lost. The current
+private key is stored locally at `.tauri/updater-2026-10-07.key`, with its public
+key in the adjacent `.key.pub` file and `plugins.updater.pubkey`. The matching
+GitHub Actions secrets have been configured with an empty key password.
+Back up the private key in a secure password manager or encrypted offline storage;
+GitHub Secrets cannot be used to retrieve it later. Do not generate a new key
+for each release or commit the private key.
+
+Release CI runs `bun scripts/check-updater-key.mjs` before building to reject
+signatures whose key ID differs from the configured public key.
+For local builds in PowerShell:
+
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content .tauri/updater-2026-10-07.key -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
+bun scripts/check-updater-key.mjs
+bun run tauri:build
+```
+
+Versions 0.1.1 and 0.1.2 contain the previous public key. Users must download
+and install the first release containing the new public key manually once.
+Subsequent releases must keep this same key pair for automatic updates to work.
+Do not replace the existing 0.1.2 release; publish a new version for migration.
+
 ## Publish (recommended)
 
 Working tree must be clean. Script bumps version files, commits, tags `vX.Y.Z`, and pushes — that triggers the **Release** workflow.
 
 ```bash
-npm run release                 # patch  0.1.0 → 0.1.1
-npm run release -- minor        #        0.1.0 → 0.2.0
-npm run release -- major        #        0.1.0 → 1.0.0
-npm run release -- 0.2.0        # exact version
+bun run release                 # patch  0.1.0 → 0.1.1
+bun run release minor        #        0.1.0 → 0.2.0
+bun run release major        #        0.1.0 → 1.0.0
+bun run release 0.2.0        # exact version
 
-npm run release -- patch --dry-run   # preview only
-npm run release -- --no-bump         # tag current version, no bump
-npm run release -- patch --no-push   # commit + tag local only
+bun run release patch --dry-run   # preview only
+bun run release --no-bump         # tag current version, no bump
+bun run release patch --no-push   # commit + tag local only
 ```
 
 ### Manual (equivalent)
 
 ```bash
-npm run version:bump
+bun run version:bump
 git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
-git commit -m "chore: release v$(node -p "require('./package.json').version")"
-git tag "v$(node -p "require('./package.json').version")"
+git commit -m "chore: release v$(bun -p "require('./package.json').version")"
+git tag "v$(bun -p "require('./package.json').version")"
 git push origin main --tags
 ```
 

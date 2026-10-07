@@ -204,6 +204,17 @@
 
 .ble-controls.bluetooth-off { display: none; }
 
+.audio-quick-connect .device-action {
+  min-width: 96px;
+  text-align: right;
+}
+
+.audio-quick-connect .device-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ble-btn {
   @include button-base;
   @include focus-ring;

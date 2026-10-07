@@ -1,3 +1,4 @@
+import { storage } from "./storage";
 export interface DesktopPreferences {
   version: 2;
   autoReconnect: boolean;
@@ -10,7 +11,7 @@ const LEGACY_KEY = "b4s.desktop.preferences.v1";
 const DEFAULT_PREFERENCES: DesktopPreferences = {
   version: 2,
   autoReconnect: false,
-  experimentalMode: false,
+  experimentalMode: true,
 };
 
 function decodeCurrentPreferences(raw: string): DesktopPreferences | null {
@@ -45,7 +46,7 @@ function migrateLegacyPreferences(raw: string): DesktopPreferences | null {
       return {
         version: 2,
         autoReconnect: value.autoReconnect,
-        experimentalMode: false,
+        experimentalMode: DEFAULT_PREFERENCES.experimentalMode,
       };
     }
   } catch {
@@ -56,23 +57,23 @@ function migrateLegacyPreferences(raw: string): DesktopPreferences | null {
 
 export function readDesktopPreferences(): DesktopPreferences {
   try {
-    const current = localStorage.getItem(KEY);
+    const current = storage.getItem(KEY);
     if (current !== null) {
       return decodeCurrentPreferences(current) ?? DEFAULT_PREFERENCES;
     }
 
-    const legacy = localStorage.getItem(LEGACY_KEY);
+    const legacy = storage.getItem(LEGACY_KEY);
     if (legacy === null) return DEFAULT_PREFERENCES;
 
     const migrated = migrateLegacyPreferences(legacy);
     if (!migrated) {
-      try { localStorage.removeItem(LEGACY_KEY); } catch { /* Storage recovery is best effort. */ }
+      try { storage.removeItem(LEGACY_KEY); } catch { /* Storage recovery is best effort. */ }
       return DEFAULT_PREFERENCES;
     }
 
     try {
-      localStorage.setItem(KEY, JSON.stringify(migrated));
-      localStorage.removeItem(LEGACY_KEY);
+      storage.setItem(KEY, JSON.stringify(migrated));
+      storage.removeItem(LEGACY_KEY);
     } catch {
       // Keep the migrated in-memory settings if storage is temporarily read-only.
     }
@@ -85,11 +86,11 @@ export function readDesktopPreferences(): DesktopPreferences {
 
 function persistPreferences(preferences: DesktopPreferences): boolean {
   try {
-    localStorage.setItem(KEY, JSON.stringify(preferences));
+    storage.setItem(KEY, JSON.stringify(preferences));
   } catch {
     return false;
   }
-  try { localStorage.removeItem(LEGACY_KEY); } catch { /* Legacy cleanup is best effort. */ }
+  try { storage.removeItem(LEGACY_KEY); } catch { /* Legacy cleanup is best effort. */ }
   return true;
 }
 

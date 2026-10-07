@@ -1,5 +1,20 @@
 use super::*;
 
+fn listening_state_parameter(
+    family: protocol::ProtocolFamily,
+    command: ListeningCommand,
+    wire: u8,
+) -> u8 {
+    if family == protocol::ProtocolFamily::Bp1Ultra {
+        match command {
+            ListeningCommand::TransparencyFull => return 0xFF,
+            ListeningCommand::TransparencyVoice => return 1,
+            _ => {}
+        }
+    }
+    wire
+}
+
 pub async fn send_listening(command: ListeningCommand) -> Result<(), CommandError> {
     let profile = {
         let state = BLE.lock().await;
@@ -19,10 +34,11 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), CommandErro
         }
         ListeningCommand::CustomLevel(_) | ListeningCommand::AdaptiveEnvironment(_) => AncMode::Anc,
     };
-    let parameter = data
+    let wire_parameter = data
         .get(3)
         .copied()
         .ok_or("Encoded listening command is incomplete")?;
+    let parameter = listening_state_parameter(profile.protocol, command, wire_parameter);
     log::info!("TX ANC {:?} → {:02X?}", mode, data);
     if BLE.lock().await.mock {
         BLE.lock().await.last_anc = Some(mode);
@@ -440,3 +456,47 @@ async fn observe_mock_state(event: DeviceEvent, opcode: u8) -> Result<(), Comman
 // ---------------------------------------------------------------------------
 // Disconnect
 // ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod listening_tests {
+    use super::*;
+
+    #[test]
+    fn ultra_command_expectations_match_normalized_transparency_readbacks() {
+        for (command, selector) in [
+            (ListeningCommand::TransparencyFull, 1),
+            (ListeningCommand::TransparencyVoice, 2),
+        ] {
+            let frame = protocol::Frame::decode_notify(&[0xAA, 0x33, 2, 102, selector, 5]).unwrap();
+            let event =
+                protocol::decode_frame(protocol::ProtocolFamily::Bp1Ultra, &frame, None).unwrap();
+            assert_eq!(
+                event,
+                DeviceEvent::Anc {
+                    mode: AncMode::Transparency,
+                    parameter: listening_state_parameter(
+                        protocol::ProtocolFamily::Bp1Ultra,
+                        command,
+                        selector
+                    ),
+                }
+            );
+        }
+        assert_eq!(
+            listening_state_parameter(
+                protocol::ProtocolFamily::Bp1Pro,
+                ListeningCommand::TransparencyVoice,
+                1
+            ),
+            1
+        );
+        assert_eq!(
+            listening_state_parameter(
+                protocol::ProtocolFamily::Bp1Pro,
+                ListeningCommand::TransparencyFull,
+                255
+            ),
+            255
+        );
+    }
+}

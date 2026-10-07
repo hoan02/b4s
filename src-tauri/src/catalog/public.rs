@@ -30,7 +30,7 @@ pub struct PublicColor {
     pub code: i32,
 }
 
-static SNAPSHOT: once_cell::sync::Lazy<Snapshot> = once_cell::sync::Lazy::new(|| {
+static SNAPSHOT: std::sync::LazyLock<Snapshot> = std::sync::LazyLock::new(|| {
     let snapshot: Snapshot = serde_json::from_str(include_str!("../../catalog/baseus-public.json"))
         .expect("valid public Baseus catalog");
     assert_eq!(

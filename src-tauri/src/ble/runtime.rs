@@ -1,8 +1,8 @@
 //! Central owner for mutable BLE runtime state.
 
 use super::*;
-use once_cell::sync::Lazy;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use tokio::sync::Mutex;
 
 pub(super) struct SessionRuntime {
@@ -247,5 +247,5 @@ mod tests {
     }
 }
 
-pub(super) static BLE: Lazy<Arc<Mutex<BleInner>>> =
-    Lazy::new(|| Arc::new(Mutex::new(BleInner::new())));
+pub(super) static BLE: LazyLock<Arc<Mutex<BleInner>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(BleInner::new())));

@@ -50,12 +50,12 @@ Nếu không thể quét hoặc kết nối, xem [hướng dẫn xử lý sự c
 
 ## Phát triển
 
-Cần Node.js 20, Rust stable, các thành phần cần thiết của Tauri trên hệ điều hành
+Cần Bun 1.4.0, Rust stable, các thành phần cần thiết của Tauri trên hệ điều hành
 và tai nghe Bluetooth để kiểm thử thiết bị. Cài dependencies rồi chạy ứng dụng:
 
 ```sh
-npm ci
-npm run tauri:dev
+bun install --frozen-lockfile
+bun run tauri:dev
 ```
 
 Trước khi gửi thay đổi, hãy chạy các bước trong [hướng dẫn đóng góp](CONTRIBUTING.md).

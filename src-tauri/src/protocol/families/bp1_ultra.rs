@@ -9,11 +9,20 @@ impl Bp1Ultra {
             // NoiseReduceManger.u: mode, ANC type, transparency type, custom level.
             // The inactive selectors are retained by firmware. Normalize the
             // parameter for the active mode, never infer state from AA34 ACK.
-            (0x33, [mode @ 0..=2, anc, _transparency, _custom]) => {
+            (0x33, [mode @ 0..=2, anc, transparency, _custom]) => {
                 let (mode, parameter) = match mode {
                     0 => (AncMode::Off, 0xFF),
                     1 => (AncMode::Anc, *anc),
-                    _ => (AncMode::Transparency, 0xFF),
+                    // Canonical B4S parameters: FF full, 01 voice. Ultra's
+                    // active selector is 01 full / 02 voice on the wire.
+                    _ => (
+                        AncMode::Transparency,
+                        match transparency {
+                            1 => 0xFF,
+                            2 => 1,
+                            _ => return Err(DecodeError::UnknownOpcode(frame.cmd)),
+                        },
+                    ),
                 };
                 Ok(DeviceEvent::Anc { mode, parameter })
             }
@@ -49,6 +58,7 @@ mod tests {
             ([0xAA, 0x33, 1, 102, 1, 5], AncMode::Anc, 102),
             ([0xAA, 0x33, 0, 102, 1, 5], AncMode::Off, 255),
             ([0xAA, 0x33, 2, 102, 1, 5], AncMode::Transparency, 255),
+            ([0xAA, 0x33, 2, 102, 2, 5], AncMode::Transparency, 1),
             ([0xAA, 0x33, 1, 1, 1, 1], AncMode::Anc, 1),
         ] {
             assert_eq!(decode(&wire).unwrap(), DeviceEvent::Anc { mode, parameter });
@@ -56,6 +66,7 @@ mod tests {
         assert!(decode(&[0xAA, 0x34, 1]).is_err());
         assert!(decode(&[0xAA, 0x34, 1, 102]).is_err());
         assert!(decode(&[0xAA, 0x33, 1]).is_err());
+        assert!(decode(&[0xAA, 0x33, 2, 102, 3, 5]).is_err());
     }
 
     #[test]

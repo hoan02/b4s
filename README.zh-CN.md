@@ -35,12 +35,12 @@ BP1 Pro 有经过审查的型号配置。BP1 Ultra 实验性支持 BLE/789C 连�
 
 无法扫描或连接时，请参阅[桌面故障排除指南](docs/desktop-troubleshooting.md)。
 
-开发需要 Node.js 20、Rust stable、对应平台的 Tauri 依赖；测试设备功能
+开发需要 Bun 1.4.0、Rust stable、对应平台的 Tauri 依赖；测试设备功能
 还需要蓝牙耳机：
 
 ```sh
-npm ci
-npm run tauri:dev
+bun install --frozen-lockfile
+bun run tauri:dev
 ```
 
 应用默认使用英语，并提供越南语、简体中文、西班牙语和巴西葡萄牙语。

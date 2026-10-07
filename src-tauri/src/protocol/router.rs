@@ -297,12 +297,26 @@ pub fn encode_listening(
     crate::device::capability::authorize(profile, crate::device::capability::Feature::Listening)?;
     let (mode, parameter) = match command {
         ListeningCommand::Normal => (AncMode::Off, 0xFF),
-        ListeningCommand::TransparencyFull => (AncMode::Transparency, 0xFF),
+        ListeningCommand::TransparencyFull => (
+            AncMode::Transparency,
+            if profile.protocol == ProtocolFamily::Bp1Ultra {
+                1
+            } else {
+                0xFF
+            },
+        ),
         ListeningCommand::TransparencyVoice => {
             if !profile.noise.supports_transparency_voice {
                 return Err("Transparency voice mode is not supported by this model".into());
             }
-            (AncMode::Transparency, 0x01)
+            (
+                AncMode::Transparency,
+                if profile.protocol == ProtocolFamily::Bp1Ultra {
+                    2
+                } else {
+                    1
+                },
+            )
         }
         ListeningCommand::CustomLevel(level) => {
             let max = profile.noise.max_custom_level;
@@ -354,7 +368,14 @@ mod tests {
             vec![0xBA, 0x34, 1, 5]
         );
         assert!(encode_listening(&profile, ListeningCommand::CustomLevel(6)).is_err());
-        assert!(encode_listening(&profile, ListeningCommand::TransparencyVoice).is_err());
+        assert_eq!(
+            encode_listening(&profile, ListeningCommand::TransparencyFull).unwrap(),
+            vec![0xBA, 0x34, 2, 1]
+        );
+        assert_eq!(
+            encode_listening(&profile, ListeningCommand::TransparencyVoice).unwrap(),
+            vec![0xBA, 0x34, 2, 2]
+        );
         assert_eq!(
             encode_feature(&profile, FeatureCommand::SetBassBoost(3)).unwrap(),
             vec![0xBA, 0x54, 1, 3]

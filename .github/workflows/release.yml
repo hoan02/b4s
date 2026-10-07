@@ -33,7 +33,7 @@ jobs:
             args: ""
           - platform: macos-latest
             args: "--target universal-apple-darwin"
-          - platform: ubuntu-22.04
+          - platform: ubuntu-24.04
             args: ""
 
     runs-on: ${{ matrix.platform }}
@@ -42,11 +42,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
+          bun-version: 1.4.0
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -54,7 +53,7 @@ jobs:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -63,7 +62,7 @@ jobs:
             pkg-config build-essential curl wget file
 
       - name: Install frontend deps
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Sync version from tag
         shell: bash
@@ -73,10 +72,16 @@ jobs:
           elif [[ -n "${{ inputs.tag }}" ]]; then
             VER="${{ inputs.tag }}"
           else
-            VER=$(node -p "require('./package.json').version")
+            VER=$(bun -p "require('./package.json').version")
           fi
           echo "VERSION=$VER" >> "$GITHUB_ENV"
-          node scripts/bump-version.mjs "$VER"
+          bun scripts/bump-version.mjs "$VER"
+
+      - name: Validate updater signing key
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: bun scripts/check-updater-key.mjs
 
       - name: Build & release
         uses: tauri-apps/tauri-action@v0
@@ -85,6 +90,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
+          tauriScript: bun run tauri
           tagName: v${{ env.VERSION }}
           releaseName: B4S v${{ env.VERSION }}
           releaseBody: |

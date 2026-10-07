@@ -6,6 +6,16 @@
 import { invoke, listen, type UnlistenFn } from "./tauri";
 import { rememberDevice } from "./reconnect";
 
+export interface AudioTarget {
+  endpointId: string;
+  name: string;
+  candidates: Array<{ address: string; name: string }>;
+}
+
+export const getAudioTarget = () => invoke<AudioTarget | null>("ble_get_audio_target");
+export const prepareAudioTarget = (endpointId: string) =>
+  invoke<BleDevice>("ble_prepare_audio_target", { endpointId });
+
 // ---------------------------------------------------------------------------
 // Types (mirror Rust serde)
 // ---------------------------------------------------------------------------
@@ -315,8 +325,8 @@ export async function stopScan(): Promise<void> {
   await invoke("ble_stop_scan");
 }
 
-export async function connect(deviceId: string, mock = false): Promise<BleDevice> {
-  const device = await invoke<BleDevice>("ble_connect", { deviceId, mock });
+export async function connect(deviceId: string, mock = false, audioEndpointId?: string): Promise<BleDevice> {
+  const device = await invoke<BleDevice>("ble_connect", { deviceId, mock, audioEndpointId });
   if (!mock) rememberDevice(device);
   return device;
 }

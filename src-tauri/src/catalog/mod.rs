@@ -7,7 +7,7 @@ pub use types::{ConnectionProfile, ControlTransport, WireFraming};
 
 include!(concat!(env!("OUT_DIR"), "/model_profiles.rs"));
 
-static PROFILES: once_cell::sync::Lazy<Vec<ModelProfile>> = once_cell::sync::Lazy::new(|| {
+static PROFILES: std::sync::LazyLock<Vec<ModelProfile>> = std::sync::LazyLock::new(|| {
     let profiles: Vec<ModelProfile> = PROFILE_SOURCES
         .iter()
         .map(|source| serde_json::from_str(source).expect("valid model profile JSON"))

@@ -10,10 +10,14 @@ import {
   checkAdapter,
   getScanStatus,
   type ScanStatus,
+  type AudioTarget,
+  getAudioTarget,
+  prepareAudioTarget,
 } from "../lib/ble";
-import { findRememberedDevice, readRememberedDevice } from "../lib/reconnect";
+import { findReconnectTarget, readRememberedDevice } from "../lib/reconnect";
 import { resolveDeviceThumb } from "../lib/deviceImages";
 import { formatError, t } from "../lib/i18n";
+import { isTauri } from "../lib/tauri";
 
 interface Props {
   onConnected: (device: BleDevice) => void;
@@ -30,6 +34,10 @@ const BlePairing: Component<Props> = (props) => {
   const [error, setError] = createSignal<string | null>(null);
   const [adapterOk, setAdapterOk] = createSignal<boolean | null>(null);
   const [useMock, setUseMock] = createSignal(false);
+  const [audioTarget, setAudioTarget] = createSignal<AudioTarget | null>(null);
+  const [audioBusy, setAudioBusy] = createSignal(false);
+  let checkingAudio = false;
+  let lastAudioRefresh = 0;
   const savedDevice = props.autoReconnect ? readRememberedDevice() : null;
   const [autoSearching, setAutoSearching] = createSignal(!!savedDevice);
   const reconnectAbort = new AbortController();
@@ -46,7 +54,7 @@ const BlePairing: Component<Props> = (props) => {
   let handleVisibility: (() => void) | undefined;
 
   const refreshAdapter = async () => {
-    if (useMock() || checkingAdapter || scanning() || autoSearching() || connectingId()) return;
+    if (useMock() || checkingAdapter || scanning() || autoSearching() || connectingId() || audioBusy()) return;
     checkingAdapter = true;
     try {
       const ok = await checkAdapter();
@@ -56,7 +64,7 @@ const BlePairing: Component<Props> = (props) => {
         setScanning(false);
         setDevices([]);
         setError(t("pair.bluetoothHint"));
-      } else if (!scanning()) {
+      } else if (!scanning() && error() === t("pair.bluetoothHint")) {
         setError(null);
       }
     } finally {
@@ -64,16 +72,48 @@ const BlePairing: Component<Props> = (props) => {
     }
   };
 
+  const refreshAudio = async () => {
+    if (!isTauri() || checkingAudio || disposed || useMock() || audioBusy() || connectingId() || scanning() || autoSearching()) return;
+    checkingAudio = true;
+    lastAudioRefresh = Date.now();
+    try {
+      const target = await getAudioTarget();
+      if (!disposed) setAudioTarget(target);
+    } catch (error) {
+      if (!disposed) setAudioTarget(null);
+      console.warn("Audio output lookup failed", error);
+    } finally { checkingAudio = false; }
+  };
+
+  const connectAudio = async () => {
+    const target = audioTarget();
+    if (!target || disposed || audioBusy() || connectingId() || scanning() || autoSearching()) return;
+    setAudioBusy(true);
+    setError(null);
+    try {
+      const device = await prepareAudioTarget(target.endpointId);
+      if (!disposed) await handleConnect(device, target.endpointId);
+    } catch (error) {
+      if (!disposed) setError(formatError(error));
+    } finally {
+      if (!disposed) { setAudioBusy(false); void refreshAudio(); }
+    }
+  };
+
   onMount(() => {
     props.onAutoReconnectAttempt();
-    handleFocus = () => { void refreshAdapter(); };
+    handleFocus = () => { void refreshAdapter(); void refreshAudio(); };
     handleVisibility = () => {
-      if (document.visibilityState === "visible") void refreshAdapter();
+      if (document.visibilityState === "visible") { void refreshAdapter(); void refreshAudio(); }
     };
     window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibility);
-    adapterPoll = window.setInterval(() => { void refreshAdapter(); }, 3000);
+    adapterPoll = window.setInterval(() => {
+      void refreshAdapter();
+      if (Date.now() - lastAudioRefresh >= 15_000) void refreshAudio();
+    }, 3000);
     void refreshAdapter();
+    void refreshAudio();
 
     void (async () => {
       const scanUnsub = await onScanStatus((status) => {
@@ -127,12 +167,12 @@ const BlePairing: Component<Props> = (props) => {
   const runAutomaticReconnect = async () => {
     if (!savedDevice) return;
     try {
-      const candidate = await findRememberedDevice(savedDevice, {
-        checkAdapter, startScan, stopScan, getScanStatus, onScanStatus,
+      const candidate = await findReconnectTarget(savedDevice, {
+        checkAdapter, startScan, stopScan, getScanStatus, onScanStatus, getAudioTarget, prepareAudioTarget,
       }, reconnectAbort.signal);
       if (!disposed && !reconnectAbort.signal.aborted && candidate) {
         setAutoSearching(false);
-        await handleConnect(candidate);
+        await handleConnect(candidate.device, candidate.audioEndpointId);
       }
     } catch (e) {
       if (!disposed && !reconnectAbort.signal.aborted) setError(formatError(e));
@@ -148,7 +188,7 @@ const BlePairing: Component<Props> = (props) => {
   };
 
   const handleScan = async () => {
-    if (connectingId()) return;
+    if (connectingId() || audioBusy()) return;
     if (autoSearching()) await cancelAutoReconnect();
     setError(null);
     setDevices([]);
@@ -168,7 +208,7 @@ const BlePairing: Component<Props> = (props) => {
   };
 
   const enableDemo = async () => {
-    if (connectingId()) return;
+    if (connectingId() || audioBusy()) return;
     if (autoSearching()) await cancelAutoReconnect();
     setUseMock(true);
     setError(null);
@@ -180,7 +220,7 @@ const BlePairing: Component<Props> = (props) => {
     }
   };
 
-  const handleConnect = async (device: BleDevice) => {
+  const handleConnect = async (device: BleDevice, audioEndpointId?: string) => {
     if (connectingId()) return;
     if (autoSearching()) await cancelAutoReconnect();
     if (disposed || connectingId()) return;
@@ -196,7 +236,7 @@ const BlePairing: Component<Props> = (props) => {
           return;
         }
       }
-      props.onConnected(await connect(device.id, isMock));
+      props.onConnected(await connect(device.id, isMock, audioEndpointId));
     } catch (e) {
       setError(formatError(e));
       setConnectingId(null);
@@ -252,7 +292,7 @@ const BlePairing: Component<Props> = (props) => {
                 <button
                   class="ble-btn secondary"
                   type="button"
-                  disabled={!!connectingId()}
+                  disabled={!!connectingId() || audioBusy()}
                   onClick={() => autoSearching() ? cancelAutoReconnect() : stopScan()}
                 >
                   <span class="spinner" />
@@ -260,11 +300,32 @@ const BlePairing: Component<Props> = (props) => {
                 </button>
               }
             >
-              <button class="ble-btn primary" type="button" disabled={!!connectingId() || autoSearching()} onClick={handleScan}>
+              <button class="ble-btn primary" type="button" disabled={!!connectingId() || autoSearching() || audioBusy()} onClick={handleScan}>
                 {t("pair.scan")}
               </button>
             </Show>
           </div>
+
+          <Show when={audioTarget() && !useMock()}>
+            <button class="ble-device matched audio-quick-connect" type="button"
+              aria-busy={audioBusy()}
+              aria-label={`${t("pair.quickConnect")}: ${audioTarget()?.name}`}
+              disabled={audioBusy() || !!connectingId() || scanning() || autoSearching()}
+              onClick={connectAudio}>
+              <div class="device-icon photo">
+                <img src={resolveDeviceThumb(null, audioTarget()?.candidates[0]?.name ?? "", null).src} alt="" draggable={false} />
+              </div>
+              <div class="device-info">
+                <div class="device-name-row"><span class="name">{audioTarget()?.name}</span></div>
+                <div class="device-meta"><span>{t("pair.activeAudio")}</span></div>
+              </div>
+              <div class="device-action">
+                <Show when={!audioBusy()} fallback={<span class="spinner small" />}>
+                  <span class="connect-label">{t("pair.quickConnect")}</span>
+                </Show>
+              </div>
+            </button>
+          </Show>
 
           <Show when={error()}>
             <div class="ble-error">{error()}</div>
@@ -294,6 +355,7 @@ const BlePairing: Component<Props> = (props) => {
                 {(device) => (
                   <DeviceRow
                     device={device}
+                    disabled={audioBusy() || !!connectingId()}
                     control={advertisesControl(device)}
                     connecting={connectingId() === device.id}
                     onConnect={() => handleConnect(device)}
@@ -308,6 +370,7 @@ const BlePairing: Component<Props> = (props) => {
                 {(device) => (
                   <DeviceRow
                     device={device}
+                    disabled={audioBusy() || !!connectingId()}
                     connecting={connectingId() === device.id}
                     onConnect={() => handleConnect(device)}
                   />
@@ -363,6 +426,7 @@ const DeviceRow: Component<{
   device: BleDevice;
   control?: boolean;
   connecting: boolean;
+  disabled?: boolean;
   onConnect: () => void;
 }> = (props) => {
   const bars = () => rssiToBars(props.device.rssi);
@@ -372,7 +436,7 @@ const DeviceRow: Component<{
     <button
       class={`ble-device ${props.device.isBaseus ? "matched" : ""} ${props.connecting ? "connecting" : ""}`}
       type="button"
-      disabled={props.connecting}
+      disabled={props.connecting || props.disabled}
       onClick={() => props.onConnect()}
     >
       <div class="device-icon photo">

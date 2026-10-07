@@ -1,9 +1,9 @@
-import { test } from "node:test";
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 
-const source = readFileSync(new URL("../src/lib/desktopPreferences.ts", import.meta.url), "utf8");
+const source = readFileSync(new URL("../src/lib/desktopPreferences.ts", import.meta.url), "utf8").replace('import { storage } from "./storage";', 'const storage = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value), removeItem: key => localStorage.removeItem(key) };');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;
@@ -12,7 +12,7 @@ const { readDesktopPreferences, writeAutoReconnect, writeExperimentalMode } = pr
 
 const currentKey = "b4s.desktop.preferences.v2";
 const legacyKey = "b4s.desktop.preferences.v1";
-const defaults = { version: 2, autoReconnect: false, experimentalMode: false };
+const defaults = { version: 2, autoReconnect: false, experimentalMode: true };
 
 function installStorage(entries = {}) {
   const values = new Map(Object.entries(entries));
@@ -24,9 +24,18 @@ function installStorage(entries = {}) {
   return values;
 }
 
-test("missing preferences use safe defaults", () => {
+test("new preferences enable experimental mode by default", () => {
   installStorage();
   assert.deepEqual(readDesktopPreferences(), defaults);
+});
+
+test("an explicitly saved disabled experimental mode survives reload and unrelated preference edits", () => {
+  installStorage({ [currentKey]: JSON.stringify({ version: 2, autoReconnect: false, experimentalMode: false }) });
+  assert.equal(readDesktopPreferences().experimentalMode, false);
+  assert.equal(writeAutoReconnect(true), true);
+  assert.equal(readDesktopPreferences().experimentalMode, false);
+  assert.equal(writeExperimentalMode(true), true);
+  assert.equal(readDesktopPreferences().experimentalMode, true);
 });
 
 test("version 1 preferences migrate once and remove the legacy key", () => {
@@ -35,10 +44,10 @@ test("version 1 preferences migrate once and remove the legacy key", () => {
   });
 
   assert.deepEqual(readDesktopPreferences(), {
-    version: 2, autoReconnect: true, experimentalMode: false,
+    version: 2, autoReconnect: true, experimentalMode: true,
   });
   assert.deepEqual(JSON.parse(values.get(currentKey)), {
-    version: 2, autoReconnect: true, experimentalMode: false,
+    version: 2, autoReconnect: true, experimentalMode: true,
   });
   assert.equal(values.has(legacyKey), false);
 });
@@ -61,7 +70,7 @@ test("writes recover corrupt values into the current schema", () => {
 
   assert.equal(writeAutoReconnect(true), true);
   assert.deepEqual(JSON.parse(values.get(currentKey)), {
-    version: 2, autoReconnect: true, experimentalMode: false,
+    version: 2, autoReconnect: true, experimentalMode: true,
   });
   assert.equal(writeExperimentalMode(true), true);
   assert.deepEqual(readDesktopPreferences(), {

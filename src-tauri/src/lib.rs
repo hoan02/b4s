@@ -23,22 +23,48 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .try_init();
-
-    let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_process::init())
+    // Share one TLS provider between the updater and direct HTTP requests.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let builder = tauri::Builder::default();
+    // Register first so duplicate launches cannot initialize another BLE runtime.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+        desktop::show_main_window(app);
+    }));
+    let builder = builder
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .max_file_size(5_000_000)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("b4s".into()),
+                    }),
+                ])
+                .build(),
+        )
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build());
     #[cfg(desktop)]
-    let builder = builder.plugin(tauri_plugin_autostart::init(
-        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-        None,
-    ));
+    let builder = builder
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(tauri_plugin_window_state::StateFlags::POSITION)
+                .build(),
+        )
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ));
 
     builder
         .invoke_handler(tauri::generate_handler![
             ble_check_adapter,
+            ble_get_audio_target,
+            ble_prepare_audio_target,
             ble_start_scan,
             ble_stop_scan,
             ble_connect,
@@ -55,6 +81,7 @@ pub fn run() {
             get_start_at_login,
             set_start_at_login,
             set_experimental_mode,
+            validate_settings_store,
             get_app_info,
             check_for_updates,
             install_update,

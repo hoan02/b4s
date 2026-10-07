@@ -1,7 +1,7 @@
 //! Own the platform adapter and serialize its app-scoped operations.
 
 use super::*;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 pub(super) static INITIALIZATION: Mutex<()> = Mutex::const_new(());
 pub(super) static SCAN_OPERATION: Mutex<()> = Mutex::const_new(());
@@ -13,7 +13,7 @@ struct AdapterState {
     central_task: Option<tokio::task::JoinHandle<()>>,
 }
 
-static STATE: Lazy<Mutex<AdapterState>> = Lazy::new(|| Mutex::new(AdapterState::default()));
+static STATE: LazyLock<Mutex<AdapterState>> = LazyLock::new(|| Mutex::new(AdapterState::default()));
 
 pub(super) async fn initialize() -> Result<Adapter, String> {
     let _initialization = INITIALIZATION.lock().await;

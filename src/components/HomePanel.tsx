@@ -1,3 +1,4 @@
+import { requestToggle } from "../lib/confirmedToggle";
 /**
  * Home — model-supported noise, spatial and feature controls
  */
@@ -132,7 +133,7 @@ const HomePanel: Component<Props> = (props) => {
       case "offline":
         return t("device.offline");
       default:
-        return t("control.unknown");
+        return "—";
     }
   };
 
@@ -224,25 +225,22 @@ const HomePanel: Component<Props> = (props) => {
           </button>
         </div>
         <OperationStatus pending={props.ancPending} error={props.ancError} />
-        <Show when={props.ancMode === null && !props.ancPending}>
-          <span role="status">{t("control.unknown")}</span>
-        </Show>
         <Show when={props.ancMode === "transparency"}>
           <div class="noise-options" role="group" aria-label={t("home.transparencyOptions")}>
             <button type="button" disabled={props.ancPending} class={props.transparencyMode === "full" ? "active" : ""} aria-pressed={props.transparencyMode === "full"} onClick={() => props.onTransparencyMode("full")}><span>{t("home.fullTransparency")}</span><small>{t("home.default")}</small></button>
-            <button type="button" disabled={props.ancPending} class={props.transparencyMode === "voice" ? "active" : ""} aria-pressed={props.transparencyMode === "voice"} onClick={() => props.onTransparencyMode("voice")}><span>{t("home.voiceMode")}</span><small>{t("home.prioritizeVoice")}</small></button>
+            <Show when={props.transparencyVoiceSupported}>
+              <button type="button" disabled={props.ancPending} class={props.transparencyMode === "voice" ? "active" : ""} aria-pressed={props.transparencyMode === "voice"} onClick={() => props.onTransparencyMode("voice")}><span>{t("home.voiceMode")}</span><small>{t("home.prioritizeVoice")}</small></button>
+            </Show>
           </div>
-          <Show when={props.transparencyMode === null}><span role="status">{t("control.unknown")}</span></Show>
         </Show>
         <Show when={props.ancMode === "anc"}>
           <div class="noise-options noise-reduction-panel">
-            <Show when={props.adaptiveNoise !== null} fallback={<span role="status">{t("control.unknown")}</span>}>
-              <div class="noise-adaptive-row"><div><strong>{t("home.adaptive")}</strong><small>{t("home.autoEnvironment")}</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported || props.ancPending} checked={props.adaptiveNoise === true} onChange={(e) => props.onAdaptiveNoise((e.currentTarget as HTMLInputElement).checked)} /><span class="slider" /></label></div>
+            <Show when={props.adaptiveNoise !== null}>
+              <div class="noise-adaptive-row"><div><strong>{t("home.adaptive")}</strong><small>{t("home.autoEnvironment")}</small></div><label class="toggle sm"><input type="checkbox" disabled={!props.adaptiveSupported || props.ancPending} checked={props.adaptiveNoise === true} onChange={(e) => requestToggle(e.currentTarget, props.adaptiveNoise === true, props.onAdaptiveNoise)} /><span class="slider" /></label></div>
             </Show>
             <Show when={props.adaptiveNoise === false}>
-              <div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel === null ? t("control.unknown") : `${props.noiseLevel}/${props.noiseMaxLevel}`}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" disabled={props.ancPending} class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>
+              <div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel === null ? "—" : `${props.noiseLevel}/${props.noiseMaxLevel}`}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" disabled={props.ancPending} class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>
             </Show>
-            <Show when={props.adaptiveNoise === true && props.noiseEnvironment === null}><span role="status">{t("control.unknown")}</span></Show>
             <Show when={props.adaptiveNoise === true}>
               <AdaptiveEnvironmentCards selected={props.noiseEnvironment} disabled={props.ancPending} onSelect={props.onNoiseEnvironment} />
             </Show>
@@ -262,9 +260,7 @@ const HomePanel: Component<Props> = (props) => {
           <div class="list-text">
             <span class="list-title">{t("home.spatial")}</span>
             <span class="list-sub">
-              {props.spatialOn === null || props.spatialMode === null
-                ? t("control.unknown")
-                : t("listen.spatialHint")}
+              {t("listen.spatialHint")}
             </span>
           </div>
           <label class="toggle sm">
@@ -275,7 +271,7 @@ const HomePanel: Component<Props> = (props) => {
               aria-checked={props.spatialOn === null ? "mixed" : props.spatialOn}
               checked={props.spatialOn === true}
               onChange={(e) =>
-                props.onSpatialOn((e.currentTarget as HTMLInputElement).checked)
+                requestToggle(e.currentTarget, props.spatialOn === true, props.onSpatialOn)
               }
             />
             <span class="slider" />
@@ -316,7 +312,7 @@ const HomePanel: Component<Props> = (props) => {
             </span>
             <div class="list-text">
               <span class="list-title">{t("home.gameMode")}</span>
-              <span class="list-sub">{props.gameMode === null ? t("control.unknown") : t("home.lowLatency")}</span>
+              <span class="list-sub">{t("home.lowLatency")}</span>
               <OperationStatus pending={props.gamePending} error={props.gameError} />
             </div>
             <label class="toggle sm">
@@ -328,7 +324,7 @@ const HomePanel: Component<Props> = (props) => {
                 aria-busy={props.gamePending}
                 aria-label={t("home.gameMode")}
                 onChange={(e) =>
-                  props.onGameMode((e.currentTarget as HTMLInputElement).checked)
+                  requestToggle(e.currentTarget, props.gameMode === true, props.onGameMode)
                 }
               />
               <span class="slider" />
@@ -355,7 +351,7 @@ const HomePanel: Component<Props> = (props) => {
             <span class="list-ico list-ico-text">IE</span>
             <div class="list-text">
               <span class="list-title">{t("gesture.inEar")}</span>
-              <span class="list-sub">{props.inEarOn === null ? t("control.unknown") : t("gesture.inEarHint")}</span>
+              <span class="list-sub">{t("gesture.inEarHint")}</span>
               <OperationStatus pending={props.inEarPending} error={props.inEarError} />
             </div>
             <label class="toggle sm">
@@ -365,7 +361,7 @@ const HomePanel: Component<Props> = (props) => {
                 aria-checked={props.inEarOn === null ? "mixed" : props.inEarOn}
                 checked={props.inEarOn === true}
                 aria-label={t("gesture.inEar")}
-                onChange={(e) => props.onInEar((e.currentTarget as HTMLInputElement).checked)}
+                onChange={(e) => requestToggle(e.currentTarget, props.inEarOn === true, props.onInEar)}
               />
               <span class="slider" />
             </label>
@@ -388,7 +384,7 @@ const HomePanel: Component<Props> = (props) => {
             <span class="list-ico list-ico-text">MP</span>
             <div class="list-text">
               <span class="list-title">{t("multipoint.title")}</span>
-              <span class="list-sub">{props.multipointOn === null ? t("control.unknown") : t("multipoint.hint")}</span>
+              <span class="list-sub">{t("multipoint.hint")}</span>
               <OperationStatus pending={props.multipointPending} error={props.multipointError} />
             </div>
             <label class="toggle sm">
@@ -398,7 +394,7 @@ const HomePanel: Component<Props> = (props) => {
                 aria-checked={props.multipointOn === null ? "mixed" : props.multipointOn}
                 checked={props.multipointOn === true}
                 aria-label={t("multipoint.title")}
-                onChange={(e) => props.onMultipoint((e.currentTarget as HTMLInputElement).checked)}
+                onChange={(e) => requestToggle(e.currentTarget, props.multipointOn === true, props.onMultipoint)}
               />
               <span class="slider" />
             </label>
@@ -448,7 +444,7 @@ const HomePanel: Component<Props> = (props) => {
             <span class="list-ico list-ico-text">AL</span>
             <div class="list-text">
               <span class="list-title">{t("adaptiveLr.title")}</span>
-              <span class="list-sub">{props.adaptiveLrOn === null ? t("control.unknown") : t("adaptiveLr.hint")}</span>
+              <span class="list-sub">{t("adaptiveLr.hint")}</span>
               <OperationStatus pending={props.adaptiveLrPending} error={props.adaptiveLrError} />
             </div>
             <label class="toggle sm">
@@ -458,7 +454,7 @@ const HomePanel: Component<Props> = (props) => {
                 aria-checked={props.adaptiveLrOn === null ? "mixed" : props.adaptiveLrOn}
                 checked={props.adaptiveLrOn === true}
                 aria-label={t("adaptiveLr.title")}
-                onChange={(e) => props.onAdaptiveLr((e.currentTarget as HTMLInputElement).checked)}
+                onChange={(e) => requestToggle(e.currentTarget, props.adaptiveLrOn === true, props.onAdaptiveLr)}
               />
               <span class="slider" />
             </label>

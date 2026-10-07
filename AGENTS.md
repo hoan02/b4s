@@ -12,15 +12,15 @@ B4S is a SolidJS/Vite frontend packaged as a cross-platform Tauri desktop app.
 
 ## Build, Test, and Development Commands
 
-Install dependencies with `npm ci` (or `npm install` when updating the lockfile). Use:
+Install dependencies with `bun install --frozen-lockfile` (or `bun install` when updating `bun.lock`). CI uses Bun 1.4.0. Use:
 
 ```bash
-npm run dev                 # Start the Vite frontend
-npm run tauri:dev           # Run the desktop app with the Rust backend
-npm run build               # Type-check and build the frontend
-npx tsc --noEmit            # Frontend type-check only
+bun run dev                 # Start the Vite frontend
+bun run tauri:dev           # Run the desktop app with the Rust backend
+bun run build               # Type-check and build the frontend
+bun x --bun tsc --noEmit    # Frontend type-check only
 cargo check --manifest-path src-tauri/Cargo.toml  # Check Rust code
-npm run tauri:build        # Build platform installers
+bun run tauri:build         # Build platform installers
 ```
 
 Test on hardware with Bluetooth enabled and a supported, pairable earbud nearby. CI runs frontend type-check/build, `cargo check`, and a Tauri build on Windows and Ubuntu.
@@ -31,7 +31,7 @@ Use two spaces in TypeScript/TSX, Rust’s standard `rustfmt` style, and clear t
 
 ## Testing Guidelines
 
-No automated unit-test framework is configured. Before submitting changes, run the type-check, frontend build, and `cargo check`; exercise affected BLE flows manually when hardware is available. Add focused Rust or frontend tests alongside new logic if introducing behavior that can be tested without hardware.
+Frontend tests use Bun's test runner (`bun run test:session`, `bun run test:preferences`, `bun run test:reconnect`, `bun run test:logging`, and `bun run test:storage`). Before submitting changes, run the type-check, frontend build, and `cargo check`; exercise affected BLE flows manually when hardware is available. Add focused Rust or frontend tests alongside new logic if introducing behavior that can be tested without hardware.
 
 ## Commit & Pull Request Guidelines
 

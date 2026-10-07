@@ -1,3 +1,4 @@
+import { storage } from "./storage";
 /** Theme preference: system, light, or dark. */
 
 export type ThemeMode = "system" | "light" | "dark";
@@ -15,7 +16,7 @@ function resolvedTheme(mode: ThemeMode): "light" | "dark" {
 
 export function getStoredTheme(): ThemeMode {
   try {
-    const v = localStorage.getItem(KEY);
+    const v = storage.getItem(KEY);
     if (v === "system" || v === "light" || v === "dark") return v;
   } catch {
     /* */
@@ -26,7 +27,7 @@ export function getStoredTheme(): ThemeMode {
 export function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute("data-theme", resolvedTheme(mode));
   try {
-    localStorage.setItem(KEY, mode);
+    storage.setItem(KEY, mode);
   } catch {
     /* */
   }

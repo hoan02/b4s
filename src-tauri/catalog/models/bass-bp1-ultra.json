@@ -28,7 +28,7 @@
       108
     ],
     "maxCustomLevel": 5,
-    "supportsTransparencyVoice": false
+    "supportsTransparencyVoice": true
   },
   "eq": null,
   "image": null,

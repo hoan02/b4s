@@ -1,12 +1,12 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
- * Bump app version across Node, Cargo and Tauri version metadata.
+ * Bump app version across package, Cargo and Tauri version metadata.
  *
  * Usage:
- *   npm run version:bump           # patch 0.1.0 → 0.1.1
- *   npm run version:bump -- minor  # 0.1.0 → 0.2.0
- *   npm run version:bump -- major  # 0.1.0 → 1.0.0
- *   npm run version:bump -- 1.2.3  # set exact
+ *   bun run version:bump           # patch 0.1.0 → 0.1.1
+ *   bun run version:bump minor  # 0.1.0 → 0.2.0
+ *   bun run version:bump major  # 0.1.0 → 1.0.0
+ *   bun run version:bump 1.2.3  # set exact
  *
  * Then release:
  *   git commit -am "chore: release vX.Y.Z"
@@ -44,7 +44,6 @@ function bump(ver, kind) {
 }
 
 const pkgPath = path.join(root, "package.json");
-const lockPath = path.join(root, "package-lock.json");
 const tauriPath = path.join(root, "src-tauri", "tauri.conf.json");
 const cargoPath = path.join(root, "src-tauri", "Cargo.toml");
 const cargoLockPath = path.join(root, "src-tauri", "Cargo.lock");
@@ -54,11 +53,6 @@ const next = bump(pkg.version, arg);
 
 pkg.version = next;
 writeJson(pkgPath, pkg);
-
-const lock = readJson(lockPath);
-lock.version = next;
-if (lock.packages?.[""]) lock.packages[""].version = next;
-writeJson(lockPath, lock);
 
 const tauri = readJson(tauriPath);
 tauri.version = next;
@@ -82,7 +76,7 @@ fs.writeFileSync(cargoLockPath, cargoLock);
 console.log(`Version → ${next}`);
 console.log(`
 Next steps:
-  git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+  git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
   git commit -m "chore: release v${next}"
   git tag v${next}
   git push origin main --tags

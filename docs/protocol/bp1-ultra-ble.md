@@ -76,7 +76,14 @@ Example CRC-valid feature notifications:
 
 - ANC indoor: `789C000E0201053301660105A8FF` -> `AA3301660105`.
 - Normal retains ANC selector: `AA3300660105`; decoder normalizes active parameter to FF.
-- Transparency retains ANC selector: `AA3302660105`; full transparency is the reviewed submode.
+- Transparency retains ANC selector: `AA3302660105` reports selector 1 (full).
+- Ultra transparency selectors are 1 (full) and 2 (voice). Explicit writes use
+  `BA340201` and `BA340202`; AA33's third payload byte supplies the active
+  transparency selector. The decoder normalizes these to B4S parameters FF
+  (full) and 01 (voice), including the command-confirmation comparison.
+  The local APK `EarPodNewActivity.initNoiseUI` selects types 1/2 through
+  `NoiseReduceManger2.p`; `NoiseReduceDataModel.m` writes the selected type in
+  BA34. Voice switching still needs a hardware readback on the user's firmware.
 - Spatial Music: `789C000C020103420101E29A`.
 - Spatial Cinema: `789C000C02010342020213DA`.
 - Bass level 3: `789C000C020103530103264B`.

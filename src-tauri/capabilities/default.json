@@ -5,8 +5,12 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "shell:allow-open",
-    "updater:default",
-    "process:default"
+    { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://github.com/hoan02/b4s" }] },
+    "log:allow-log",
+    "store:allow-load",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save",
+    "updater:default"
   ]
 }

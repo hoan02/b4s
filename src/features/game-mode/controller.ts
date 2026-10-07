@@ -11,7 +11,6 @@ interface Dependencies {
   isDemo(): boolean;
   setGameMode(value: boolean): void;
   formatError(error: unknown): string;
-  notifyChanged(enabled: boolean): void;
   notifyError(message: string): void;
 }
 
@@ -34,7 +33,6 @@ export function createGameModeController(dependencies: Dependencies) {
     setMode(enabled: boolean) {
       return operation.run(() => setGameMode(enabled), () => {
         if (dependencies.isDemo()) dependencies.setGameMode(enabled);
-        dependencies.notifyChanged(enabled);
       }, dependencies.notifyError);
     },
   };

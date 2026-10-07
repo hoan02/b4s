@@ -13,8 +13,9 @@ research/release gates; they cannot justify speculative offline commands.
 macOS/Linux transport work follows Windows and has explicit platform evidence.
 
 Close hides to tray; Quit performs cleanup. Auto-start and auto-reconnect are
-separate opt-in preferences, off by default. Experimental mode is also off by
-default and never overrides backend validation, unknown firmware constraints
+separate opt-in preferences, off by default. Experimental mode is on by
+default for new settings; a saved disabled choice is preserved. It never
+overrides backend validation, unknown firmware constraints
 or an absent transport. Only traced/replay-implemented and safety-bounded
 features are eligible. Hardware verification is per feature/model/firmware/
 transport/platform; replay alone cannot promote support to verified.

@@ -82,7 +82,6 @@ const App: Component = () => {
   const [restorePrompt, setRestorePrompt] = createSignal(false);
   const [gestureState, setGestureState] = createSignal<Array<{ layout: number; left: number; right: number }>>([]);
   const [link, setLink] = createSignal<LinkHealth>(emptyLink());
-  const [controlError, setControlError] = createSignal<string | null>(null);
   let latestLinkSession = -1;
   let latestLinkRevision = -1;
   const noiseCaps = () => device()?.deviceProfile.noise;
@@ -184,8 +183,6 @@ const App: Component = () => {
     session,
     refreshSnapshot,
     noiseCapabilities: noiseCaps,
-    clearError: () => setControlError(null),
-    setError: setControlError,
     refreshLink: async () => {
       applyLink(await getLinkHealth());
     },
@@ -209,7 +206,6 @@ const App: Component = () => {
     isDemo: () => link().mock,
     setGameMode: setGameOn,
     formatError,
-    notifyChanged: (enabled) => notify(enabled ? t("toast.gameOn") : t("toast.gameOff"), "info"),
     notifyError: (message) => notify(message, "error"),
   });
   const spatialController = createSpatialController({
@@ -331,7 +327,6 @@ const App: Component = () => {
           setConnected(state.connected);
           setDevice(state.device);
           if (!state.connected) {
-            setControlError(null);
             setView("home");
             setBattery({ left: null, right: null, case: null });
             stopLinkPoll();
@@ -362,7 +357,6 @@ const App: Component = () => {
     setConnected(true);
     findController.reset();
     gestures.reset();
-    setControlError(null);
     setView("home");
     startLinkPoll();
     notify(t("toast.connected", { name: dev.modelName || dev.name }), "success");
@@ -391,7 +385,6 @@ const App: Component = () => {
     setDevice(null);
     findController.reset();
     gestures.reset();
-    setControlError(null);
     setView("home");
     stopLinkPoll();
   };
@@ -550,11 +543,6 @@ const App: Component = () => {
             }
           >
             <section class="section section-scroll">
-              <Show when={controlError()}>
-                <div class="control-error" role="alert" aria-live="assertive" style={{ "margin-bottom": "12px" }}>
-                  {controlError()}
-                </div>
-              </Show>
               <HomePanel
                 name={device()?.modelName || device()?.name || "Device"}
                 modelId={device()?.modelId}

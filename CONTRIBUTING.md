@@ -6,15 +6,15 @@ are welcome. Start with [the architecture](docs/architecture.md) and
 
 ## Local development
 
-Install Node.js (CI uses 20), Rust stable and the platform prerequisites for
-Tauri 2. Run `npm ci`, then `npm run tauri:dev`. Bluetooth hardware is only
+Install Bun 1.4.0, Rust stable and the platform prerequisites for
+Tauri 2. Run `bun install --frozen-lockfile`, then `bun run tauri:dev`. Bluetooth hardware is only
 needed for integration testing; Rust frame and catalog tests run without it.
 
 Before submitting a pull request, run:
 
 ```sh
-npx tsc --noEmit
-npm run build
+bun x --bun tsc --noEmit
+bun run build
 cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml --lib
 ```
@@ -45,7 +45,7 @@ commit APKs, decompiled proprietary source, firmware, secrets or generated files
 ## Translations
 
 Follow the [translation guide](docs/translations.md) when adding or changing UI
-text. Run `npm run check:i18n` and `npm run build`; include native-speaker review
+text. Run `bun run check:i18n` and `bun run build`; include native-speaker review
 and a screenshot of the changed view when possible.
 
 ## Pull requests
