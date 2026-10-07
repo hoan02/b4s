@@ -23,7 +23,13 @@ async function start() {
   const [theme, setTheme] = createSignal<"dark" | "light">("dark");
   const [level, setLevel] = createSignal<(typeof LEVELS)[number]>("live");
   const [ldac, setLdac] = createSignal<boolean | null>(true);
-  applyTheme("dark");
+  const params = new URLSearchParams(location.search);
+  const bare = params.get("frame") === "app";
+  const initialTheme = params.get("theme") === "light" ? "light" : "dark";
+  setTheme(initialTheme);
+  applyTheme(initialTheme);
+  const lang = params.get("lang");
+  if (lang && (LOCALES as readonly string[]).includes(lang)) await setLocale(lang as (typeof LOCALES)[number]);
 
   const link = () => ({
     ...emptyLink(),
@@ -44,7 +50,8 @@ async function start() {
   const show = (name: string) => view === null || view === name;
 
   const App = () => (
-    <div style={{ display: "flex", gap: "24px", padding: "16px", "align-items": "flex-start", "flex-wrap": "wrap" }}>
+    <div style={{ display: "flex", gap: "24px", padding: bare ? "0" : "16px", "align-items": "flex-start", "flex-wrap": "wrap" }}>
+      <Show when={!bare}>
       <div style={{ width: "100%", display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
         <button onClick={() => { const next = theme() === "dark" ? "light" : "dark"; setTheme(next); applyTheme(next); }}>
           theme: {theme()}
@@ -52,14 +59,21 @@ async function start() {
         <For each={LEVELS}>{(item) => <button onClick={() => setLevel(item)}>{item}</button>}</For>
         <For each={[...LOCALES]}>{(item) => <button onClick={() => void setLocale(item)}>{item}</button>}</For>
       </div>
+      </Show>
       <Show when={show("home")}>
-      <div class="preview-frame" style={{ width: "400px", background: "var(--bg)", height: "860px", overflow: "auto" }}>
+      <div
+        class="preview-frame"
+        ref={(el) => queueMicrotask(() => { el.scrollTop = Number(params.get("scroll") ?? 0); })}
+        style={bare
+          ? { width: "400px", height: "800px", overflow: "hidden", background: "var(--bg)" }
+          : { width: "400px", background: "var(--bg)", height: "860px", overflow: "auto" }}
+      >
         <section class="section section-scroll">
           <HomePanel
             name="Baseus Bass BP1 Pro"
             modelId="bass-bp1-pro"
             experimentalFeatures={["gesture", "inEar", "multipoint", "restoreDefaults", "adaptiveLr", "windNoise"]}
-            battery={{ left: 82, right: 14, case: 100, rightCharging: true }}
+            battery={{ left: 100, right: 100, case: 80 }}
             link={link()}
             ancMode="anc"
             transparencyMode="full"
