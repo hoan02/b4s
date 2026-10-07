@@ -11,11 +11,9 @@ Bowie M3s**. Built with SolidJS, Tauri and Rust.
 
 [**Download the latest installer**](https://github.com/hoan02/b4s/releases/latest) · [Supported earbuds](#supported-baseus-earbuds) · [FAQ](#faq)
 
-| Scan and connect | Device controls | More controls | Settings |
-|---|---|---|---|
-| ![B4S scanning for Baseus earbuds over Bluetooth LE on a PC](assets/i1.png) | ![B4S showing battery, noise cancelling modes and spatial audio for Baseus Bass BP1 Pro](assets/i2.png) | ![B4S controls grouped into sound, controls and device settings](assets/i4.png) | ![B4S settings with language, theme and update options](assets/i3.png) |
+<p align="center"><a href="assets/b4s-demo.mp4"><img src="assets/b4s-demo.gif" alt="B4S demo: battery, noise control, spatial audio, EQ, touch controls and sound settings" width="320"></a></p>
 
-Screenshots show the Vietnamese interface. The control screens were rendered from the app's own components with sample data.
+<p align="center"><sub>Preview of the app, shown with the Vietnamese interface and sample data. <a href="assets/b4s-demo.mp4">Watch the full video with narration (Vietnamese, ~75 s)</a>.</sub></p>
 
 ## What is new in 0.1.3
 

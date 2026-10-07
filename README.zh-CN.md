@@ -10,11 +10,9 @@
 
 [**下载最新安装包**](https://github.com/hoan02/b4s/releases/latest) · [支持的耳机](#支持的-baseus-耳机) · [常见问题](#常见问题)
 
-| 扫描并连接 | 设备控制 | 更多控制 | 设置 |
-|---|---|---|---|
-| ![B4S 在电脑上通过蓝牙 LE 扫描 Baseus 耳机](assets/i1.png) | ![B4S 显示 Baseus Bass BP1 Pro 的电量、降噪模式和空间音频](assets/i2.png) | ![B4S 将控制按声音、控制和设备分组](assets/i4.png) | ![B4S 设置：语言、主题和更新](assets/i3.png) |
+<p align="center"><a href="assets/b4s-demo.mp4"><img src="assets/b4s-demo.gif" alt="B4S 演示：电量、降噪控制、空间音频、EQ、触控设置和音效设置" width="320"></a></p>
 
-截图展示的是越南语界面。控制界面由应用自身组件使用示例数据渲染。
+<p align="center"><sub>应用预览，使用越南语界面和示例数据。<a href="assets/b4s-demo.mp4">观看带旁白的完整视频（越南语，约 75 秒）</a>。</sub></p>
 
 ## 0.1.3 新增内容
 
