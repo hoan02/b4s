@@ -1,10 +1,11 @@
 {
   "name": "b4s",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "B4S — unofficial desktop companion for multi-model earbuds listening control (BLE)",
   "type": "module",
   "packageManager": "bun@1.4.0",
   "scripts": {
+    "test:models": "bun test scripts/model-contracts.test.mjs scripts/model-id-migration.test.mjs scripts/device-images.test.mjs",
     "test:storage": "bun test scripts/storage.test.mjs",
     "test:logging": "bun test scripts/logging.test.mjs",
     "test:session": "bun test scripts/device-session.test.mjs",
@@ -21,16 +22,16 @@
     "release": "bun scripts/release.mjs"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/api": "~2.12.1",
     "@tauri-apps/plugin-log": "^2.10.0",
     "@tauri-apps/plugin-opener": "^2.7.0",
     "@tauri-apps/plugin-store": "^2.5.0",
-    "@tauri-apps/plugin-updater": "^2.10.1",
+    "@tauri-apps/plugin-updater": "~2.13.1",
     "i18next": "^26.4.2",
     "solid-js": "^1.9.3"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.1.0",
+    "@tauri-apps/cli": "~2.12.1",
     "@types/node": "^22.9.0",
     "sass": "^1.81.0",
     "typescript": "^5.6.3",

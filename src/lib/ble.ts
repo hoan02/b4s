@@ -5,6 +5,7 @@
 
 import { invoke, listen, type UnlistenFn } from "./tauri";
 import { rememberDevice } from "./reconnect";
+import { assertModelContracts, isSoundContract, isEvidenceMap } from "./modelContracts";
 
 export interface AudioTarget {
   endpointId: string;
@@ -43,6 +44,8 @@ export interface BleDevice {
 }
 
 export interface DeviceProfile {
+  sound: { maxBassLevel: number; provenance: string } | null;
+  featureEvidence: Record<string, { status: "unknown" | "unsupported" | "sourceReviewed" | "implemented" | "hardwareVerified"; provenance: string; firmwareVersions: string[] }>;
   capabilities: { anc: boolean; eq: boolean; customEq: boolean; gameMode: boolean; bassBoost: boolean; spatial: boolean; ldac: boolean; hearingProtection: boolean; findBuds: boolean; gesture: boolean; inEar: boolean; multipoint: boolean; restoreDefaults: boolean; adaptiveLr: boolean };
   experimentalFeatures: string[];
   connection: {
@@ -73,6 +76,15 @@ export interface DeviceProfile {
 export interface ModelInfo {
   id: string;
   displayName: string;
+  productName: string;
+  presentation: {
+    region: string;
+    productName: string;
+    imageUrl: string | null;
+    largeImageUrl: string | null;
+    categoryPath: string[];
+    colors: { code: number; imageUrl: string | null }[];
+  } | null;
   namePatterns: string[];
   support: "verified" | "experimental" | "scanOnly";
   protocol: string;
@@ -108,11 +120,14 @@ export async function listModels(): Promise<ModelInfo[]> {
 }
 
 export interface ModelProfile {
+  schemaVersion: 3;
+  sound: DeviceProfile["sound"];
+  featureEvidence: DeviceProfile["featureEvidence"];
   id: string;
   displayName: string;
   aliases: string[];
-  support: "verified" | "experimental" | "scanOnly" | string;
-  protocolFamily: string;
+  support: "verified" | "experimental" | "scanOnly";
+  protocolFamily: "bp1" | "bp1Ultra" | "unknown";
   category: string;
   group: string;
   capabilities: Record<string, boolean>;
@@ -123,6 +138,7 @@ export interface ModelProfile {
     supportsTransparencyVoice: boolean;
   };
   eq: {
+    customWrite: { slot: number; ancBank: boolean };
     bands: number[];
     qValues: number[];
     minGain: number;
@@ -131,6 +147,7 @@ export interface ModelProfile {
     presets: Array<{ id: string; label: string; description: string; dictSort: number; curve: number[] }>;
   } | null;
   gesture: {
+    protocol: "legacy" | "v2";
     dualButton: boolean;
     layouts: Array<{ layout: number; functions: number[] }>;
     provenance: string;
@@ -142,7 +159,10 @@ export interface ModelProfile {
 }
 
 export async function listModelProfiles(): Promise<ModelProfile[]> {
-  return invoke<ModelProfile[]>("list_model_profiles");
+  const profiles = await invoke<unknown>("list_model_profiles");
+  if (!Array.isArray(profiles)) throw new Error("Invalid model catalog response");
+  profiles.forEach(assertModelContracts);
+  return profiles as unknown as ModelProfile[];
 }
 
 /** Proof of real control link — not just "connected" UI flag */
@@ -229,6 +249,8 @@ function isBleDevice(value: unknown): value is BleDevice {
 
 function isDeviceProfile(value: unknown): value is DeviceProfile {
   if (!isRecord(value) || !isRecord(value.capabilities) || !isRecord(value.noise)) return false;
+  if (!isSoundContract(value.sound) || !isEvidenceMap(value.featureEvidence) ||
+    (value.capabilities.bassBoost === true && value.sound === null)) return false;
   const capabilities = value.capabilities;
   const noise = value.noise;
   const connection = value.connection;

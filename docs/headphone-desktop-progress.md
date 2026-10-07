@@ -828,3 +828,9 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - `connect_one` now logs the selected entry (id, name, address, advertised services) and, after service discovery, the exact services and characteristics that entry exposes, so a terminal `npm run tauri:dev` session shows why a connection failed. The missing-service error now reports the discovered service count and hints that the entry may be the audio endpoint.
 - The pairing list marks the entry advertising the reviewed control service with a **Control** tag (five locales) and sorts it first, so duplicate same-name entries can be told apart. The troubleshooting guide documents the duplicate-entry flow and the scan-only transport gate.
 - `cargo check` and 142 Rust library tests pass; `npx tsc --noEmit`, five-locale parity (293/293) and `npm run build` pass. This is diagnostics only and does not change the control transport.
+
+## Release 0.1.3 — 2026-10-07
+
+The schema-3 catalog now embeds 124 headphones: BP1 Pro/Ultra retain existing control profiles and 122 models remain recognition-only. Canonical IDs, APK-style product metadata and local image caching are implemented. Historical milestone entries above retain their original scope. See [identity/presentation](model-identity-presentation.md), [cache](product-image-cache.md) and [changelog](../CHANGELOG.md).
+
+Release checks: 49 frontend tests, 7 public-catalog tests and 15 extraction tests passed. Rust library validation uses serial execution because authorization tests share experimental state. No additional hardware acceptance or native image performance measurement is claimed.

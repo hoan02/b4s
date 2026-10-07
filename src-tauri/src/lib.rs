@@ -9,7 +9,7 @@ mod desktop;
 mod device;
 mod protocol;
 
-use api::{ble::*, desktop::*, device::*, updates::*};
+use api::{ble::*, desktop::*, device::*, images::*, updates::*};
 #[cfg(desktop)]
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -73,6 +73,7 @@ pub fn run() {
             ble_get_connection,
             ble_get_link_health,
             list_models,
+            cache_product_image,
             list_model_profiles,
             get_model_profile,
             get_device_snapshot,

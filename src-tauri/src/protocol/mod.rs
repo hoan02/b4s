@@ -13,6 +13,7 @@
 //!   Notify  : 654b749c-e37f-ae1f-ebab-40ca133e3690
 
 pub mod advertisement;
+mod constraints;
 mod crc_table;
 mod families;
 mod framing;

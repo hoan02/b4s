@@ -68,7 +68,7 @@ export async function setListeningState(state: ListeningStateRequest): Promise<D
 
 export interface NoiseProfile {
   adaptive: boolean;
-  maxLevel: 0 | 3 | 5;
+  maxLevel: number;
 }
 
 export function profileNoise(profile?: {
@@ -78,7 +78,7 @@ export function profileNoise(profile?: {
   if (!profile) return { adaptive: false, maxLevel: 0 };
   return {
     adaptive: profile.supportsAdaptive,
-    maxLevel: profile.maxCustomLevel === 3 ? 3 : profile.maxCustomLevel > 0 ? 5 : 0,
+    maxLevel: profile.maxCustomLevel,
   };
 }
 

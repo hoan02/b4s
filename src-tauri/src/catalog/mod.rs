@@ -1,8 +1,13 @@
+pub mod evidence;
+pub mod features;
 pub mod public;
 mod types;
+mod validation;
+use validation::validate_profiles;
 
 pub use types::Capabilities;
 pub use types::ModelProfile;
+pub use types::SoundProfile;
 pub use types::{ConnectionProfile, ControlTransport, WireFraming};
 
 include!(concat!(env!("OUT_DIR"), "/model_profiles.rs"));
@@ -31,210 +36,83 @@ pub fn validate() -> Result<(), String> {
     validate_profiles(&all_profiles())
 }
 
-fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String> {
-    let mut ids = std::collections::HashSet::new();
-    for profile in profiles {
-        if profile.capabilities.hearing_protection && profile.hearing.is_none() {
-            return Err(format!("missing hearing constraints in {}", profile.id));
-        }
-        if let Some(hearing) = &profile.hearing {
-            let unique: std::collections::HashSet<_> = hearing.thresholds.iter().collect();
-            if hearing.provenance.trim().is_empty()
-                || hearing.thresholds.is_empty()
-                || unique.len() != hearing.thresholds.len()
-                || hearing
-                    .thresholds
-                    .iter()
-                    .any(|value| ![75, 80, 85, 90, 95, 100].contains(value))
-            {
-                return Err(format!("invalid hearing constraints in {}", profile.id));
-            }
-        }
-        if profile.capabilities.gesture && profile.gesture.is_none() {
-            return Err(format!("missing gesture constraints in {}", profile.id));
-        }
-        if let Some(gesture) = &profile.gesture {
-            if gesture.provenance.trim().is_empty() || gesture.layouts.is_empty() {
-                return Err(format!("invalid gesture constraints in {}", profile.id));
-            }
-            let mut layouts = std::collections::HashSet::new();
-            for layout in &gesture.layouts {
-                if layout.layout > 5 || !layouts.insert(layout.layout) {
-                    return Err(format!("invalid gesture layout in {}", profile.id));
-                }
-                if layout.functions.is_empty()
-                    || layout
-                        .functions
-                        .iter()
-                        .any(|function| !matches!(function, 0..=19 | 27 | 28))
-                {
-                    return Err(format!("invalid gesture functions in {}", profile.id));
-                }
-            }
-        }
-        if profile.capabilities.in_ear && profile.in_ear.is_none() {
-            return Err(format!("missing in-ear provenance in {}", profile.id));
-        }
-        if let Some(in_ear) = &profile.in_ear {
-            if in_ear.provenance.trim().is_empty() {
-                return Err(format!("invalid in-ear provenance in {}", profile.id));
-            }
-        }
-        if profile.capabilities.multipoint && profile.multipoint.is_none() {
-            return Err(format!("missing multipoint provenance in {}", profile.id));
-        }
-        if let Some(multipoint) = &profile.multipoint {
-            if multipoint.provenance.trim().is_empty() {
-                return Err(format!("invalid multipoint provenance in {}", profile.id));
-            }
-        }
-        if profile.capabilities.restore_defaults && profile.restore_defaults.is_none() {
-            return Err(format!(
-                "missing restore-defaults provenance in {}",
-                profile.id
-            ));
-        }
-        if let Some(restore) = &profile.restore_defaults {
-            if restore.provenance.trim().is_empty() {
-                return Err(format!(
-                    "invalid restore-defaults provenance in {}",
-                    profile.id
-                ));
-            }
-        }
-        if profile.capabilities.adaptive_lr && profile.adaptive_lr.is_none() {
-            return Err(format!("missing adaptiveLr provenance in {}", profile.id));
-        }
-        if let Some(adaptive) = &profile.adaptive_lr {
-            if adaptive.provenance.trim().is_empty() {
-                return Err(format!("invalid adaptiveLr provenance in {}", profile.id));
-            }
-        }
-        let mut experimental = std::collections::HashSet::new();
-        for feature in &profile.experimental_features {
-            let capability_enabled = match feature.as_str() {
-                "gesture" => profile.capabilities.gesture && profile.gesture.is_some(),
-                "inEar" => profile.capabilities.in_ear && profile.in_ear.is_some(),
-                "multipoint" => profile.capabilities.multipoint && profile.multipoint.is_some(),
-                "restoreDefaults" => {
-                    profile.capabilities.restore_defaults && profile.restore_defaults.is_some()
-                }
-                "adaptiveLr" => profile.capabilities.adaptive_lr && profile.adaptive_lr.is_some(),
-                _ => false,
-            };
-            if !capability_enabled || !experimental.insert(feature) {
-                return Err(format!(
-                    "invalid experimental feature {feature} in {}",
-                    profile.id
-                ));
-            }
-        }
-        if profile.schema_version != 2 {
-            return Err(format!("unsupported profile schema in {}", profile.id));
-        }
-        if profile.connection.is_none() {
-            return Err(format!("missing connection profile in {}", profile.id));
-        }
-        if let Some(connection) = &profile.connection {
-            if connection.provenance.trim().is_empty() {
-                return Err(format!("missing transport provenance in {}", profile.id));
-            }
-            for uuid in [
-                &connection.service_uuid,
-                &connection.write_uuid,
-                &connection.notify_uuid,
-            ]
-            .into_iter()
-            .flatten()
-            {
-                uuid::Uuid::parse_str(uuid)
-                    .map_err(|_| format!("invalid transport UUID in {}", profile.id))?;
-            }
-            if connection.transport == ControlTransport::BleGatt
-                && (connection.service_uuid.is_none()
-                    || connection.write_uuid.is_none()
-                    || connection.notify_uuid.is_none()
-                    || connection.framing == WireFraming::Unresolved)
-            {
-                return Err(format!(
-                    "incomplete BLE connection profile in {}",
-                    profile.id
-                ));
-            }
-            if connection.transport == ControlTransport::Unresolved
-                && (profile.support != "scanOnly"
-                    || !connection.handshake.is_empty()
-                    || connection.init_state_query)
-            {
-                return Err(format!(
-                    "unresolved transport must remain passive in {}",
-                    profile.id
-                ));
-            }
-        }
-        if !ids.insert(profile.id.clone()) {
-            return Err(format!("duplicate model profile: {}", profile.id));
-        }
-        if !matches!(
-            profile.protocol_family.as_str(),
-            "bp1" | "bp1Ultra" | "unknown"
-        ) {
-            return Err(format!("unknown protocol family in {}", profile.id));
-        }
-        if !matches!(
-            profile.support.as_str(),
-            "verified" | "experimental" | "scanOnly"
-        ) {
-            return Err(format!("invalid support level in {}", profile.id));
-        }
-        if profile.id.is_empty() || profile.aliases.is_empty() {
-            return Err("profiles must define an id and aliases".into());
-        }
-        if let Some(eq) = &profile.eq {
-            if !eq.q_values.is_empty()
-                && (eq.q_values.len() != eq.bands.len()
-                    || eq.q_values.iter().any(|q| !q.is_finite() || *q <= 0.0))
-            {
-                return Err(format!("invalid EQ Q values in {}", profile.id));
-            }
-            if eq.bands.is_empty() || eq.min_gain >= eq.max_gain {
-                return Err(format!("invalid EQ bands or gain limits in {}", profile.id));
-            }
-            let mut sorts = std::collections::HashSet::new();
-            for preset in &eq.presets {
-                if !preset.curve.is_empty() && preset.curve.len() != eq.bands.len() {
-                    return Err(format!("EQ curve length mismatch in {}", profile.id));
-                }
-                if preset.filters.len() > 16
-                    || preset.filters.iter().any(|filter| {
-                        filter.frequency == 0
-                            || !filter.q_value.is_finite()
-                            || filter.q_value <= 0.0
-                            || !filter.gain.is_finite()
-                            || filter.gain < eq.min_gain
-                            || filter.gain > eq.max_gain
-                            || filter.filter > 2
-                    })
-                {
-                    return Err(format!("invalid EQ filter payload in {}", profile.id));
-                }
-                if !sorts.insert(preset.dict_sort) {
-                    return Err(format!("duplicate EQ dictSort in {}", profile.id));
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn v2_rejects_missing_invalid_or_active_unresolved_transport() {
+    fn every_public_headphone_has_an_explicit_runtime_profile() {
+        let profiles = all_profiles();
+        assert_eq!(profiles.len(), 124);
+        for public in public::headphone_models() {
+            let profile = profiles
+                .iter()
+                .find(|profile| {
+                    public::identity_key(&profile.display_name)
+                        == public::identity_key(&public.model)
+                })
+                .expect("public headphone must be embedded in the runtime catalog");
+            if profile.support == "scanOnly" {
+                assert_eq!(profile.support, "scanOnly");
+                assert_eq!(profile.protocol_family, "unknown");
+                assert_eq!(profile.capabilities, Capabilities::default());
+                let connection = profile.connection.as_ref().unwrap();
+                assert_eq!(connection.transport, ControlTransport::Unresolved);
+                let runtime = crate::protocol::models::profile_for(Some(&profile.id), None, None);
+                assert_eq!(runtime.connection.as_ref(), Some(connection));
+                assert!(!runtime.verified);
+            }
+        }
+    }
+
+    #[test]
+    fn model_contracts_reject_missing_limits_old_schema_and_unimplemented_gesture() {
+        let pro = profile_for("bass-bp1-pro").unwrap();
+        for mutation in 0..8 {
+            let mut model = pro.clone();
+            match mutation {
+                0 => model.schema_version = 2,
+                1 => model.sound = None,
+                2 => model.sound.as_mut().unwrap().max_bass_level = 5,
+                3 => model.eq.as_mut().unwrap().custom_write.slot = 100,
+                4 => model.gesture.as_mut().unwrap().protocol = types::GestureProtocol::V2,
+                5 => {
+                    model.feature_evidence.remove("gestureV2");
+                }
+                6 => model.eq.as_mut().unwrap().bands[0] = 0,
+                _ => {
+                    model.eq.as_mut().unwrap().bands.pop();
+                    model.eq.as_mut().unwrap().q_values.pop();
+                }
+            }
+            assert!(validate_profiles(&[model]).is_err());
+        }
+    }
+
+    #[test]
+    fn enabled_features_require_implementation_evidence_without_claiming_firmware_coverage() {
+        let mut pro = profile_for("bass-bp1-pro").unwrap();
+        assert!(pro.feature_evidence["anc"].firmware_versions.is_empty());
+        assert_eq!(
+            pro.feature_evidence["gestureV2"].status,
+            evidence::EvidenceStatus::Unknown
+        );
+        pro.feature_evidence.get_mut("anc").unwrap().status =
+            evidence::EvidenceStatus::SourceReviewed;
+        assert!(validate_profiles(&[pro]).is_err());
+        let mut pro = profile_for("bass-bp1-pro").unwrap();
+        pro.feature_evidence
+            .get_mut("anc")
+            .unwrap()
+            .provenance
+            .clear();
+        assert!(validate_profiles(&[pro]).is_err());
+    }
+
+    #[test]
+    fn v3_rejects_missing_invalid_or_active_unresolved_transport() {
         let mut profile = profile_for("bass-bp1-pro").unwrap();
-        assert_eq!(profile.schema_version, 2);
+        assert_eq!(profile.schema_version, 3);
         profile.connection = None;
         assert!(validate_profiles(&[profile]).is_err());
         let mut profile = profile_for("bass-bp1-pro").unwrap();
@@ -295,6 +173,16 @@ mod tests {
     fn hearing_capability_requires_explicit_valid_threshold_constraints() {
         let mut model = profile_for("bass-bp1-pro").unwrap();
         model.capabilities.hearing_protection = true;
+        model
+            .feature_evidence
+            .get_mut("hearingProtection")
+            .unwrap()
+            .status = evidence::EvidenceStatus::Implemented;
+        model
+            .feature_evidence
+            .get_mut("hearingProtection")
+            .unwrap()
+            .provenance = "test fixture".into();
         assert!(validate_profiles(&[model.clone()]).is_err());
         model.hearing = Some(types::HearingProfile {
             thresholds: vec![75, 85, 100],
@@ -313,6 +201,7 @@ mod tests {
         model.gesture = None;
         assert!(validate_profiles(&[model.clone()]).is_err());
         model.gesture = Some(types::GestureProfile {
+            protocol: types::GestureProtocol::Legacy,
             dual_button: true,
             layouts: vec![types::GestureLayoutProfile {
                 layout: 0,
@@ -381,6 +270,6 @@ mod tests {
             assert!(validate_profiles(&[model.clone()]).is_err());
         }
         model.eq.as_mut().unwrap().q_values.clear();
-        assert!(validate_profiles(&[model]).is_ok());
+        assert!(validate_profiles(&[model]).is_err());
     }
 }

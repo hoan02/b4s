@@ -37,7 +37,16 @@
     "supportsTransparencyVoice": true
   },
   "eq": {
-    "qValues": [1, 1, 1, 1, 1, 1, 1, 1],
+    "qValues": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
     "bands": [
       100,
       200,
@@ -403,7 +412,11 @@
           }
         ]
       }
-    ]
+    ],
+    "customWrite": {
+      "slot": 101,
+      "ancBank": false
+    }
   },
   "image": "default_ear_pic",
   "gesture": {
@@ -411,22 +424,53 @@
     "layouts": [
       {
         "layout": 0,
-        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+        "functions": [
+          1,
+          6,
+          2,
+          3,
+          4,
+          11,
+          12,
+          0
+        ]
       },
       {
         "layout": 1,
-        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+        "functions": [
+          1,
+          6,
+          2,
+          3,
+          4,
+          11,
+          12,
+          0
+        ]
       },
       {
         "layout": 2,
-        "functions": [1, 6, 2, 3, 4, 11, 12, 0]
+        "functions": [
+          1,
+          6,
+          2,
+          3,
+          4,
+          11,
+          12,
+          0
+        ]
       },
       {
         "layout": 3,
-        "functions": [1, 0]
+        "functions": [
+          1,
+          0
+        ]
       }
     ],
-    "provenance": "assets/gesture/gesture_config_function_list.json (2.17.0.1); firmware/capture acceptance not verified, experimental-only"
+    "provenance": "assets/gesture/gesture_config_function_list.json (2.17.0.1); firmware/capture acceptance not verified, experimental-only",
+    "protocol": "legacy"
   },
   "inEar": {
     "provenance": "GestureBleManager.a and EarHeadSetViewModel (BA25/BA26); model/firmware support not verified, experimental-only"
@@ -447,7 +491,7 @@
     "restoreDefaults",
     "adaptiveLr"
   ],
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "connection": {
     "transport": "bleGatt",
     "framing": "bareAaBa",
@@ -462,5 +506,121 @@
     "initStateQuery": false,
     "firmwareVersions": [],
     "provenance": "docs/protocol/bp1-pro-anc.md; firmware scope not yet captured"
+  },
+  "sound": {
+    "maxBassLevel": 1,
+    "provenance": "Existing reviewed bass command contract; docs/apk-feature-parity-audit.md"
+  },
+  "featureEvidence": {
+    "anc": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "eq": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "customEq": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "gameMode": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "bassBoost": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "spatial": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "ldac": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "hearingProtection": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "findBuds": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "gesture": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "inEar": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "multipoint": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "restoreDefaults": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "adaptiveLr": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "callEnhancement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "batteryEnhancement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "soundBalance": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "deviceManagement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "gestureV2": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "personalizedSound": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "firmwareUpdate": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "aiServices": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    }
   }
 }

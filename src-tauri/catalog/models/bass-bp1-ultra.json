@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "bass-bp1-ultra",
   "displayName": "Baseus Bass BP1 Ultra",
   "aliases": [
@@ -105,6 +105,123 @@
         ]
       }
     ],
-    "provenance": "APK assets/gesture/*_v2.json exact BP1 Ultra entries; BA21 layouts 0..3 and BA22 readback verified; child actions require a separate payload and are excluded; docs/protocol/bp1-ultra-ble.md"
+    "provenance": "APK assets/gesture/*_v2.json exact BP1 Ultra entries; BA21 layouts 0..3 and BA22 readback verified; child actions require a separate payload and are excluded; docs/protocol/bp1-ultra-ble.md",
+    "protocol": "legacy"
+  },
+  "sound": {
+    "maxBassLevel": 5,
+    "provenance": "Existing reviewed bass command contract; docs/apk-feature-parity-audit.md"
+  },
+  "featureEvidence": {
+    "anc": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "eq": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "customEq": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "gameMode": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "bassBoost": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "spatial": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "ldac": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "hearingProtection": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "findBuds": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "gesture": {
+      "status": "implemented",
+      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "firmwareVersions": []
+    },
+    "inEar": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "multipoint": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "restoreDefaults": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "adaptiveLr": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "callEnhancement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "batteryEnhancement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "soundBalance": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "deviceManagement": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "gestureV2": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "personalizedSound": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "firmwareUpdate": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    },
+    "aiServices": {
+      "status": "unknown",
+      "provenance": "",
+      "firmwareVersions": []
+    }
   }
 }

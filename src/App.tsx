@@ -26,10 +26,13 @@ import {
   getLinkHealth,
   emptyLink,
   listModelProfiles,
+  listModels,
 } from "./lib/ble";
 import { queryBattery } from "./lib/device";
 import { readDesktopPreferences, writeAutoReconnect, writeExperimentalMode } from "./lib/desktopPreferences";
 import { migrateModelIdsOnce } from "./lib/modelIdMigration";
+import { readRememberedDevice } from "./lib/reconnect";
+import { loadDeviceImage, registerDeviceImages } from "./lib/deviceImages";
 import { getAppInfo, setExperimentalMode } from "./lib/app";
 import {
   applyTheme,
@@ -277,6 +280,14 @@ const App: Component = () => {
   };
 
   onMount(async () => {
+    const remembered = readRememberedDevice();
+    void listModels().then(models => {
+      registerDeviceImages(models);
+      if (remembered?.modelId) {
+        const image = models.find(model => model.id === remembered.modelId)?.imageUrl;
+        if (image) void loadDeviceImage(image);
+      }
+    }).catch(() => { /* Image warmup is optional. */ });
     try {
       await setExperimentalMode(savedDesktopPreferences.experimentalMode);
       setExperimentalModeReady(true);
@@ -290,7 +301,7 @@ const App: Component = () => {
     applyTheme(storedTheme);
     setTheme(storedTheme);
 
-    try { setModelProfiles(await listModelProfiles()); } catch { /* unavailable outside Tauri */ }
+    try { setModelProfiles(await listModelProfiles()); } catch (error) { notify(formatError(error), "error"); }
     try {
       const info = await getAppInfo();
       setAppVersion(info.version);
@@ -486,7 +497,7 @@ const App: Component = () => {
           <section class="section section-scroll">
             <MorePanel
               bassSupported={device()?.deviceProfile.capabilities.bassBoost ?? false}
-              bassMaxLevel={device()?.deviceProfile.protocol === "bp1Ultra" ? 5 : 1}
+              bassMaxLevel={device()?.deviceProfile.sound?.maxBassLevel ?? 0}
               ldacSupported={device()?.deviceProfile.capabilities.ldac ?? false}
               pending={sound.pending()}
               error={sound.error()}

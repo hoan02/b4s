@@ -10,37 +10,7 @@ pub(crate) fn set_experimental_mode(enabled: bool) {
     EXPERIMENTAL_MODE.store(enabled, Ordering::Relaxed);
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Feature {
-    Listening,
-    Eq,
-    CustomEq,
-    Game,
-    Bass,
-    Spatial,
-    Ldac,
-    Hearing,
-    Find,
-    Gesture,
-    InEar,
-    Multipoint,
-    RestoreDefaults,
-    AdaptiveLr,
-}
-
-impl Feature {
-    /// Capability key used by the reviewed profile's `experimentalFeatures`.
-    pub fn key(self) -> &'static str {
-        match self {
-            Feature::Gesture => "gesture",
-            Feature::InEar => "inEar",
-            Feature::Multipoint => "multipoint",
-            Feature::RestoreDefaults => "restoreDefaults",
-            Feature::AdaptiveLr => "adaptiveLr",
-            _ => "",
-        }
-    }
-}
+pub use crate::catalog::features::Feature;
 
 pub fn authorize_control(profile: &DeviceProfile) -> Result<(), String> {
     let connection = profile
@@ -74,22 +44,10 @@ pub fn authorize_control(profile: &DeviceProfile) -> Result<(), String> {
 pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String> {
     authorize_control(profile)?;
     let capability = &profile.capabilities;
-    let enabled = match feature {
-        Feature::Listening => capability.anc,
-        Feature::Eq => capability.eq,
-        Feature::CustomEq => capability.eq && capability.custom_eq,
-        Feature::Game => capability.game_mode,
-        Feature::Bass => capability.bass_boost,
-        Feature::Spatial => capability.spatial,
-        Feature::Ldac => capability.ldac,
-        Feature::Hearing => capability.hearing_protection,
-        Feature::Find => capability.find_buds,
-        Feature::Gesture => capability.gesture,
-        Feature::InEar => capability.in_ear,
-        Feature::Multipoint => capability.multipoint,
-        Feature::RestoreDefaults => capability.restore_defaults,
-        Feature::AdaptiveLr => capability.adaptive_lr,
-    };
+    let enabled = capability
+        .enabled(feature.key())
+        .ok_or("No reviewed feature schema")?
+        && (!matches!(feature, Feature::CustomEq) || capability.eq);
     if enabled {
         let key = feature.key();
         if !key.is_empty()
@@ -115,6 +73,14 @@ pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String
 mod tests {
     use super::*;
     use crate::protocol::profile_for;
+
+    #[test]
+    fn evidence_metadata_cannot_grant_a_disabled_runtime_feature() {
+        let mut pro = profile_for(Some("bass-bp1-pro"), None, None);
+        pro.feature_evidence.get_mut("ldac").unwrap().status =
+            crate::catalog::evidence::EvidenceStatus::HardwareVerified;
+        assert!(authorize(&pro, Feature::Ldac).is_err());
+    }
 
     #[test]
     fn metadata_and_unsupported_feature_cannot_authorize_packets() {

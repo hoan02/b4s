@@ -12,6 +12,14 @@ SolidJS, Tauri y Rust.
 
 Las capturas muestran la interfaz en vietnamita.
 
+## Novedades de 0.1.3
+
+El catálogo incluye 124 perfiles, con 122 modelos solo de reconocimiento. Los nombres e imágenes usan metadatos públicos; las fotos se guardan en una caché local de 64 MiB para reutilizarlas sin conexión. Los identificadores y los datos guardados del dispositivo/EQ se migran automáticamente.
+
+Los usuarios de 0.1.1/0.1.2 deben instalar 0.1.3 manualmente una vez porque cambió la clave de firma del actualizador.
+
+[Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
+
 ## Compatibilidad
 
 BP1 Pro tiene un perfil de modelo revisado. BP1 Ultra admite conexión BLE/789C

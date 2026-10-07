@@ -161,7 +161,7 @@ pub(super) fn device_from_identity(
     let model_name = resolved
         .model
         .as_ref()
-        .map(|model| model.display_name.clone());
+        .map(|model| model.product_name.clone());
     let support = resolved.model.as_ref().map(|model| match model.support {
         protocol::SupportLevel::Verified => "verified".into(),
         protocol::SupportLevel::Experimental => "experimental".into(),

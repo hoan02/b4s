@@ -61,7 +61,7 @@ bun run tauri:build
 ```
 
 Versions 0.1.1 and 0.1.2 contain the previous public key. Users must download
-and install the first release containing the new public key manually once.
+and install the 0.1.3 release containing the new public key manually once.
 Subsequent releases must keep this same key pair for automatic updates to work.
 Do not replace the existing 0.1.2 release; publish a new version for migration.
 
@@ -93,3 +93,7 @@ git push origin main --tags
 Updater endpoint:
 
 `https://github.com/hoan02/b4s/releases/latest/download/latest.json`
+
+## 0.1.3 release checklist
+
+See [CHANGELOG](../CHANGELOG.md) for public release notes. Check frozen Bun install, all frontend tests, i18n, Python catalog/extraction tests, frontend build, serial Rust tests and locked cargo check. The Release workflow verifies signing-key compatibility before each platform build. Verify Windows/macOS/Linux installers, detached signatures and `latest.json` after publication. APKs, extraction outputs and private signing keys stay ignored.

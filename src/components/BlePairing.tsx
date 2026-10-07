@@ -15,7 +15,7 @@ import {
   prepareAudioTarget,
 } from "../lib/ble";
 import { findReconnectTarget, readRememberedDevice } from "../lib/reconnect";
-import { resolveDeviceThumb } from "../lib/deviceImages";
+import { createDeviceVisual, handleDeviceImageError, resolveDeviceThumb } from "../lib/deviceImages";
 import { formatError, t } from "../lib/i18n";
 import { isTauri } from "../lib/tauri";
 
@@ -431,6 +431,7 @@ const DeviceRow: Component<{
 }> = (props) => {
   const bars = () => rssiToBars(props.device.rssi);
   const title = () => props.device.modelName || props.device.name;
+  const visual = createDeviceVisual(() => props.device.imageUrl, title, true);
 
   return (
     <button
@@ -441,7 +442,10 @@ const DeviceRow: Component<{
     >
       <div class="device-icon photo">
         <img
-          src={resolveDeviceThumb(props.device.modelId, props.device.name, props.device.imageUrl).src}
+          src={visual().src}
+          data-image-url={visual().sourceUrl}
+          decoding="async"
+          onError={handleDeviceImageError}
           alt=""
           draggable={false}
         />

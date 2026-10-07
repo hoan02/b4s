@@ -6,7 +6,7 @@ import { Component, Show } from "solid-js";
 import type { BatteryData } from "./Battery";
 import type { AncMode, NoiseEnvironment, SpatialMode, TransparencyMode } from "../lib/device";
 import type { LinkHealth } from "../lib/ble";
-import { resolveDeviceImage } from "../lib/deviceImages";
+import { createDeviceVisual, handleDeviceImageError } from "../lib/deviceImages";
 import { t } from "../lib/i18n";
 import OperationStatus from "./OperationStatus";
 import {
@@ -118,7 +118,7 @@ function fmt(p: number | null) {
 }
 
 const HomePanel: Component<Props> = (props) => {
-  const visual = () => resolveDeviceImage(props.modelId, props.name, props.imageUrl);
+  const visual = createDeviceVisual(() => props.imageUrl, () => props.name);
   const level = () => props.link.level;
   const statusText = () => {
     switch (level()) {
@@ -162,6 +162,9 @@ const HomePanel: Component<Props> = (props) => {
         <img
           class="home-device-img"
           src={visual().src}
+          data-image-url={visual().sourceUrl}
+          decoding="async"
+          onError={handleDeviceImageError}
           alt=""
           draggable={false}
         />

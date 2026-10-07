@@ -11,6 +11,14 @@ B4S 是一款独立的桌面应用，可在 Windows、macOS 和 Linux 上控制�
 
 截图展示的是越南语界面。
 
+## 0.1.3 新增内容
+
+目录包含 124 个耳机配置，其中 122 个型号仅支持识别。产品名称和图片使用公开元数据；缩略图和大图保存在本地缓存中（64 MiB），可离线重复使用。型号 ID 已统一，已保存的设备和 EQ 数据会自动迁移。
+
+由于更新签名密钥已更换，0.1.1/0.1.2 用户需要手动安装 0.1.3 一次。
+
+[Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
+
 ## 设备支持
 
 BP1 Pro 有经过审查的型号配置。BP1 Ultra 实验性支持 BLE/789C 连接和电量显示，

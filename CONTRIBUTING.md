@@ -16,7 +16,7 @@ Before submitting a pull request, run:
 bun x --bun tsc --noEmit
 bun run build
 cargo check --manifest-path src-tauri/Cargo.toml
-cargo test --manifest-path src-tauri/Cargo.toml --lib
+cargo test --manifest-path src-tauri/Cargo.toml --lib -- --test-threads=1
 ```
 
 ## Choose the right contribution
@@ -27,6 +27,11 @@ cargo test --manifest-path src-tauri/Cargo.toml --lib
 - UI changes: include screenshots and check supported and unsupported features.
 
 Keep changes focused. Do not duplicate a screen or copy an adapter for each model.
+Run `bun run test:models` for model contracts, saved-ID migration and image cache
+requests. Model IDs and profile filenames follow the
+[identity and presentation contract](docs/model-identity-presentation.md).
+Some authorization tests share experimental-mode state; run Rust tests serially
+until that test state is isolated.
 Use two-space indentation in TypeScript and standard rustfmt formatting in Rust.
 Avoid repository-wide formatting in an unrelated change.
 

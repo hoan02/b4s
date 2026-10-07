@@ -11,6 +11,14 @@ Bluetooth LE no Windows, macOS e Linux. Foi desenvolvido com SolidJS, Tauri e Ru
 
 As capturas mostram a interface em vietnamita.
 
+## Novidades da versão 0.1.3
+
+O catálogo inclui 124 perfis, com 122 modelos apenas para reconhecimento. Nomes e imagens usam metadados públicos; as fotos ficam em um cache local de 64 MiB para uso offline. Os identificadores e dados salvos do dispositivo/EQ são migrados automaticamente.
+
+Usuários das versões 0.1.1/0.1.2 precisam instalar a versão 0.1.3 manualmente uma vez porque a chave de assinatura do atualizador mudou.
+
+[Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
+
 ## Compatibilidade
 
 BP1 Pro tem um perfil de modelo revisado. O BP1 Ultra oferece conexão BLE/789C
