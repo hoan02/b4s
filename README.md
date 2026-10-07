@@ -1,15 +1,21 @@
-# B4S
+# B4S: unofficial Baseus earbuds app for Windows, macOS and Linux
 
 English | [Tiếng Việt](README.vi.md) | [Español](README.es.md) | [简体中文](README.zh-CN.md) | [Português (Brasil)](README.pt-BR.md)
 
-B4S is an independent desktop companion for controlling selected Bluetooth LE
-earbuds on Windows, macOS and Linux. It is built with SolidJS, Tauri and Rust.
+**B4S is a free, open-source desktop app that controls Baseus Bluetooth LE earbuds from your PC.**
+Switch noise cancelling (ANC), transparency and adaptive modes, adjust the EQ,
+turn on spatial audio and game mode, and read battery levels without the Baseus
+phone app. It works with the **Baseus Bass BP1 Pro** and **BP1 Ultra**, with
+experimental profiles for the **EP10 Ultra, EP10 Pro, Bowie M4s, Bowie MS1 and
+Bowie M3s**. Built with SolidJS, Tauri and Rust.
 
-| Scan and connect | Device controls | Settings |
-|---|---|---|
-| ![Scan and connect](assets/i1.png) | ![Battery, ANC and audio controls](assets/i2.png) | ![Settings](assets/i3.png) |
+[**Download the latest installer**](https://github.com/hoan02/b4s/releases/latest) · [Supported earbuds](#supported-baseus-earbuds) · [FAQ](#faq)
 
-Screenshots show the Vietnamese interface.
+| Scan and connect | Device controls | More controls | Settings |
+|---|---|---|---|
+| ![B4S scanning for Baseus earbuds over Bluetooth LE on a PC](assets/i1.png) | ![B4S showing battery, noise cancelling modes and spatial audio for Baseus Bass BP1 Pro](assets/i2.png) | ![B4S controls grouped into sound, controls and device settings](assets/i4.png) | ![B4S settings with language, theme and update options](assets/i3.png) |
+
+Screenshots show the Vietnamese interface. The control screens were rendered from the app's own components with sample data.
 
 ## What is new in 0.1.3
 
@@ -19,16 +25,25 @@ Users of 0.1.1/0.1.2 must install 0.1.3 manually once because the updater signin
 
 [Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
 
-## Device support
+## Supported Baseus earbuds
 
-BP1 Pro has a reviewed model profile. BP1 Ultra supports experimental BLE/789C
-connection, battery reporting, ANC, game mode, spatial audio, Bass Boost, LDAC,
-hearing protection and gestures. EQ/SoundFit remain unavailable. Other catalog entries may
-be experimental or recognition-only. EP10 Ultra, Bowie M4s and MS1 reuse the
-BP1 Ultra adapter, and Bowie M3s and EP10 Pro reuse the BP1 Pro adapter, as
-experimental source-reviewed profiles that have not been tested on hardware. A name match does not mean that control
-has been verified; check the support level shown by the app and the model
-catalog before relying on a feature.
+B4S only enables controls for earbuds that have a reviewed profile. A name match
+alone never turns a control on.
+
+| Baseus model | Support level | What you can control |
+|---|---|---|
+| Bass BP1 Pro | Reviewed profile | ANC, transparency and adaptive modes, EQ presets and custom EQ, spatial audio, game mode, bass boost, find earbuds |
+| Bass BP1 Ultra | Experimental, tested on Windows | Battery, ANC, game mode, spatial audio, bass boost, LDAC, hearing protection, gestures. EQ/SoundFit unavailable |
+| Bass EP10 Ultra, Bowie M4s, Bowie MS1 | Experimental, not tested on hardware | Same controls as BP1 Ultra (shared adapter) |
+| Bass EP10 Pro, Bowie M3s | Experimental, not tested on hardware | ANC, spatial audio, game mode, bass boost, gestures, wind noise reduction (EP10 Pro also has EQ presets) |
+| 117 other Baseus models in the catalog | Recognition only | Name and image in the device list, no controls |
+
+Some controls (touch gestures, in-ear detection, multipoint, wind noise
+reduction, adaptive L/R, restore defaults) are marked **Experimental** in the
+app and follow *Settings → Experimental mode*. Controls vary by model and
+firmware.
+
+### Support levels
 
 | Level | Meaning |
 |---|---|
@@ -49,7 +64,9 @@ See [the model catalog](docs/model-catalog.md) and [protocol notes](docs/protoco
 - Show left, right and case battery levels when the device reports them.
 - Control noise cancellation, transparency and supported listening modes.
 - Adjust EQ presets and custom EQ where the model profile allows it.
-- Use spatial audio, game mode and find-earbuds controls on supported models.
+- Use spatial audio, game mode, bass boost and find-earbuds controls on supported models.
+- Try experimental controls such as touch gestures, in-ear detection, multipoint,
+  wind noise reduction and adaptive L/R earbuds on models that declare them.
 - Choose a light or dark theme and check for app updates.
 - Optionally start at sign-in. Closing the window hides B4S to the system tray
   when the tray is available; use **Quit B4S** in the tray menu to exit.
@@ -68,6 +85,30 @@ bun run tauri:dev
 ```
 
 Before submitting changes, run the checks in [Contributing](CONTRIBUTING.md).
+
+## FAQ
+
+**Is there a Baseus app for Windows or PC?**
+Baseus publishes its official app for phones. B4S is an independent, unofficial
+desktop app that covers the earbud controls above on Windows, macOS and Linux.
+Windows is the platform used for testing so far.
+
+**Can I change Baseus noise cancelling (ANC) or EQ from a computer?**
+Yes, on supported models: connect over Bluetooth LE, then switch ANC,
+transparency or adaptive mode and pick an EQ preset in B4S.
+
+**Does it work with my Baseus earbuds?**
+Check [Supported Baseus earbuds](#supported-baseus-earbuds). B4S recognizes 124
+Baseus headphone models, but only the models in that table have controls.
+
+**Why can B4S not find or control my earbuds on Windows?**
+Windows often lists the same earbuds twice (audio endpoint and BLE control
+entry). Pick the entry marked **Control**. See the
+[troubleshooting guide](docs/desktop-troubleshooting.md).
+
+**Is it safe, and does it send my data anywhere?**
+Controls run locally over Bluetooth. B4S needs no account and sends no device or
+personal data to a server. Read the [disclaimer](#disclaimer-and-safe-use).
 
 ## Languages
 

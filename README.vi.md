@@ -1,15 +1,21 @@
-# B4S
+# B4S: ứng dụng Baseus không chính thức cho Windows, macOS và Linux
 
 [English](README.md) | Tiếng Việt | [Español](README.es.md) | [简体中文](README.zh-CN.md) | [Português (Brasil)](README.pt-BR.md)
 
-B4S là ứng dụng desktop độc lập để điều khiển một số mẫu tai nghe Bluetooth LE
-trên Windows, macOS và Linux. Ứng dụng được xây dựng bằng SolidJS, Tauri và Rust.
+**B4S là ứng dụng desktop miễn phí, mã nguồn mở, dùng để điều khiển tai nghe Bluetooth LE Baseus ngay trên máy tính.**
+Bật/tắt chống ồn (ANC), xuyên âm và chế độ thích ứng, chỉnh EQ, dùng âm thanh
+không gian, chế độ game và xem pin mà không cần ứng dụng Baseus trên điện thoại.
+Hỗ trợ **Baseus Bass BP1 Pro** và **BP1 Ultra**, cùng profile thử nghiệm cho
+**EP10 Ultra, EP10 Pro, Bowie M4s, Bowie MS1 và Bowie M3s**. Xây dựng bằng
+SolidJS, Tauri và Rust.
 
-| Quét và kết nối | Điều khiển thiết bị | Cài đặt |
-|---|---|---|
-| ![Quét và kết nối](assets/i1.png) | ![Pin, ANC và âm thanh](assets/i2.png) | ![Cài đặt](assets/i3.png) |
+[**Tải bản cài đặt mới nhất**](https://github.com/hoan02/b4s/releases/latest) · [Tai nghe được hỗ trợ](#tai-nghe-baseus-được-hỗ-trợ) · [Hỏi đáp](#hỏi-đáp)
 
-Ảnh chụp màn hình hiện giao diện tiếng Việt.
+| Quét và kết nối | Điều khiển thiết bị | Thêm điều khiển | Cài đặt |
+|---|---|---|---|
+| ![B4S quét tai nghe Baseus qua Bluetooth LE trên máy tính](assets/i1.png) | ![B4S hiển thị pin, chống ồn và âm thanh không gian cho Baseus Bass BP1 Pro](assets/i2.png) | ![B4S nhóm điều khiển theo âm thanh, điều khiển và thiết bị](assets/i4.png) | ![Cài đặt B4S: ngôn ngữ, giao diện và cập nhật](assets/i3.png) |
+
+Ảnh chụp màn hình hiện giao diện tiếng Việt. Các màn hình điều khiển được dựng từ chính component của ứng dụng với dữ liệu mẫu.
 
 ## Điểm mới trong 0.1.3
 
@@ -19,14 +25,25 @@ Người dùng 0.1.1/0.1.2 cần cài thủ công 0.1.3 một lần vì khóa k�
 
 [Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
 
-## Hỗ trợ thiết bị
+## Tai nghe Baseus được hỗ trợ
 
-BP1 Pro có profile model đã được rà soát. BP1 Ultra hỗ trợ kết nối BLE/789C và
-hiển thị pin, ANC, chế độ game, âm thanh không gian, Bass Boost, LDAC, bảo vệ
-thính giác và thao tác chạm ở mức thử nghiệm. EQ/SoundFit chưa khả dụng. Các model khác
-trong catalog có thể ở mức thử nghiệm hoặc chỉ nhận diện. Nhận diện được tên
-thiết bị không đồng nghĩa với việc điều khiển đã được xác minh. Hãy xem mức hỗ
-trợ trong ứng dụng và catalog model trước khi sử dụng.
+B4S chỉ bật điều khiển cho tai nghe đã có profile được rà soát. Chỉ khớp tên
+thiết bị thì không bao giờ tự bật chức năng.
+
+| Model Baseus | Mức hỗ trợ | Điều khiển được |
+|---|---|---|
+| Bass BP1 Pro | Profile đã rà soát | ANC, xuyên âm, chế độ thích ứng, EQ preset và EQ tùy chỉnh, âm thanh không gian, chế độ game, bass boost, tìm tai nghe |
+| Bass BP1 Ultra | Thử nghiệm, đã thử trên Windows | Pin, ANC, chế độ game, âm thanh không gian, bass boost, LDAC, bảo vệ thính giác, thao tác chạm. Chưa có EQ/SoundFit |
+| Bass EP10 Ultra, Bowie M4s, Bowie MS1 | Thử nghiệm, chưa thử trên phần cứng | Giống BP1 Ultra (dùng chung adapter) |
+| Bass EP10 Pro, Bowie M3s | Thử nghiệm, chưa thử trên phần cứng | ANC, âm thanh không gian, chế độ game, bass boost, thao tác chạm, giảm tiếng ồn gió (EP10 Pro có thêm EQ preset) |
+| 117 model Baseus khác trong catalog | Chỉ nhận diện | Hiện tên và ảnh trong danh sách, không có điều khiển |
+
+Một số điều khiển (thao tác chạm, phát hiện đeo tai, kết nối hai thiết bị, giảm
+tiếng ồn gió, tai nghe thích ứng L/R, khôi phục mặc định) được gắn nhãn
+**Thử nghiệm** trong ứng dụng và phụ thuộc *Cài đặt → Chế độ thử nghiệm*. Chức
+năng thay đổi theo model và firmware.
+
+### Mức hỗ trợ
 
 | Mức hỗ trợ | Ý nghĩa |
 |---|---|
@@ -46,7 +63,9 @@ Xem [catalog model](docs/model-catalog.md) và [ghi chú giao thức](docs/proto
 - Hiển thị pin trái, phải và hộp sạc khi thiết bị gửi dữ liệu.
 - Điều khiển chống ồn, xuyên âm và các chế độ nghe được hỗ trợ.
 - Chỉnh EQ preset và EQ tùy chỉnh khi profile model cho phép.
-- Dùng âm thanh không gian, chế độ game và tìm tai nghe trên model tương thích.
+- Dùng âm thanh không gian, chế độ game, bass boost và tìm tai nghe trên model tương thích.
+- Dùng thử các điều khiển thử nghiệm như thao tác chạm, phát hiện đeo tai, kết nối
+  hai thiết bị, giảm tiếng ồn gió và tai nghe thích ứng L/R trên model có khai báo.
 - Chọn giao diện sáng/tối và kiểm tra cập nhật ứng dụng.
 - Có thể bật khởi động cùng lúc đăng nhập. Đóng cửa sổ sẽ ẩn B4S vào khay hệ
   thống khi khay khả dụng; chọn **Quit B4S** trong menu khay để thoát.
@@ -67,6 +86,31 @@ bun run tauri:dev
 ```
 
 Trước khi gửi thay đổi, hãy chạy các bước trong [hướng dẫn đóng góp](CONTRIBUTING.md).
+
+## Hỏi đáp
+
+**Có ứng dụng Baseus cho Windows hoặc máy tính không?**
+Baseus phát hành ứng dụng chính thức cho điện thoại. B4S là ứng dụng desktop độc
+lập, không chính thức, cung cấp các điều khiển tai nghe ở trên trên Windows,
+macOS và Linux. Hiện Windows là nền tảng đã được dùng để kiểm thử.
+
+**Có thể chỉnh chống ồn (ANC) hoặc EQ của tai nghe Baseus từ máy tính không?**
+Có, với model được hỗ trợ: kết nối qua Bluetooth LE rồi đổi chế độ ANC, xuyên âm,
+thích ứng hoặc chọn EQ preset trong B4S.
+
+**Tai nghe Baseus của tôi có dùng được không?**
+Xem mục [Tai nghe Baseus được hỗ trợ](#tai-nghe-baseus-được-hỗ-trợ). B4S nhận
+diện 124 model tai nghe Baseus nhưng chỉ các model trong bảng đó mới có điều khiển.
+
+**Vì sao B4S không tìm thấy hoặc không điều khiển được tai nghe trên Windows?**
+Windows thường liệt kê cùng một tai nghe hai lần (cổng âm thanh và cổng điều
+khiển BLE). Hãy chọn mục có nhãn **Control**. Xem
+[hướng dẫn xử lý sự cố](docs/desktop-troubleshooting.md).
+
+**Ứng dụng có an toàn và có gửi dữ liệu của tôi đi đâu không?**
+Điều khiển chạy cục bộ qua Bluetooth. B4S không cần tài khoản và không gửi dữ
+liệu thiết bị hay cá nhân lên máy chủ. Đọc phần
+[miễn trừ trách nhiệm](#miễn-trừ-trách-nhiệm-và-sử-dụng-an-toàn).
 
 ## Ngôn ngữ
 

@@ -3,12 +3,13 @@ import { requestToggle } from "../lib/confirmedToggle";
  * Home — model-supported noise, spatial and feature controls
  */
 import { Component, Show } from "solid-js";
-import type { BatteryData } from "./Battery";
+import type { BatteryData } from "../lib/battery";
 import type { AncMode, NoiseEnvironment, SpatialMode, TransparencyMode } from "../lib/device";
 import type { LinkHealth } from "../lib/ble";
 import { createDeviceVisual, handleDeviceImageError } from "../lib/deviceImages";
 import { t } from "../lib/i18n";
 import OperationStatus from "./OperationStatus";
+import { NavRow, ToggleRow } from "./ListRows";
 import {
   IconNormal,
   IconAmbient,
@@ -24,10 +25,19 @@ import {
   IconOutdoor,
   IconTransit,
   IconFlight,
+  IconEar,
+  IconTouch,
+  IconLink,
+  IconBalance,
+  IconWind,
+  IconReset,
+  IconBolt,
 } from "./Icons";
 
 interface Props {
   name: string;
+  /** Capability keys the reviewed profile marks Experimental-only. */
+  experimentalFeatures?: string[];
   modelId?: string | null;
   imageUrl?: string | null;
   battery: BatteryData;
@@ -122,7 +132,27 @@ function fmt(p: number | null) {
   return p === null ? "—" : `${Math.min(100, p)}%`;
 }
 
+const BatteryCell = (props: { label: string; value: number | null; charging?: boolean }) => (
+  <div class="home-batt-cell">
+    <div class={`pct ${pctClass(props.value)}`}>
+      {fmt(props.value)}
+      <Show when={props.charging}>
+        <IconBolt size={13} class="batt-bolt" />
+      </Show>
+    </div>
+    <div class="batt-bar" aria-hidden="true">
+      <span class={pctClass(props.value)} style={{ width: `${Math.min(100, props.value ?? 0)}%` }} />
+    </div>
+    <div class="tag">{props.label}</div>
+  </div>
+);
+
 const HomePanel: Component<Props> = (props) => {
+  const isExperimental = (key: string) => props.experimentalFeatures?.includes(key) ?? false;
+  const soundVisible = () =>
+    props.gameSupported || props.eqSupported || props.windNoiseSupported || props.moreSupported;
+  const controlsVisible = () =>
+    props.gestureSupported || props.inEarSupported || props.multipointSupported || props.adaptiveLrSupported;
   const visual = createDeviceVisual(() => props.imageUrl, () => props.name);
   const level = () => props.link.level;
   const statusText = () => {
@@ -175,25 +205,10 @@ const HomePanel: Component<Props> = (props) => {
         />
       </div>
 
-      <div class="home-batt">
-        <div class="home-batt-cell">
-          <div class={`pct ${pctClass(props.battery.left)}`}>
-            {fmt(props.battery.left)}
-          </div>
-          <div class="tag">{t("home.indicatorLeft")}</div>
-        </div>
-        <div class="home-batt-cell">
-          <div class={`pct ${pctClass(props.battery.case)}`}>
-            {fmt(props.battery.case)}
-          </div>
-          <div class="tag">{t("home.indicatorCase")}</div>
-        </div>
-        <div class="home-batt-cell">
-          <div class={`pct ${pctClass(props.battery.right)}`}>
-            {fmt(props.battery.right)}
-          </div>
-          <div class="tag">{t("home.indicatorRight")}</div>
-        </div>
+      <div class="home-batt" role="group" aria-label={t("home.battery")}>
+        <BatteryCell label={t("home.indicatorLeft")} value={props.battery.left} charging={props.battery.leftCharging} />
+        <BatteryCell label={t("home.indicatorCase")} value={props.battery.case} charging={props.battery.caseCharging} />
+        <BatteryCell label={t("home.indicatorRight")} value={props.battery.right} charging={props.battery.rightCharging} />
       </div>
 
       {/* Noise — only square tiles */}
@@ -310,214 +325,137 @@ const HomePanel: Component<Props> = (props) => {
 
       </Show>
 
-      {/* Main list */}
+      {/* Main list: grouped by purpose, one row structure everywhere */}
       <div class="home-list">
-        <div class="home-list-card">
-          <Show when={props.gameSupported}>
-          <div class="list-row">
-            <span class="list-ico">
-              <IconGame size={22} />
-            </span>
-            <div class="list-text">
-              <span class="list-title">{t("home.gameMode")}</span>
-              <span class="list-sub">{t("home.lowLatency")}</span>
-              <OperationStatus pending={props.gamePending} error={props.gameError} />
-            </div>
-            <label class="toggle sm">
-              <input
-                type="checkbox"
-                aria-checked={props.gameMode === null ? "mixed" : props.gameMode}
-                checked={props.gameMode === true}
-                disabled={props.gamePending}
-                aria-busy={props.gamePending}
-                aria-label={t("home.gameMode")}
-                onChange={(e) =>
-                  requestToggle(e.currentTarget, props.gameMode === true, props.onGameMode)
-                }
+        <Show when={soundVisible()}>
+        <div class="home-group">
+          <p class="home-section-label">{t("home.groupSound")}</p>
+          <div class="home-list-card">
+            <Show when={props.gameSupported}>
+              <ToggleRow
+                icon={<IconGame size={22} />}
+                title={t("home.gameMode")}
+                hint={t("home.lowLatency")}
+                checked={props.gameMode}
+                pending={props.gamePending}
+                error={props.gameError}
+                onChange={props.onGameMode}
               />
-              <span class="slider" />
-            </label>
-          </div>
-
-          </Show>
-
-          <Show when={props.eqSupported}>
-          <button type="button" class="list-row action" onClick={() => props.onOpenEq()}>
-            <span class="list-ico">
-              <IconEq size={22} />
-            </span>
-            <div class="list-text">
-              <span class="list-title">EQ</span>
-              <span class="list-sub">{props.eqLabel}</span>
-            </div>
-            <span class="list-chev">›</span>
-          </button>
-          </Show>
-
-          <Show when={props.inEarSupported}>
-          <div class="list-row">
-            <span class="list-ico list-ico-text">IE</span>
-            <div class="list-text">
-              <span class="list-title">{t("gesture.inEar")}</span>
-              <span class="list-sub">{t("gesture.inEarHint")}</span>
-              <OperationStatus pending={props.inEarPending} error={props.inEarError} />
-            </div>
-            <label class="toggle sm">
-              <input
-                type="checkbox"
-                disabled={props.inEarPending}
-                aria-checked={props.inEarOn === null ? "mixed" : props.inEarOn}
-                checked={props.inEarOn === true}
-                aria-label={t("gesture.inEar")}
-                onChange={(e) => requestToggle(e.currentTarget, props.inEarOn === true, props.onInEar)}
+            </Show>
+            <Show when={props.eqSupported}>
+              <NavRow icon={<IconEq size={22} />} title="EQ" hint={props.eqLabel} onClick={props.onOpenEq} />
+            </Show>
+            <Show when={props.windNoiseSupported}>
+              <ToggleRow
+                icon={<IconWind size={22} />}
+                title={t("windNoise.title")}
+                hint={t("windNoise.hint")}
+                experimental={isExperimental("windNoise")}
+                checked={props.windNoiseOn}
+                pending={props.windNoisePending}
+                error={props.windNoiseError}
+                onChange={props.onWindNoise}
               />
-              <span class="slider" />
-            </label>
-          </div>
-          </Show>
-
-          <Show when={props.gestureSupported}>
-          <button type="button" class="list-row action" onClick={() => props.onOpenGestures()}>
-            <span class="list-ico list-ico-text">G</span>
-            <div class="list-text">
-              <span class="list-title">{t("gesture.title")}</span>
-              <span class="list-sub">{t("gesture.entryHint")}</span>
-            </div>
-            <span class="list-chev">›</span>
-          </button>
-          </Show>
-
-          <Show when={props.multipointSupported}>
-          <div class="list-row">
-            <span class="list-ico list-ico-text">MP</span>
-            <div class="list-text">
-              <span class="list-title">{t("multipoint.title")}</span>
-              <span class="list-sub">{t("multipoint.hint")}</span>
-              <OperationStatus pending={props.multipointPending} error={props.multipointError} />
-            </div>
-            <label class="toggle sm">
-              <input
-                type="checkbox"
-                disabled={props.multipointPending}
-                aria-checked={props.multipointOn === null ? "mixed" : props.multipointOn}
-                checked={props.multipointOn === true}
-                aria-label={t("multipoint.title")}
-                onChange={(e) => requestToggle(e.currentTarget, props.multipointOn === true, props.onMultipoint)}
+            </Show>
+            <Show when={props.moreSupported}>
+              <NavRow
+                icon={<IconMore size={22} />}
+                title={t("home.moreAudio")}
+                hint={t("home.bassLdac")}
+                onClick={props.onOpenMore}
               />
-              <span class="slider" />
-            </label>
+            </Show>
           </div>
-          </Show>
-
-          <Show when={props.moreSupported}>
-          <button type="button" class="list-row action" onClick={() => props.onOpenMore()}>
-            <span class="list-ico">
-              <IconMore size={22} />
-            </span>
-            <div class="list-text">
-              <span class="list-title">{t("home.moreAudio")}</span>
-              <span class="list-sub">{t("home.bassLdac")}</span>
-            </div>
-            <span class="list-chev">›</span>
-          </button>
-          </Show>
         </div>
+        </Show>
 
-        <div class="home-list-card">
-          <Show when={props.findSupported}>
-          <button type="button" class={`list-row action find-row ${props.findActive ? "active" : ""}`} onClick={() => props.onFindBuds()} aria-pressed={props.findActive}>
-            <span class="list-ico"><IconFind size={22} /></span>
-            <div class="list-text">
-              <span class="list-title">{props.findActive ? t("home.finding") : t("home.find")}</span>
-              <span class="list-sub">{t("home.playSound")}</span>
-            </div>
-            <span class="list-chev">›</span>
-          </button>
-          </Show>
-          <button
-            type="button"
-            class="list-row action"
-            onClick={() => props.onOpenSettings()}
-          >
-            <span class="list-ico">
-              <IconSettings size={22} />
-            </span>
-            <div class="list-text">
-              <span class="list-title">{t("nav.settings")}</span>
-            </div>
-            <span class="list-chev">›</span>
-          </button>
-          <Show when={props.adaptiveLrSupported}>
-          <div class="list-row">
-            <span class="list-ico list-ico-text">AL</span>
-            <div class="list-text">
-              <span class="list-title">{t("adaptiveLr.title")}</span>
-              <span class="list-sub">{t("adaptiveLr.hint")}</span>
-              <OperationStatus pending={props.adaptiveLrPending} error={props.adaptiveLrError} />
-            </div>
-            <label class="toggle sm">
-              <input
-                type="checkbox"
-                disabled={props.adaptiveLrPending}
-                aria-checked={props.adaptiveLrOn === null ? "mixed" : props.adaptiveLrOn}
-                checked={props.adaptiveLrOn === true}
-                aria-label={t("adaptiveLr.title")}
-                onChange={(e) => requestToggle(e.currentTarget, props.adaptiveLrOn === true, props.onAdaptiveLr)}
+        <Show when={controlsVisible()}>
+        <div class="home-group">
+          <p class="home-section-label">{t("home.groupControls")}</p>
+          <div class="home-list-card">
+            <Show when={props.gestureSupported}>
+              <NavRow
+                icon={<IconTouch size={22} />}
+                title={t("gesture.title")}
+                hint={t("gesture.entryHint")}
+                experimental={isExperimental("gesture")}
+                onClick={props.onOpenGestures}
               />
-              <span class="slider" />
-            </label>
-          </div>
-          </Show>
-          <Show when={props.windNoiseSupported}>
-          <div class="list-row">
-            <span class="list-ico list-ico-text">WN</span>
-            <div class="list-text">
-              <span class="list-title">{t("windNoise.title")}</span>
-              <span class="list-sub">{t("windNoise.hint")}</span>
-              <OperationStatus pending={props.windNoisePending} error={props.windNoiseError} />
-            </div>
-            <label class="toggle sm">
-              <input
-                type="checkbox"
-                disabled={props.windNoisePending}
-                aria-checked={props.windNoiseOn === null ? "mixed" : props.windNoiseOn}
-                checked={props.windNoiseOn === true}
-                aria-label={t("windNoise.title")}
-                onChange={(e) => requestToggle(e.currentTarget, props.windNoiseOn === true, props.onWindNoise)}
+            </Show>
+            <Show when={props.inEarSupported}>
+              <ToggleRow
+                icon={<IconEar size={22} />}
+                title={t("gesture.inEar")}
+                hint={t("gesture.inEarHint")}
+                experimental={isExperimental("inEar")}
+                checked={props.inEarOn}
+                pending={props.inEarPending}
+                error={props.inEarError}
+                onChange={props.onInEar}
               />
-              <span class="slider" />
-            </label>
+            </Show>
+            <Show when={props.multipointSupported}>
+              <ToggleRow
+                icon={<IconLink size={22} />}
+                title={t("multipoint.title")}
+                hint={t("multipoint.hint")}
+                experimental={isExperimental("multipoint")}
+                checked={props.multipointOn}
+                pending={props.multipointPending}
+                error={props.multipointError}
+                onChange={props.onMultipoint}
+              />
+            </Show>
+            <Show when={props.adaptiveLrSupported}>
+              <ToggleRow
+                icon={<IconBalance size={22} />}
+                title={t("adaptiveLr.title")}
+                hint={t("adaptiveLr.hint")}
+                experimental={isExperimental("adaptiveLr")}
+                checked={props.adaptiveLrOn}
+                pending={props.adaptiveLrPending}
+                error={props.adaptiveLrError}
+                onChange={props.onAdaptiveLr}
+              />
+            </Show>
           </div>
-          </Show>
-          <Show when={props.restoreSupported}>
-          <button
-            type="button"
-            class="list-row action danger"
-            disabled={props.restorePending}
-            onClick={() => props.onRestore()}
-          >
-            <span class="list-ico list-ico-text">R</span>
-            <div class="list-text">
-              <span class="list-title">{t("restore.title")}</span>
-              <span class="list-sub">{t("restore.hint")}</span>
-              <OperationStatus pending={props.restorePending} error={props.restoreError} />
-            </div>
-            <span class="list-chev">›</span>
-          </button>
-          </Show>
+        </div>
+        </Show>
 
-          <button
-            type="button"
-            class="list-row action danger"
-            onClick={() => props.onDisconnect()}
-          >
-            <span class="list-ico">
-              <IconPower size={22} />
-            </span>
-            <div class="list-text">
-              <span class="list-title">{t("home.disconnect")}</span>
-            </div>
-          </button>
+        <div class="home-group">
+          <p class="home-section-label">{t("home.groupDevice")}</p>
+          <div class="home-list-card">
+            <Show when={props.findSupported}>
+              <NavRow
+                icon={<IconFind size={22} />}
+                title={props.findActive ? t("home.finding") : t("home.find")}
+                hint={t("home.playSound")}
+                active={props.findActive}
+                onClick={props.onFindBuds}
+              />
+            </Show>
+            <NavRow icon={<IconSettings size={22} />} title={t("nav.settings")} onClick={props.onOpenSettings} />
+            <Show when={props.restoreSupported}>
+              <NavRow
+                icon={<IconReset size={22} />}
+                title={t("restore.title")}
+                hint={t("restore.hint")}
+                experimental={isExperimental("restoreDefaults")}
+                danger
+                disabled={props.restorePending}
+                pending={props.restorePending}
+                error={props.restoreError}
+                onClick={props.onRestore}
+              />
+            </Show>
+            <NavRow
+              icon={<IconPower size={22} />}
+              title={t("home.disconnect")}
+              danger
+              chevron={false}
+              onClick={props.onDisconnect}
+            />
+          </div>
         </div>
       </div>
       </div>{/* home-body */}

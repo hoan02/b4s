@@ -237,4 +237,8 @@
       transform: translateX(20px);
     }
   }
+  input:disabled + .slider {
+    opacity: 0.6;
+    cursor: default;
+  }
 }

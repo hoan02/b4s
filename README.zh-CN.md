@@ -1,15 +1,20 @@
-# B4S
+# B4S：适用于 Windows、macOS 和 Linux 的非官方 Baseus 耳机应用
 
 [English](README.md) | [Tiếng Việt](README.vi.md) | [Español](README.es.md) | 简体中文 | [Português (Brasil)](README.pt-BR.md)
 
-B4S 是一款独立的桌面应用，可在 Windows、macOS 和 Linux 上控制部分蓝牙 LE
-耳机。应用使用 SolidJS、Tauri 和 Rust 构建。
+**B4S 是一款免费开源的桌面应用，可在电脑上控制 Baseus（倍思）蓝牙 LE 耳机。**
+无需手机上的 Baseus 应用，即可切换降噪（ANC）、通透和自适应模式，调节均衡器，
+开启空间音频和游戏模式，并查看电量。支持 **Baseus Bass BP1 Pro** 和
+**BP1 Ultra**，并为 **EP10 Ultra、EP10 Pro、Bowie M4s、Bowie MS1 和 Bowie M3s**
+提供实验性配置。应用使用 SolidJS、Tauri 和 Rust 构建。
 
-| 扫描并连接 | 设备控制 | 设置 |
-|---|---|---|
-| ![扫描并连接](assets/i1.png) | ![电量、降噪和音频控制](assets/i2.png) | ![设置](assets/i3.png) |
+[**下载最新安装包**](https://github.com/hoan02/b4s/releases/latest) · [支持的耳机](#支持的-baseus-耳机) · [常见问题](#常见问题)
 
-截图展示的是越南语界面。
+| 扫描并连接 | 设备控制 | 更多控制 | 设置 |
+|---|---|---|---|
+| ![B4S 在电脑上通过蓝牙 LE 扫描 Baseus 耳机](assets/i1.png) | ![B4S 显示 Baseus Bass BP1 Pro 的电量、降噪模式和空间音频](assets/i2.png) | ![B4S 将控制按声音、控制和设备分组](assets/i4.png) | ![B4S 设置：语言、主题和更新](assets/i3.png) |
+
+截图展示的是越南语界面。控制界面由应用自身组件使用示例数据渲染。
 
 ## 0.1.3 新增内容
 
@@ -19,11 +24,23 @@ B4S 是一款独立的桌面应用，可在 Windows、macOS 和 Linux 上控制�
 
 [Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
 
-## 设备支持
+## 支持的 Baseus 耳机
 
-BP1 Pro 有经过审查的型号配置。BP1 Ultra 实验性支持 BLE/789C 连接和电量显示，
-现已支持实验性 ANC、游戏模式、空间音频、Bass Boost、LDAC、听力保护和触控设置。EQ/SoundFit 尚不可用。目录中的其他型号可能处于实验阶段或仅可识别。
-应用识别出设备名称并不代表控制功能已通过验证。
+B4S 只为已有审查配置的耳机启用控制。仅凭名称匹配不会开启任何控制功能。
+
+| Baseus 型号 | 支持级别 | 可控制的功能 |
+|---|---|---|
+| Bass BP1 Pro | 已审查配置 | ANC、通透和自适应模式，EQ 预设和自定义 EQ，空间音频，游戏模式，Bass Boost，查找耳机 |
+| Bass BP1 Ultra | 实验性，已在 Windows 上测试 | 电量、ANC、游戏模式、空间音频、Bass Boost、LDAC、听力保护、触控手势。EQ/SoundFit 不可用 |
+| Bass EP10 Ultra、Bowie M4s、Bowie MS1 | 实验性，未在硬件上测试 | 与 BP1 Ultra 相同（共用适配器） |
+| Bass EP10 Pro、Bowie M3s | 实验性，未在硬件上测试 | ANC、空间音频、游戏模式、Bass Boost、手势、风噪抑制（EP10 Pro 另有 EQ 预设） |
+| 目录中其余 117 个 Baseus 型号 | 仅识别 | 在设备列表中显示名称和图片，无控制功能 |
+
+部分控制（触控手势、入耳检测、多点连接、风噪抑制、左右自适应、恢复默认设置）
+在应用中标记为**实验性**，并受 *Settings → Experimental mode* 控制。功能因型号
+和固件而异。
+
+### 支持级别
 
 | 支持级别 | 含义 |
 |---|---|
@@ -54,6 +71,28 @@ bun run tauri:dev
 应用默认使用英语，并提供越南语、简体中文、西班牙语和巴西葡萄牙语。
 可在 **Settings** 中切换语言；翻译已打包，可离线使用。请参阅[翻译指南](docs/translations.md)
 参与翻译。
+
+## 常见问题
+
+**Baseus 有适用于 Windows 或电脑的应用吗？**
+Baseus 官方应用面向手机。B4S 是独立的非官方桌面应用，可在 Windows、macOS 和
+Linux 上提供上述耳机控制。目前仅在 Windows 上做过测试。
+
+**可以在电脑上调整 Baseus 的降噪（ANC）或 EQ 吗？**
+可以（限受支持的型号）：通过蓝牙 LE 连接后，在 B4S 中切换 ANC、通透或自适应模式，
+并选择 EQ 预设。
+
+**我的 Baseus 耳机能用吗？**
+请查看[支持的 Baseus 耳机](#支持的-baseus-耳机)。B4S 可识别 124 个 Baseus 耳机型号，
+但只有该表中的型号才有控制功能。
+
+**为什么 B4S 在 Windows 上找不到或无法控制我的耳机？**
+Windows 常会把同一副耳机列出两次（音频端点和 BLE 控制入口）。请选择标有
+**Control** 的条目。请参阅[故障排除指南](docs/desktop-troubleshooting.md)。
+
+**安全吗？会把我的数据发送出去吗？**
+控制通过蓝牙在本地运行。B4S 无需账号，也不会向服务器发送设备或个人数据。
+请阅读[安全与许可](#安全与许可)。
 
 ## 文档
 

@@ -119,10 +119,15 @@
     min-width: 0;
 
     .pct {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
       font-size: $fs-md;
       font-weight: $fw-semibold;
       font-variant-numeric: tabular-nums;
       color: var(--text);
+      .batt-bolt { color: $brand-yellow-deep; }
       &.low {
         color: $accent-red;
       }
@@ -133,8 +138,25 @@
         color: var(--text-3);
       }
     }
+    .batt-bar {
+      height: 4px;
+      margin: 8px 6px 0;
+      border-radius: $radius-full;
+      background: var(--bg-fill);
+      overflow: hidden;
+      span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: $accent-green;
+        transition: width $transition-base;
+        &.mid { background: $brand-yellow; }
+        &.low { background: $accent-red; }
+        &.unk { background: transparent; }
+      }
+    }
     .tag {
-      margin-top: 2px;
+      margin-top: 6px;
       font-size: 10px;
       font-weight: $fw-medium;
       color: var(--text-3);
@@ -222,13 +244,6 @@
   }
 }
 
-.list-ico-text {
-  font-size: 11px;
-  font-weight: $fw-bold;
-  letter-spacing: -0.3px;
-  color: var(--text-2);
-}
-
 // —— Square tiles: noise only ——
 .noise-tiles {
   display: grid;
@@ -301,11 +316,6 @@
 .home-find-action {
   width: 100%;
   margin: 4px 0 8px;
-}
-
-.find-row {
-  .list-ico { color: $accent-blue; }
-  &.active { background: color-mix(in srgb, $accent-blue 10%, var(--bg-card)); }
 }
 
 .find-action-button {
@@ -514,7 +524,12 @@
     }
   }
 
-  &.danger .list-title,
+  &.active {
+    background: var(--brand-soft);
+    .list-ico { color: var(--text); }
+  }
+
+  &.danger .list-title-text,
   &.danger .list-ico {
     color: $accent-red;
   }
@@ -535,12 +550,32 @@
   }
 
   .list-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
     font-size: $fs-base;
     font-weight: $fw-regular;
     color: var(--text);
+  }
+
+  .list-title-text {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .exp-badge {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: $radius-full;
+    background: var(--brand-soft);
+    color: var(--text-2);
+    font-size: 10px;
+    font-weight: $fw-semibold;
+    line-height: 1.5;
+    letter-spacing: 0.2px;
   }
 
   .list-sub {

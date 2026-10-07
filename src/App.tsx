@@ -18,7 +18,7 @@ import { createGameModeController } from "./features/game-mode/controller";
 import { createSpatialController } from "./features/spatial/controller";
 import { createGestureController } from "./features/gestures/controller";
 import { createDeviceSession } from "./stores/deviceSession";
-import type { BatteryData } from "./components/Battery";
+import type { BatteryData } from "./lib/battery";
 import type { BleDevice, LinkHealth, ModelProfile } from "./lib/ble";
 import {
   disconnect as bleDisconnect,
@@ -606,6 +606,7 @@ const App: Component = () => {
                 windNoiseOn={windNoiseOn()}
                 windNoisePending={gestures.pending()}
                 windNoiseError={gestures.error()}
+                experimentalFeatures={device()?.deviceProfile.experimentalFeatures ?? []}
                 moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
                 spatialPending={spatialController.pending()}
                 spatialError={spatialController.error()}
