@@ -49,7 +49,6 @@ const MorePanel: Component<Props> = (props) => {
         <div class="setting-row" classList={{ "setting-row-stacked": props.bassMaxLevel > 1 }}>
           <div>
             <span class="setting-title">{t("more.bassBoost")}</span>
-            <span class="setting-desc">{t("more.bassBoost")}</span>
           </div>
           <div class="level-pills" aria-label={t("listen.bassLevel")}>
             <For each={bassLevels()}>
@@ -101,7 +100,6 @@ const MorePanel: Component<Props> = (props) => {
         <div class="setting-row">
           <div>
             <span class="setting-title">{t("more.hearingProtection")}</span>
-            <span class="setting-desc">{t("more.hearingProtection")}</span>
           </div>
           <label class="toggle sm">
             <input

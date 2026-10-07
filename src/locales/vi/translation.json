@@ -260,5 +260,10 @@
   "adaptiveLr.title": "Tai nghe thích ứng L/R",
   "adaptiveLr.hint": "Thích ứng âm thanh giữa tai trái và phải",
   "windNoise.title": "Giảm tiếng ồn gió",
-  "windNoise.hint": "Giảm tiếng gió khi dùng chống ồn"
+  "windNoise.hint": "Giảm tiếng gió khi dùng chống ồn",
+  "common.experimental": "Thử nghiệm",
+  "home.groupSound": "Âm thanh",
+  "home.groupControls": "Điều khiển & kết nối",
+  "home.groupDevice": "Thiết bị",
+  "home.battery": "Pin"
 }

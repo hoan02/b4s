@@ -1,15 +1,21 @@
-# B4S
+# B4S: aplicativo não oficial para fones Baseus no Windows, macOS e Linux
 
 [English](README.md) | [Tiếng Việt](README.vi.md) | [Español](README.es.md) | [简体中文](README.zh-CN.md) | Português (Brasil)
 
-B4S é um aplicativo independente para desktop que controla alguns fones
-Bluetooth LE no Windows, macOS e Linux. Foi desenvolvido com SolidJS, Tauri e Rust.
+**O B4S é um aplicativo desktop gratuito e de código aberto para controlar fones Bluetooth LE da Baseus pelo PC.**
+Alterne o cancelamento de ruído (ANC), a transparência e o modo adaptativo,
+ajuste o equalizador, ative o áudio espacial e o modo jogo e veja a bateria sem
+usar o app da Baseus no celular. Funciona com **Baseus Bass BP1 Pro** e **BP1
+Ultra**, com perfis experimentais para **EP10 Ultra, EP10 Pro, Bowie M4s, Bowie
+MS1 e Bowie M3s**. Foi desenvolvido com SolidJS, Tauri e Rust.
 
-| Buscar e conectar | Controles do dispositivo | Configurações |
-|---|---|---|
-| ![Buscar e conectar](assets/i1.png) | ![Bateria, ANC e áudio](assets/i2.png) | ![Configurações](assets/i3.png) |
+[**Baixar o instalador mais recente**](https://github.com/hoan02/b4s/releases/latest) · [Fones compatíveis](#fones-baseus-compatíveis) · [Perguntas frequentes](#perguntas-frequentes)
 
-As capturas mostram a interface em vietnamita.
+| Buscar e conectar | Controles do dispositivo | Mais controles | Configurações |
+|---|---|---|---|
+| ![B4S buscando fones Baseus por Bluetooth LE em um PC](assets/i1.png) | ![B4S mostrando bateria, modos de cancelamento de ruído e áudio espacial do Baseus Bass BP1 Pro](assets/i2.png) | ![Controles do B4S agrupados em som, controles e dispositivo](assets/i4.png) | ![Configurações do B4S com idioma, tema e atualizações](assets/i3.png) |
+
+As capturas mostram a interface em vietnamita. As telas de controle foram geradas com os componentes do aplicativo e dados de exemplo.
 
 ## Novidades da versão 0.1.3
 
@@ -19,14 +25,25 @@ Usuários das versões 0.1.1/0.1.2 precisam instalar a versão 0.1.3 manualmente
 
 [Changelog](CHANGELOG.md) · [Model contract](docs/model-identity-presentation.md) · [Image cache](docs/product-image-cache.md)
 
-## Compatibilidade
+## Fones Baseus compatíveis
 
-BP1 Pro tem um perfil de modelo revisado. O BP1 Ultra oferece conexão BLE/789C
-e bateria, ANC, modo de jogo, áudio espacial, Bass Boost, LDAC, proteção
-auditiva e gestos experimentais. EQ/SoundFit ainda não estão disponíveis.
-Outros modelos do catálogo podem ser experimentais ou apenas reconhecidos.
-Identificar o nome do dispositivo não significa que os controles foram
-verificados.
+O B4S só habilita controles para fones com perfil revisado. Um nome igual nunca
+liga um controle por si só.
+
+| Modelo Baseus | Nível | O que você pode controlar |
+|---|---|---|
+| Bass BP1 Pro | Perfil revisado | ANC, transparência e modo adaptativo, equalizador e EQ personalizado, áudio espacial, modo jogo, Bass Boost, localizar fones |
+| Bass BP1 Ultra | Experimental, testado no Windows | Bateria, ANC, modo jogo, áudio espacial, Bass Boost, LDAC, proteção auditiva, gestos. EQ/SoundFit indisponíveis |
+| Bass EP10 Ultra, Bowie M4s, Bowie MS1 | Experimental, não testado em hardware | Os mesmos controles do BP1 Ultra (adaptador compartilhado) |
+| Bass EP10 Pro, Bowie M3s | Experimental, não testado em hardware | ANC, áudio espacial, modo jogo, Bass Boost, gestos, redução de ruído de vento (o EP10 Pro também tem presets de EQ) |
+| Outros 117 modelos Baseus do catálogo | Apenas detecção | Nome e imagem na lista, sem controles |
+
+Alguns controles (gestos de toque, detecção no ouvido, multiponto, redução de
+ruído de vento, L/R adaptativo, restaurar padrões) aparecem como **Experimental**
+no aplicativo e dependem de *Settings → Experimental mode*. Os recursos variam
+conforme o modelo e o firmware.
+
+### Níveis de suporte
 
 | Nível | Significado |
 |---|---|
@@ -60,6 +77,31 @@ O aplicativo inicia em inglês e inclui vietnamita, chinês simplificado,
 espanhol e português do Brasil. Altere o idioma em **Settings**; as traduções
 estão incluídas e funcionam offline. Consulte o [guia de tradução](docs/translations.md)
 para contribuir.
+
+## Perguntas frequentes
+
+**Existe um app da Baseus para Windows ou PC?**
+A Baseus publica o app oficial para celulares. O B4S é um aplicativo desktop
+independente e não oficial que oferece os controles acima no Windows, macOS e
+Linux. Até agora, o Windows é a plataforma usada nos testes.
+
+**Posso mudar o cancelamento de ruído (ANC) ou o EQ da Baseus pelo computador?**
+Sim, nos modelos compatíveis: conecte por Bluetooth LE e troque ANC, transparência
+ou modo adaptativo e escolha um preset de EQ no B4S.
+
+**Funciona com os meus fones Baseus?**
+Veja [Fones Baseus compatíveis](#fones-baseus-compatíveis). O B4S reconhece 124
+modelos de fones Baseus, mas apenas os dessa tabela têm controles.
+
+**Por que o B4S não encontra ou não controla meus fones no Windows?**
+O Windows costuma listar os mesmos fones duas vezes (saída de áudio e entrada de
+controle BLE). Escolha a entrada marcada como **Control**. Veja o
+[guia de solução de problemas](docs/desktop-troubleshooting.md).
+
+**É seguro? Meus dados são enviados para algum lugar?**
+Os controles rodam localmente por Bluetooth. O B4S não exige conta e não envia
+dados do dispositivo nem pessoais a nenhum servidor. Leia o aviso em
+[Segurança e licença](#segurança-e-licença).
 
 ## Documentação
 

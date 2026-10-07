@@ -204,5 +204,10 @@
   "adaptiveLr.title": "左右耳自适应",
   "adaptiveLr.hint": "左右耳自适应音频",
   "windNoise.title": "风噪抑制",
-  "windNoise.hint": "降噪时减少风噪"
+  "windNoise.hint": "降噪时减少风噪",
+  "common.experimental": "实验性",
+  "home.groupSound": "音效",
+  "home.groupControls": "控制与连接",
+  "home.groupDevice": "设备",
+  "home.battery": "电量"
 }

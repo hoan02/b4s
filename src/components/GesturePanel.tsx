@@ -1,7 +1,8 @@
-import { requestToggle } from "../lib/confirmedToggle";
 import { Component, For, Show } from "solid-js";
 import { t } from "../lib/i18n";
 import OperationStatus from "./OperationStatus";
+import { IconBack, IconEar } from "./Icons";
+import { ToggleRow } from "./ListRows";
 import { gestureFunctionLabelKey, gestureLayoutLabelKey } from "../features/gestures/actions";
 
 export interface GestureLayout {
@@ -45,7 +46,7 @@ const GesturePanel: Component<Props> = (props) => {
     <div class="gesture-panel">
       <div class="screen-nav">
         <button type="button" class="screen-back" aria-label={t("nav.back")} onClick={() => props.onBack()}>
-          ‹
+          <IconBack size={20} />
         </button>
         <span class="screen-title">{t("gesture.title")}</span>
         <div class="screen-nav-spacer" />
@@ -56,24 +57,15 @@ const GesturePanel: Component<Props> = (props) => {
       </Show>
 
       <Show when={props.inEarSupported}>
-        <div class="list-row">
-          <div class="list-text">
-            <span class="list-title">{t("gesture.inEar")}</span>
-            <span class="list-sub">
-              {t("gesture.inEarHint")}
-            </span>
-          </div>
-          <label class="toggle sm">
-            <input
-              type="checkbox"
-              disabled={props.pending}
-              aria-checked={props.inEarOn === null ? "mixed" : props.inEarOn}
-              checked={props.inEarOn === true}
-              aria-label={t("gesture.inEar")}
-              onChange={(e) => requestToggle(e.currentTarget, props.inEarOn === true, props.onInEar)}
-            />
-            <span class="slider" />
-          </label>
+        <div class="home-list-card gesture-inear">
+          <ToggleRow
+            icon={<IconEar size={22} />}
+            title={t("gesture.inEar")}
+            hint={t("gesture.inEarHint")}
+            checked={props.inEarOn}
+            pending={props.pending}
+            onChange={props.onInEar}
+          />
         </div>
       </Show>
 
