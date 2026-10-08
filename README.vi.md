@@ -11,11 +11,9 @@ SolidJS, Tauri và Rust.
 
 [**Tải bản cài đặt mới nhất**](https://github.com/hoan02/b4s/releases/latest) · [Tai nghe được hỗ trợ](#tai-nghe-baseus-được-hỗ-trợ) · [Hỏi đáp](#hỏi-đáp)
 
-| Quét và kết nối | Điều khiển thiết bị | Thêm điều khiển | Cài đặt |
-|---|---|---|---|
-| ![B4S quét tai nghe Baseus qua Bluetooth LE trên máy tính](assets/i1.png) | ![B4S hiển thị pin, chống ồn và âm thanh không gian cho Baseus Bass BP1 Pro](assets/i2.png) | ![B4S nhóm điều khiển theo âm thanh, điều khiển và thiết bị](assets/i4.png) | ![Cài đặt B4S: ngôn ngữ, giao diện và cập nhật](assets/i3.png) |
+<p align="center"><a href="assets/b4s-demo.mp4"><img src="assets/b4s-demo.gif" alt="Demo B4S: pin, kiểm soát tiếng ồn, âm thanh không gian, EQ, thao tác chạm và cài đặt âm thanh" width="320"></a></p>
 
-Ảnh chụp màn hình hiện giao diện tiếng Việt. Các màn hình điều khiển được dựng từ chính component của ứng dụng với dữ liệu mẫu.
+<p align="center"><sub>Xem trước ứng dụng với giao diện tiếng Việt và dữ liệu mẫu. <a href="assets/b4s-demo.mp4">Xem video đầy đủ có thuyết minh (tiếng Việt, ~75 giây)</a>.</sub></p>
 
 ## Điểm mới trong 0.1.3
 

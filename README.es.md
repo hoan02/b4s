@@ -11,11 +11,9 @@ Bowie M4s, Bowie MS1 y Bowie M3s**. Está desarrollada con SolidJS, Tauri y Rust
 
 [**Descargar el último instalador**](https://github.com/hoan02/b4s/releases/latest) · [Auriculares compatibles](#auriculares-baseus-compatibles) · [Preguntas frecuentes](#preguntas-frecuentes)
 
-| Buscar y conectar | Controles del dispositivo | Más controles | Ajustes |
-|---|---|---|---|
-| ![B4S buscando auriculares Baseus por Bluetooth LE en un PC](assets/i1.png) | ![B4S mostrando batería, modos de cancelación de ruido y audio espacial de Baseus Bass BP1 Pro](assets/i2.png) | ![Controles de B4S agrupados en sonido, controles y dispositivo](assets/i4.png) | ![Ajustes de B4S con idioma, tema y actualizaciones](assets/i3.png) |
+<p align="center"><a href="assets/b4s-demo.mp4"><img src="assets/b4s-demo.gif" alt="Demo de B4S: batería, control de ruido, audio espacial, EQ, controles táctiles y ajustes de sonido" width="320"></a></p>
 
-Las capturas muestran la interfaz en vietnamita. Las pantallas de control se generaron con los componentes de la aplicación y datos de ejemplo.
+<p align="center"><sub>Vista previa de la aplicación con la interfaz en vietnamita y datos de ejemplo. <a href="assets/b4s-demo.mp4">Ver el vídeo completo con narración (vietnamita, ~75 s)</a>.</sub></p>
 
 ## Novedades de 0.1.3
 
