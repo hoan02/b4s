@@ -1,6 +1,6 @@
 {
   "name": "b4s",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "B4S — unofficial desktop companion for multi-model earbuds listening control (BLE)",
   "type": "module",
   "packageManager": "bun@1.4.0",
