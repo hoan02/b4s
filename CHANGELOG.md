@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — 2026-10-08
 
+- Unify the control UI: grouped list rows, icons, battery bars and select
+  controls across the home, gesture and sound screens.
+- Replace the README screenshots with a narrated demo video and GIF preview, and
+  call for contributors and hardware testers for the experimental profiles.
 - Add experimental profiles for Bass EP10 Ultra, Bowie M4s and MS1 (BP1 Ultra
   adapter) and Bowie M3s and Bass EP10 Pro (BP1 Pro adapter). They are derived
   from exact-name APK evidence and are not hardware verified; M3s has no EQ.
