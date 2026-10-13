@@ -141,6 +141,21 @@ impl SpatialMode {
     }
 }
 
+/// Which bud the find alert targets (FindEarPhoneActivity.e side byte).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FindSide {
+    Left = 0x00,
+    Right = 0x01,
+    Both = 0x02,
+}
+
+impl FindSide {
+    pub fn to_byte(self) -> u8 {
+        self as u8
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Commands (app → device)
 // ---------------------------------------------------------------------------
@@ -193,7 +208,11 @@ pub enum Command {
     },
     QueryLdac,
     QueryHearingProtection,
-    FindBuds(bool),
+    /// BA10 <side> <start>: 00 left, 01 right, 02 both (FindEarPhoneActivity.e).
+    FindBuds {
+        side: FindSide,
+        start: bool,
+    },
     QueryInEar,
     SetInEar(bool),
     QueryMultipoint,
@@ -228,7 +247,6 @@ pub enum DeviceEvent {
     EqIndex(u8),
     GameMode(bool),
     BassBoost(u8),
-    SpatialEnabled(bool),
     SpatialMode(SpatialMode),
     Ldac(bool),
     HearingProtection {
@@ -246,6 +264,15 @@ pub enum DeviceEvent {
     RestoreResult(u8),
     AdaptiveLr(bool),
     WindNoise(bool),
+    /// Set reply carrying only a status code (AA34, AA52). Never feature state:
+    /// `01` is success, anything else is a device-side rejection.
+    WriteStatus {
+        opcode: u8,
+        code: u8,
+    },
+    /// AA8B pushed by firmware: `01` means gestures use the V2 (BA8C/BA8D)
+    /// contract, which B4S does not encode.
+    GestureProtocolV2(bool),
     /// Raw / unknown — forwarded for debug
     Unknown {
         cmd: u8,

@@ -145,7 +145,7 @@ mod tests {
     fn bp1_profile_is_model_data_not_protocol_code() {
         let profile = profile_for("bass-bp1-pro").unwrap();
         assert_eq!(profile.protocol_family, "bp1");
-        assert_eq!(profile.noise.environments, vec![101, 102, 103, 108]);
+        assert_eq!(profile.noise.environments, vec![104, 102, 103, 101]);
         assert_eq!(profile.eq.unwrap().presets.len(), 7);
         validate().unwrap();
     }

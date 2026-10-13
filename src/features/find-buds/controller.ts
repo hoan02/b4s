@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js";
 import { findBuds } from "../../lib/device";
+import type { FindSide } from "../../lib/device";
 import { formatError, t } from "../../lib/i18n";
 import type { ToastItem } from "../../lib/toast";
 
@@ -9,10 +10,12 @@ export function createFindBudsController(notify: Notify) {
   const [active, setActive] = createSignal(false);
   const [confirmationOpen, setConfirmationOpen] = createSignal(false);
   const [dialogMode, setDialogMode] = createSignal<"confirm" | "active">("confirm");
+  // The app stops the alert on the same side it started (BA10 <side> 00).
+  const [side, setSide] = createSignal<FindSide>("both");
 
   const start = async () => {
     try {
-      const result = await findBuds(true);
+      const result = await findBuds(true, side());
       setActive(true);
       setDialogMode("active");
       notify(
@@ -27,7 +30,7 @@ export function createFindBudsController(notify: Notify) {
 
   const stop = async (errorTitle?: string) => {
     try {
-      const result = await findBuds(false);
+      const result = await findBuds(false, side());
       setActive(false);
       setConfirmationOpen(false);
       setDialogMode("confirm");
@@ -54,12 +57,18 @@ export function createFindBudsController(notify: Notify) {
     setActive(false);
     setConfirmationOpen(false);
     setDialogMode("confirm");
+    setSide("both");
   };
 
   return {
     active,
     confirmationOpen,
     dialogMode,
+    side,
+    /** Side can only change before the alert starts. */
+    selectSide: (value: FindSide) => {
+      if (!active()) setSide(value);
+    },
     request,
     start,
     stop,

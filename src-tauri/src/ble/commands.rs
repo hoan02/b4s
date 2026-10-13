@@ -25,7 +25,6 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), CommandErro
             .map(|device| device.device_profile.clone())
             .ok_or("Connected device profile is missing")?
     };
-    let readback = profile.protocol == protocol::ProtocolFamily::Bp1Ultra;
     let data = protocol::encode_listening(&profile, command)?;
     let mode = match command {
         ListeningCommand::Normal => AncMode::Off,
@@ -42,17 +41,15 @@ pub async fn send_listening(command: ListeningCommand) -> Result<(), CommandErro
     log::info!("TX ANC {:?} → {:02X?}", mode, data);
     if BLE.lock().await.mock {
         BLE.lock().await.last_anc = Some(mode);
-        return observe_mock_state(DeviceEvent::Anc { mode, parameter }, 0x34).await;
+        return observe_mock_state(DeviceEvent::Anc { mode, parameter }, 0x33).await;
     }
+    // NoiseReduceManger(2).s: AA34 01 is only success; the app then sends
+    // BA33 and reads the state from AA33. A rejection fails fast.
     with_connected_peripheral(|p| {
         let d = data.clone();
         Box::pin(async move {
             let expected = crate::device::confirmation::ExpectedState::Anc { mode, parameter };
-            if readback {
-                write_and_readback(&p, &d, &[0xBA, 0x33], expected).await
-            } else {
-                write_and_observe(&p, &d, expected).await
-            }
+            write_and_readback(&p, &d, &[0xBA, 0x33], expected).await
         })
     })
     .await
@@ -126,8 +123,8 @@ pub async fn send_game_mode(on: bool) -> Result<(), CommandError> {
     .await
 }
 
-pub async fn send_find_buds(start: bool) -> Result<(), CommandError> {
-    let data = encode_connected_feature(protocol::FeatureCommand::FindBuds(start)).await?;
+pub async fn send_find_buds(side: protocol::FindSide, start: bool) -> Result<(), CommandError> {
+    let data = encode_connected_feature(protocol::FeatureCommand::FindBuds { side, start }).await?;
     let state = BLE.lock().await;
     if state.mock {
         drop(state);
@@ -140,16 +137,16 @@ pub async fn send_find_buds(start: bool) -> Result<(), CommandError> {
     })
     .await;
     if result.is_ok() {
-        BLE.lock().await.find_requested = start;
+        BLE.lock().await.find_requested = start.then_some(side);
     }
     result
 }
 
 pub async fn shutdown(app: AppHandle) {
     let _ = tokio::time::timeout(Duration::from_secs(1), scanning::stop_scan(app.clone())).await;
-    let should_stop_find = BLE.lock().await.find_requested;
-    if should_stop_find {
-        let _ = tokio::time::timeout(Duration::from_secs(1), send_find_buds(false)).await;
+    let started_side = BLE.lock().await.find_requested;
+    if let Some(side) = started_side {
+        let _ = tokio::time::timeout(Duration::from_secs(1), send_find_buds(side, false)).await;
     }
     let _ = tokio::time::timeout(Duration::from_secs(2), connection::disconnect(app)).await;
     let _ = tokio::time::timeout(
@@ -160,16 +157,9 @@ pub async fn shutdown(app: AppHandle) {
 }
 
 pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), CommandError> {
-    let ultra = BLE.lock().await.devices.values().any(|device| {
-        device.connected && device.device_profile.protocol == protocol::ProtocolFamily::Bp1Ultra
-    });
     let data = encode_connected_feature(protocol::FeatureCommand::SetSpatial(mode)).await?;
     if BLE.lock().await.mock {
-        return observe_mock_state(
-            DeviceEvent::SpatialEnabled(mode != protocol::SpatialMode::Off),
-            0x42,
-        )
-        .await;
+        return observe_mock_state(DeviceEvent::SpatialMode(mode), 0x42).await;
     }
     with_connected_peripheral(|p| {
         Box::pin(async move {
@@ -177,13 +167,7 @@ pub async fn send_spatial(mode: protocol::SpatialMode) -> Result<(), CommandErro
                 &p,
                 &data,
                 &[0xBA, 0x42],
-                if ultra {
-                    crate::device::confirmation::ExpectedState::SpatialMode(mode)
-                } else {
-                    crate::device::confirmation::ExpectedState::SpatialEnabled(
-                        mode != protocol::SpatialMode::Off,
-                    )
-                },
+                crate::device::confirmation::ExpectedState::SpatialMode(mode),
             )
             .await
         })
@@ -333,6 +317,11 @@ pub async fn send_gesture(
     left: Option<u8>,
     right: Option<u8>,
 ) -> Result<(), CommandError> {
+    if BLE.lock().await.gesture_v2 == Some(true) {
+        return Err(CommandError::UnsupportedFeature(
+            "Firmware uses the V2 gesture contract, which B4S does not support yet".into(),
+        ));
+    }
     let data = encode_connected_feature(protocol::FeatureCommand::SetGesture {
         layout,
         left,
@@ -388,21 +377,43 @@ pub async fn send_multipoint(enabled: bool) -> Result<(), CommandError> {
 }
 
 pub async fn send_restore_defaults() -> Result<(), CommandError> {
+    use crate::device::confirmation::{ExpectedState, RESULT_SUCCESS};
     let data = encode_connected_feature(protocol::FeatureCommand::RestoreDefaults).await?;
     if BLE.lock().await.mock {
-        return observe_mock_state(DeviceEvent::RestoreResult(0), 0x37).await;
+        return observe_mock_state(DeviceEvent::RestoreResult(RESULT_SUCCESS), 0x37).await;
     }
+    // EarPhoneSettingActivity/V2: AA37 01 is success (0C dual connection,
+    // 0D in a call); HomeBleDataResolvePresenter then re-reads all state.
     with_connected_peripheral(|p| {
         Box::pin(async move {
-            write_and_observe(
-                &p,
-                &data,
-                crate::device::confirmation::ExpectedState::RestoreResult(0),
-            )
-            .await
+            write_and_observe(&p, &data, ExpectedState::RestoreResult(RESULT_SUCCESS)).await
         })
     })
-    .await
+    .await?;
+    // The re-read is a separate transaction so its duration cannot turn a
+    // confirmed restore into a deadline error.
+    let requery = with_connected_peripheral(|p| {
+        Box::pin(async move {
+            let (device, token) = {
+                let state = BLE.lock().await;
+                let device = state
+                    .connected_id
+                    .as_ref()
+                    .and_then(|id| state.devices.get(id))
+                    .cloned();
+                (device, state.session.token())
+            };
+            match device {
+                Some(device) => super::connection::run_startup_queries(&p, &device, token).await,
+                None => Ok(()),
+            }
+        })
+    })
+    .await;
+    if let Err(error) = requery {
+        log::warn!("State re-query after restore failed: {error}");
+    }
+    Ok(())
 }
 
 pub async fn send_adaptive_lr(enabled: bool) -> Result<(), CommandError> {
@@ -501,14 +512,6 @@ mod listening_tests {
                 }
             );
         }
-        assert_eq!(
-            listening_state_parameter(
-                protocol::ProtocolFamily::Bp1Pro,
-                ListeningCommand::TransparencyVoice,
-                1
-            ),
-            1
-        );
         assert_eq!(
             listening_state_parameter(
                 protocol::ProtocolFamily::Bp1Pro,

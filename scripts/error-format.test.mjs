@@ -21,3 +21,11 @@ test("other errors retain their original details", () => {
   assert.equal(formatError(new Error("Readback timed out")), "error.operationFailed: Readback timed out");
   assert.equal(formatError("Disconnected"), "error.operationFailed: Disconnected");
 });
+
+test("device rejection codes map to their translated reason", () => {
+  const message = "Device rejected the command [device-code:0C]";
+  assert.equal(formatError({ contractVersion: 1, code: "deviceCommandFailed", retryable: false, message }),
+    "error.operationFailed: error.deviceCode.0C");
+  assert.equal(formatError(new Error("Device rejected the command [device-code:7E]")),
+    "error.operationFailed: error.deviceCode.other");
+});

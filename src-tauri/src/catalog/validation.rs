@@ -113,6 +113,8 @@ pub(super) fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String>
                 }
                 "adaptiveLr" => profile.capabilities.adaptive_lr && profile.adaptive_lr.is_some(),
                 "windNoise" => profile.capabilities.wind_noise && profile.wind_noise.is_some(),
+                "findBuds" => profile.capabilities.find_buds,
+                "ldac" => profile.capabilities.ldac,
                 _ => false,
             };
             if !capability_enabled || !experimental.insert(feature) {
@@ -200,6 +202,15 @@ pub(super) fn validate_profiles(profiles: &[ModelProfile]) -> Result<(), String>
                 || eq.q_values.iter().any(|q| !q.is_finite() || *q <= 0.0)
             {
                 return Err(format!("invalid EQ Q values in {}", profile.id));
+            }
+            let custom = &eq.custom_write;
+            if !custom.min_gain.is_finite()
+                || !custom.max_gain.is_finite()
+                || custom.min_gain >= custom.max_gain
+                || custom.min_gain < eq.min_gain
+                || custom.max_gain > eq.max_gain
+            {
+                return Err(format!("invalid custom EQ gain range in {}", profile.id));
             }
             if eq.bands.is_empty() || eq.min_gain >= eq.max_gain {
                 return Err(format!("invalid EQ bands or gain limits in {}", profile.id));

@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- Re-audit APK 2.17.0.1 with REA (headless JADX) and fix the ported protocol:
+  LDAC on/off was inverted (`BA75 01` now enables, `AA74 01` is enabled),
+  restore defaults completes on `AA37 01`, and noise writes are confirmed from
+  the `AA33` readback because `AA34` is only a write status.
+- Stop the 789C decoder from inventing frames out of `0xAA` payload or length
+  bytes and keep every sub-frame in device order.
+- Apply per-model APK limits: bass 1-3 on BP1 Ultra, EP10 Ultra and M4s; noise
+  environments per model, including the self-adaptive mode (104); one
+  transparency mode on the BP1 Pro family; custom EQ gain +/-6 dB.
+- Remove controls the APK does not offer: BP1 Pro adaptive L/R and EP10 Pro EQ
+  presets copied from BP1 Pro. Drop the short `m3s`/`m4s`/`ms1` aliases.
+- Find earbuds can target the left, right or both buds and is available on all
+  seven control profiles. Wind noise (BP1 Ultra family) and LDAC (BP1 Pro
+  family) appear only after the earbuds answer their state query.
+- Show the earbuds' own rejection reason (dual connection, in a call, LDAC on,
+  wear both buds...) instead of a timeout, and block legacy gesture writes when
+  firmware reports the V2 gesture contract.
+
 ## 0.1.4 — 2026-10-08
 
 - Unify the control UI: grouped list rows, icons, battery bars and select

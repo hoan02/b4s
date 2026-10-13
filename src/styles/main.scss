@@ -50,6 +50,11 @@
 .confirm-dialog p { margin: 10px 0 22px; color: #aeb7ca; font-size: 14px; line-height: 1.5; }
 .confirm-dialog-actions { display: grid; grid-template-columns: 1fr 1.25fr; gap: 10px; }
 .confirm-dialog-actions.single { grid-template-columns: 1fr; }
+/* Find-buds side picker inside the confirmation dialog (dark surface). */
+.confirm-dialog .home-seg.find-side { grid-template-columns: repeat(3, 1fr); margin: -8px 0 18px; background: #252c3d; }
+.confirm-dialog .home-seg.find-side button { color: #aeb7ca; }
+.confirm-dialog .home-seg.find-side button.active { background: #7657e8; color: #f8fafc; }
+.confirm-dialog .home-seg.find-side button:disabled { opacity: 0.6; cursor: default; }
 .confirm-btn { min-height: 42px; border: 0; border-radius: 12px; color: #f8fafc; font: inherit; font-weight: 700; cursor: pointer; }
 .confirm-btn.secondary { background: #252c3d; }
 .confirm-btn.primary { background: #7657e8; }

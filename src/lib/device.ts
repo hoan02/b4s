@@ -6,7 +6,9 @@ import { invoke } from "./tauri";
 
 export type AncMode = "off" | "anc" | "transparency";
 export type TransparencyMode = "full" | "voice";
-export type NoiseEnvironment = 101 | 102 | 103 | 108;
+export type NoiseEnvironment = 101 | 102 | 103 | 104 | 108;
+/** FindEarPhoneActivity side byte: left, right or both buds. */
+export type FindSide = "left" | "right" | "both";
 export type SpatialMode = "off" | "music" | "cinema" | "game";
 export type EqPresetId = string;
 
@@ -20,7 +22,7 @@ type DeviceCommand =
   | { kind: "setBassBoost"; level: number }
   | { kind: "setLdac"; enabled: boolean }
   | { kind: "setHearingProtection"; enabled: boolean; level: number }
-  | { kind: "findBuds"; start: boolean }
+  | { kind: "findBuds"; start: boolean; side: FindSide }
   | { kind: "setInEar"; enabled: boolean }
   | { kind: "setMultipoint"; enabled: boolean }
   | { kind: "restoreDefaults" }
@@ -129,8 +131,8 @@ export async function setHearingProtection(
   return applyDeviceCommand({ kind: "setHearingProtection", enabled, level });
 }
 
-export async function findBuds(start = true): Promise<DeviceCommandResponse> {
-  return applyDeviceCommand({ kind: "findBuds", start });
+export async function findBuds(start = true, side: FindSide = "both"): Promise<DeviceCommandResponse> {
+  return applyDeviceCommand({ kind: "findBuds", start, side });
 }
 
 export async function setInEar(enabled: boolean): Promise<DeviceCommandResponse> {

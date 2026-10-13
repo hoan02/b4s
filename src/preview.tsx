@@ -84,6 +84,7 @@ async function start() {
             noiseMaxLevel={5}
             noiseSupported
             adaptiveSupported
+            noiseEnvironments={[104, 102, 103, 101, 108]}
             transparencyVoiceSupported
             gameSupported
             eqSupported

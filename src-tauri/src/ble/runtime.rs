@@ -101,8 +101,10 @@ pub(super) struct BleInner {
     pub(super) battery: BatteryState,
     pub(super) last_anc: Option<AncMode>,
     pub(super) diagnostics: super::diagnostics::LinkDiagnostics,
-    /// Best-effort record that a find-start write was accepted by the OS.
-    pub(super) find_requested: bool,
+    /// Best-effort record of the side whose find-start write the OS accepted.
+    pub(super) find_requested: Option<crate::protocol::FindSide>,
+    /// Gesture contract pushed by firmware (AA8B); `Some(true)` blocks BA22.
+    pub(super) gesture_v2: Option<bool>,
     /// True when using mock scan/devices (no real GATT).
     pub(super) mock: bool,
     /// Live link diagnostics for UI.
@@ -128,7 +130,8 @@ impl BleInner {
             battery: BatteryState::default(),
             last_anc: None,
             diagnostics: Default::default(),
-            find_requested: false,
+            find_requested: None,
+            gesture_v2: None,
             mock: false,
             has_write_uuid: false,
             has_notify_uuid: false,
@@ -149,7 +152,8 @@ impl BleInner {
         self.diagnostics = Default::default();
         self.write_char = None;
         self.notify_char = None;
-        self.find_requested = false;
+        self.find_requested = None;
+        self.gesture_v2 = None;
         tasks
     }
 

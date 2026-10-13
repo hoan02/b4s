@@ -82,10 +82,12 @@ const GesturePanel: Component<Props> = (props) => {
                   disabled={props.pending}
                   value={selectValue(layout.layout, "left")}
                   onChange={(e) =>
+                    // GestureSettingViewModel.Z writes one side and sends FF for
+                    // the other, so its current value is never re-validated.
                     props.onGesture(
                       layout.layout,
                       Number(e.currentTarget.value),
-                      props.dualButton ? valueFor(layout.layout, "right") : Number(e.currentTarget.value)
+                      props.dualButton ? null : Number(e.currentTarget.value)
                     )
                   }
                 >
@@ -104,11 +106,7 @@ const GesturePanel: Component<Props> = (props) => {
                     disabled={props.pending}
                     value={selectValue(layout.layout, "right")}
                     onChange={(e) =>
-                      props.onGesture(
-                        layout.layout,
-                        valueFor(layout.layout, "left"),
-                        Number(e.currentTarget.value)
-                      )
+                      props.onGesture(layout.layout, null, Number(e.currentTarget.value))
                     }
                   >
                     <option value="">—</option>

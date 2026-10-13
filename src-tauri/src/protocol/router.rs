@@ -1,5 +1,5 @@
 use super::{encode_command, AncMode, Bp1ProAnc, Command, DeviceProfile, ProtocolFamily};
-use super::{EqBand, EqPreset, SpatialMode};
+use super::{EqBand, EqPreset, FindSide, SpatialMode};
 
 /// Route replies as well as writes; unknown families must never inherit BP1 decoding.
 pub fn decode_frame(
@@ -43,7 +43,10 @@ pub enum FeatureCommand {
         enabled: bool,
         level: u8,
     },
-    FindBuds(bool),
+    FindBuds {
+        side: FindSide,
+        start: bool,
+    },
     SetGesture {
         layout: u8,
         left: Option<u8>,
@@ -69,7 +72,7 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         FeatureCommand::SetBassBoost(_) => Feature::Bass,
         FeatureCommand::SetLdac(_) => Feature::Ldac,
         FeatureCommand::SetHearingProtection { .. } => Feature::Hearing,
-        FeatureCommand::FindBuds(_) => Feature::Find,
+        FeatureCommand::FindBuds { .. } => Feature::Find,
         FeatureCommand::SetGesture { .. } => Feature::Gesture,
         FeatureCommand::SetInEar(_) => Feature::InEar,
         FeatureCommand::SetMultipoint(_) => Feature::Multipoint,
@@ -90,9 +93,10 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
         (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::SetGameMode(on)) => {
             Ok(Bp1ProAnc::cmd_set_game_mode(on))
         }
-        (ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra, FeatureCommand::FindBuds(start)) => {
-            Ok(Bp1ProAnc::cmd_find_buds(start))
-        }
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::FindBuds { side, start },
+        ) => Ok(Bp1ProAnc::cmd_find_buds(side, start)),
         (
             ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
             FeatureCommand::SetCustomEq {
@@ -155,12 +159,10 @@ pub fn encode_feature(profile: &DeviceProfile, command: FeatureCommand) -> Resul
             ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
             FeatureCommand::SetAdaptiveLr(enabled),
         ) => Ok(encode_command(Command::SetAdaptiveLr(enabled))),
-        (ProtocolFamily::Bp1Pro, FeatureCommand::SetWindNoise(enabled)) => {
-            Ok(encode_command(Command::SetWindNoise(enabled)))
-        }
-        (ProtocolFamily::Bp1Ultra, FeatureCommand::SetWindNoise(_)) => {
-            Err("Wind-noise reduction is not reviewed for this protocol family".into())
-        }
+        (
+            ProtocolFamily::Bp1Pro | ProtocolFamily::Bp1Ultra,
+            FeatureCommand::SetWindNoise(enabled),
+        ) => Ok(encode_command(Command::SetWindNoise(enabled))),
         (ProtocolFamily::Unknown, _) => Err("No protocol is verified for this model".into()),
     }
 }
@@ -277,11 +279,27 @@ mod tests {
             encode_feature(&profile, FeatureCommand::SetBassBoost(0)).unwrap(),
             vec![0xBA, 0x54, 0, 255]
         );
-        assert!(encode_feature(&profile, FeatureCommand::SetBassBoost(6)).is_err());
+        // DeviceManager.d: BP1 Ultra's bass slider stops at 3.
+        assert!(encode_feature(&profile, FeatureCommand::SetBassBoost(4)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetEqIndex(0)).is_err());
         assert!(encode_feature(&profile, FeatureCommand::SetInEar(true)).is_err());
-        assert!(encode_feature(&profile, FeatureCommand::SetWindNoise(true)).is_err());
-        assert!(encode_feature(&profile, FeatureCommand::FindBuds(true)).is_err());
+        assert_eq!(
+            encode_feature(&profile, FeatureCommand::SetWindNoise(true)).unwrap(),
+            vec![0xBA, 0x52, 0x01]
+        );
+        assert_eq!(
+            encode_feature(
+                &profile,
+                FeatureCommand::FindBuds {
+                    side: FindSide::Right,
+                    start: true
+                }
+            )
+            .unwrap(),
+            vec![0xBA, 0x10, 0x01, 0x01]
+        );
+        assert!(encode_listening(&profile, ListeningCommand::AdaptiveEnvironment(104)).is_ok());
+        assert!(encode_feature(&profile, FeatureCommand::SetEqIndex(1)).is_err());
         assert!(encode_feature(
             &profile,
             FeatureCommand::SetHearingProtection {
@@ -359,9 +377,12 @@ mod tests {
             vec![0xBA, 0x34, 0x00, 0xFF]
         );
         assert_eq!(
-            encode_listening(&profile, ListeningCommand::AdaptiveEnvironment(108)).unwrap(),
-            vec![0xBA, 0x34, 0x01, 0x6C]
+            encode_listening(&profile, ListeningCommand::AdaptiveEnvironment(104)).unwrap(),
+            vec![0xBA, 0x34, 0x01, 0x68]
         );
+        // NoiseReduceDataModel.f: the Pro family has no 108 and one transparency mode.
+        assert!(encode_listening(&profile, ListeningCommand::AdaptiveEnvironment(108)).is_err());
+        assert!(encode_listening(&profile, ListeningCommand::TransparencyVoice).is_err());
     }
 
     #[test]
@@ -384,8 +405,26 @@ mod tests {
             vec![0xBA, 0x54, 0x01]
         );
         assert_eq!(
-            encode_feature(&profile, FeatureCommand::FindBuds(true)).unwrap(),
+            encode_feature(
+                &profile,
+                FeatureCommand::FindBuds {
+                    side: FindSide::Both,
+                    start: true
+                }
+            )
+            .unwrap(),
             vec![0xBA, 0x10, 0x02, 0x01]
+        );
+        assert_eq!(
+            encode_feature(
+                &profile,
+                FeatureCommand::FindBuds {
+                    side: FindSide::Left,
+                    start: false
+                }
+            )
+            .unwrap(),
+            vec![0xBA, 0x10, 0x00, 0x00]
         );
     }
 
@@ -533,10 +572,8 @@ mod tests {
             encode_feature(&profile, FeatureCommand::RestoreDefaults).unwrap(),
             vec![0xBA, 0x37]
         );
-        assert_eq!(
-            encode_feature(&profile, FeatureCommand::SetAdaptiveLr(true)).unwrap(),
-            vec![0xBA, 0x4A, 0x01]
-        );
+        // Adaptive L/R is Inspire XC1-only in the APK; BP1 Pro has no such control.
+        assert!(encode_feature(&profile, FeatureCommand::SetAdaptiveLr(true)).is_err());
         assert_eq!(
             encode_feature(&profile, FeatureCommand::SetWindNoise(true)).unwrap(),
             vec![0xBA, 0x52, 0x01]

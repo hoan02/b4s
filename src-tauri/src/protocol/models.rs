@@ -374,7 +374,7 @@ mod tests {
         let profile = profile_for(Some(&model.id), None, Some("1.0.0"));
         assert!(profile.verified);
         assert_eq!(profile.noise.max_custom_level, 5);
-        assert_eq!(profile.noise.environments, vec![101, 102, 103, 108]);
+        assert_eq!(profile.noise.environments, vec![104, 102, 103, 101]);
         assert!(profile.connection.is_some());
     }
 
@@ -397,7 +397,10 @@ mod tests {
         assert!(profile.noise.environments.is_empty());
         assert!(crate::protocol::encode_feature(
             &profile,
-            crate::protocol::FeatureCommand::FindBuds(true)
+            crate::protocol::FeatureCommand::FindBuds {
+                side: crate::protocol::FindSide::Both,
+                start: true
+            }
         )
         .is_err());
     }

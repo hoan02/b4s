@@ -31,10 +31,10 @@ B4S 只为已有审查配置的耳机启用控制。仅凭名称匹配不会开�
 | Bass BP1 Pro | 已审查配置 | ANC、通透和自适应模式，EQ 预设和自定义 EQ，空间音频，游戏模式，Bass Boost，查找耳机 |
 | Bass BP1 Ultra | 实验性，已在 Windows 上测试 | 电量、ANC、游戏模式、空间音频、Bass Boost、LDAC、听力保护、触控手势。EQ/SoundFit 不可用 |
 | Bass EP10 Ultra、Bowie M4s、Bowie MS1 | 实验性，未在硬件上测试 | 与 BP1 Ultra 相同（共用适配器） |
-| Bass EP10 Pro、Bowie M3s | 实验性，未在硬件上测试 | ANC、空间音频、游戏模式、Bass Boost、手势、风噪抑制（EP10 Pro 另有 EQ 预设） |
+| Bass EP10 Pro、Bowie M3s | 实验性，未在硬件上测试 | ANC、空间音频、游戏模式、Bass Boost、手势、查找耳机，以及耳机上报时的风噪抑制和 LDAC。EQ 需要尚未采集的型号参数 |
 | 目录中其余 117 个 Baseus 型号 | 仅识别 | 在设备列表中显示名称和图片，无控制功能 |
 
-部分控制（触控手势、入耳检测、多点连接、风噪抑制、左右自适应、恢复默认设置）
+部分控制（触控手势、入耳检测、多点连接、风噪抑制、BP1 Pro 系列的 LDAC、恢复默认设置）
 在应用中标记为**实验性**，并受 *Settings → Experimental mode* 控制。功能因型号
 和固件而异。
 

@@ -52,9 +52,13 @@ export function loadCustomEqPresets(storageKey: string, bandCount: number, minGa
         return typeof preset.id === "string" && preset.id.length > 0 && preset.id.length <= MAX_PRESET_ID_LENGTH &&
           typeof preset.label === "string" && preset.label.trim().length > 0 && preset.label.length <= MAX_PRESET_LABEL_LENGTH &&
           Array.isArray(preset.bands) && preset.bands.length === bandCount &&
-          preset.bands.every((gain: unknown) => typeof gain === "number" && Number.isFinite(gain) && gain >= minGain && gain <= maxGain);
+          preset.bands.every((gain: unknown) => typeof gain === "number" && Number.isFinite(gain));
       }
-    ).slice(0, MAX_CUSTOM_PRESETS);
+    )
+      // Presets saved under a wider range are kept and clamped to the model's
+      // custom range instead of being discarded.
+      .map((preset) => ({ ...preset, bands: preset.bands.map((gain) => Math.max(minGain, Math.min(maxGain, gain))) }))
+      .slice(0, MAX_CUSTOM_PRESETS);
     if (isLegacy) {
       try {
         storage.setItem(key, JSON.stringify({ version: 1, presets } satisfies StoredCustomEqPresets));

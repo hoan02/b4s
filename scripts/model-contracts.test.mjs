@@ -34,14 +34,16 @@ test("reviewed models supply explicit sound limits, EQ write contract and eviden
   assertModelContracts(pro);
   assertModelContracts(ultra);
   assert.equal(pro.sound.maxBassLevel, 1);
-  assert.equal(ultra.sound.maxBassLevel, 5);
-  assert.deepEqual(pro.eq.customWrite, { slot: 101, ancBank: false });
+  // DeviceManager.d caps the BP1 Ultra bass slider at 3.
+  assert.equal(ultra.sound.maxBassLevel, 3);
+  assert.deepEqual(pro.eq.customWrite, { slot: 101, ancBank: false, minGain: -6, maxGain: 6 });
   assert.equal(ultra.featureEvidence.gestureV2.status, "unknown");
 });
 
 test("missing schema, Q values or slot never receive defaults", () => {
   for (const mutate of [p => p.schemaVersion = 2, p => delete p.sound,
     p => p.eq.qValues = [], p => delete p.eq.customWrite,
+    p => delete p.eq.customWrite.minGain, p => p.eq.customWrite.maxGain = -6,
     p => delete p.featureEvidence.gestureV2]) {
     const pro = profile("bass-bp1-pro");
     mutate(pro);

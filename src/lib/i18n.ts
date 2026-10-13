@@ -77,9 +77,14 @@ export function formatError(error: unknown): string {
     : isVersionedApiError
       ? payload.message
       : String(error);
+  // Backend rejections carry the EarSetFailedUtil code reported by the earbuds.
+  const deviceCode = typeof details === "string" ? /\[device-code:([0-9A-F]{2})\]/.exec(details)?.[1] : undefined;
+  const knownDeviceCodes = ["00", "0A", "0B", "0C", "0D", "0E", "0F", "10", "11", "12", "13", "14", "17"];
   const message = typeof details === "string" && details.includes("Experimental control is disabled")
     ? t("error.experimentalControlDisabled")
-    : details;
+    : deviceCode
+      ? t(knownDeviceCodes.includes(deviceCode) ? `error.deviceCode.${deviceCode}` : "error.deviceCode.other", { code: deviceCode })
+      : details;
   return `${t("error.operationFailed")}: ${message}`;
 }
 

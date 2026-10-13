@@ -33,11 +33,11 @@ thiết bị thì không bao giờ tự bật chức năng.
 | Bass BP1 Pro | Profile đã rà soát | ANC, xuyên âm, chế độ thích ứng, EQ preset và EQ tùy chỉnh, âm thanh không gian, chế độ game, bass boost, tìm tai nghe |
 | Bass BP1 Ultra | Thử nghiệm, đã thử trên Windows | Pin, ANC, chế độ game, âm thanh không gian, bass boost, LDAC, bảo vệ thính giác, thao tác chạm. Chưa có EQ/SoundFit |
 | Bass EP10 Ultra, Bowie M4s, Bowie MS1 | Thử nghiệm, chưa thử trên phần cứng | Giống BP1 Ultra (dùng chung adapter) |
-| Bass EP10 Pro, Bowie M3s | Thử nghiệm, chưa thử trên phần cứng | ANC, âm thanh không gian, chế độ game, bass boost, thao tác chạm, giảm tiếng ồn gió (EP10 Pro có thêm EQ preset) |
+| Bass EP10 Pro, Bowie M3s | Thử nghiệm, chưa thử trên phần cứng | ANC, âm thanh không gian, chế độ game, bass boost, thao tác chạm, tìm tai nghe, giảm tiếng ồn gió và LDAC khi tai nghe có báo. EQ cần tham số model chưa thu thập được |
 | 117 model Baseus khác trong catalog | Chỉ nhận diện | Hiện tên và ảnh trong danh sách, không có điều khiển |
 
 Một số điều khiển (thao tác chạm, phát hiện đeo tai, kết nối hai thiết bị, giảm
-tiếng ồn gió, tai nghe thích ứng L/R, khôi phục mặc định) được gắn nhãn
+tiếng ồn gió, LDAC trên nhóm BP1 Pro, khôi phục mặc định) được gắn nhãn
 **Thử nghiệm** trong ứng dụng và phụ thuộc *Cài đặt → Chế độ thử nghiệm*. Chức
 năng thay đổi theo model và firmware.
 
@@ -63,7 +63,7 @@ Xem [catalog model](docs/model-catalog.md) và [ghi chú giao thức](docs/proto
 - Chỉnh EQ preset và EQ tùy chỉnh khi profile model cho phép.
 - Dùng âm thanh không gian, chế độ game, bass boost và tìm tai nghe trên model tương thích.
 - Dùng thử các điều khiển thử nghiệm như thao tác chạm, phát hiện đeo tai, kết nối
-  hai thiết bị, giảm tiếng ồn gió và tai nghe thích ứng L/R trên model có khai báo.
+  hai thiết bị, giảm tiếng ồn gió và LDAC trên model có khai báo.
 - Chọn giao diện sáng/tối và kiểm tra cập nhật ứng dụng.
 - Có thể bật khởi động cùng lúc đăng nhập. Đóng cửa sổ sẽ ẩn B4S vào khay hệ
   thống khi khay khả dụng; chọn **Quit B4S** trong menu khay để thoát.

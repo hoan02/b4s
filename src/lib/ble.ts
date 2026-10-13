@@ -138,7 +138,8 @@ export interface ModelProfile {
     supportsTransparencyVoice: boolean;
   };
   eq: {
-    customWrite: { slot: number; ancBank: boolean };
+    /** Custom bands use their own gain range (the app clamps to +/-6 dB). */
+    customWrite: { slot: number; ancBank: boolean; minGain: number; maxGain: number };
     bands: number[];
     qValues: number[];
     minGain: number;

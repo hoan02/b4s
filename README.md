@@ -30,14 +30,14 @@ alone never turns a control on.
 
 | Baseus model | Support level | What you can control |
 |---|---|---|
-| Bass BP1 Pro | Reviewed profile | ANC, transparency and adaptive modes, EQ presets and custom EQ, spatial audio, game mode, bass boost, find earbuds |
-| Bass BP1 Ultra | Experimental, tested on Windows | Battery, ANC, game mode, spatial audio, bass boost, LDAC, hearing protection, gestures. EQ/SoundFit unavailable |
+| Bass BP1 Pro | Reviewed profile | ANC, transparency and adaptive modes, EQ presets and custom EQ, spatial audio, game mode, bass boost, find earbuds (left, right or both) |
+| Bass BP1 Ultra | Experimental, tested on Windows | Battery, ANC, game mode, spatial audio, bass boost, LDAC, hearing protection, gestures, find earbuds, wind noise reduction when the earbuds report it. EQ/SoundFit unavailable |
 | Bass EP10 Ultra, Bowie M4s, Bowie MS1 | Experimental, not tested on hardware | Same controls as BP1 Ultra (shared adapter) |
-| Bass EP10 Pro, Bowie M3s | Experimental, not tested on hardware | ANC, spatial audio, game mode, bass boost, gestures, wind noise reduction (EP10 Pro also has EQ presets) |
+| Bass EP10 Pro, Bowie M3s | Experimental, not tested on hardware | ANC, spatial audio, game mode, bass boost, gestures, find earbuds, wind noise reduction and LDAC when the earbuds report them. EQ needs model parameters that are not captured yet |
 | 117 other Baseus models in the catalog | Recognition only | Name and image in the device list, no controls |
 
 Some controls (touch gestures, in-ear detection, multipoint, wind noise
-reduction, adaptive L/R, restore defaults) are marked **Experimental** in the
+reduction, LDAC on the BP1 Pro family, restore defaults) are marked **Experimental** in the
 app and follow *Settings → Experimental mode*. Controls vary by model and
 firmware.
 
@@ -64,7 +64,7 @@ See [the model catalog](docs/model-catalog.md) and [protocol notes](docs/protoco
 - Adjust EQ presets and custom EQ where the model profile allows it.
 - Use spatial audio, game mode, bass boost and find-earbuds controls on supported models.
 - Try experimental controls such as touch gestures, in-ear detection, multipoint,
-  wind noise reduction and adaptive L/R earbuds on models that declare them.
+  wind noise reduction and LDAC on models that declare them.
 - Choose a light or dark theme and check for app updates.
 - Optionally start at sign-in. Closing the window hides B4S to the system tray
   when the tray is available; use **Quit B4S** in the tray menu to exit.

@@ -36,8 +36,8 @@ pub(super) fn validate_feature(
                         || !band.q_value.is_finite()
                         || band.q_value <= 0.0
                         || !band.gain.is_finite()
-                        || band.gain < eq.min_gain
-                        || band.gain > eq.max_gain
+                        || band.gain < eq.custom_write.min_gain
+                        || band.gain > eq.custom_write.max_gain
                 })
         {
             return Err("Custom EQ values do not match the reviewed model schema".into());

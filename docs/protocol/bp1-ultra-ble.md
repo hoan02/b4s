@@ -67,8 +67,8 @@ produced by B4S itself.
 | ANC | BA34 mode parameter; BA33 -> AA33 mode ANC-type transparency-type custom-level | `NoiseReduceDataModel.n/l`, `NoiseReduceManger.u/s`; Normal, transparency, ANC levels 1/5 and environments 101/102/103/108 written and read back |
 | Game | BA24 flag; BA23 -> AA23 flag | `GestureBleManager.e/g`; on/off confirmed after a delayed state report |
 | Spatial | BA43 mode; BA42 -> AA42 selected-mode retained-mode | `PanoramicSoundViewModel.x/u`; Music 1, Cinema 2 and Off 0 confirmed; retained selector survives Off |
-| Bass Boost | BA54 enabled level; BA53 -> AA53 enabled level | `EarSoundSettingViewModel.N`, `SoundEffectsManger.H/l`; levels 3/5 and Off confirmed; source exposes levels 1..5 |
-| LDAC setting | BA75 00 enabled / 01 disabled; BA74 -> AA74 inverted flag | `LdacSettingActivity`; existing enabled setting rewritten and read back; actual Windows audio codec and disabled transition not verified |
+| Bass Boost | BA54 enabled level; BA53 -> AA53 enabled level | `EarSoundSettingViewModel.N`, `SoundEffectsManger.H/l`; levels 3/5 and Off were accepted and read back, but `DeviceManager.d` limits the app slider to 1..3 for this model, so the profile allows 1..3 (2026-10-13 REA re-audit) |
+| LDAC setting | BA75 01 enable / 00 disable; BA74 -> AA74 01 = enabled | `LdacSettingActivity.m1/onGetData`, `HeadPhoneMainActivity.F`. The earlier "inverted" reading came from a switch that does not toggle on touch; the session rewrote the existing value, so it could not distinguish polarity. The state previously shown as enabled (`AA74 00`) is actually disabled. Re-test the transition on hardware |
 | Hearing protection | BA94 enabled threshold; BA93 -> AA93 enabled threshold | `EarSoundSettingViewModel.A/U`; on/off at 80 confirmed; APK thresholds 75/80/85/90/95/100 exposed in UI |
 | Gestures | BA22 layout left right (FF preserves side); BA21 layout -> AA21 layout left right | exact BP1 Ultra entries in `assets/gesture/*_v2.json`, `GestureBleManager`; layouts 0..3 queried, one-side unchanged mapping written/read back |
 
@@ -90,8 +90,8 @@ Example CRC-valid feature notifications:
 - Hearing disabled at 80: `789C000C020103930050B70A`.
 
 AA34/AA24/AA43/AA54/AA75/AA94/AA22 success packets are acknowledgements,
-not proof of the requested state. Ultra ANC confirmation uses AA33, while Pro
-keeps its AA34 state layout. Spatial confirmation compares the selected mode,
+not proof of the requested state. ANC confirmation uses AA33 for both families;
+a rejected AA34 status fails the write with the device code. Spatial confirmation compares the selected mode,
 not only enabled/disabled. Firmware may retain inactive selectors; the active
 mode determines the displayed state. Initialization queries all enabled feature
 states, including every reviewed gesture layout.

@@ -157,10 +157,6 @@ impl DeviceSnapshot {
             DeviceEvent::EqIndex(value) => self.eq_index = Some(*value),
             DeviceEvent::GameMode(value) => self.game = Some(*value),
             DeviceEvent::Ldac(value) => self.ldac = Some(*value),
-            DeviceEvent::SpatialEnabled(value) => {
-                self.spatial_enabled = Some(*value);
-                self.spatial_mode = None;
-            }
             DeviceEvent::SpatialMode(mode) => {
                 self.spatial_enabled = Some(*mode != crate::protocol::SpatialMode::Off);
                 self.spatial_mode = Some(*mode);
