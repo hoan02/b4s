@@ -87,6 +87,20 @@ bun run release --no-bump         # tag current version, no bump
 bun run release patch --no-push   # commit + tag local only
 ```
 
+### Beta (pre-release)
+
+Merge the version bump through a pull request, then run the Release workflow
+manually with `prerelease` enabled instead of pushing a tag:
+
+```bash
+gh workflow run release.yml --ref main -f tag=0.1.5 -f prerelease=true
+```
+
+The action tags the merged `main` commit. A pre-release is never GitHub's
+"latest" release, so the updater endpoint below keeps serving the previous
+stable `latest.json`. Promote it later with
+`gh release edit vX.Y.Z --prerelease=false --latest`.
+
 ### Manual (equivalent)
 
 ```bash

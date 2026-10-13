@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.5 (beta) — 2026-10-13
+
+Published as a GitHub pre-release: installed 0.1.4 copies do not auto-update
+to it. The changes below are traced from APK source and have not been
+accepted on hardware yet; please report results for BP1 Pro ANC, BP1 Ultra
+LDAC and restore defaults.
 
 - Re-audit APK 2.17.0.1 with REA (headless JADX) and fix the ported protocol:
   LDAC on/off was inverted (`BA75 01` now enables, `AA74 01` is enabled),
