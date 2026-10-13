@@ -37,6 +37,11 @@ export function createListeningController(dependencies: Dependencies) {
     formatError,
   });
 
+  // NoiseReduceDataModel.f lists environments per model (MS1 has only 104), so
+  // the fallback must come from the profile rather than a fixed indoor value.
+  const defaultEnvironment = (): NoiseEnvironment =>
+    (dependencies.noiseCapabilities()?.environments[0] ?? 104) as NoiseEnvironment;
+
   const apply = async (
     mode: AncMode,
     parameter: number,
@@ -55,7 +60,7 @@ export function createListeningController(dependencies: Dependencies) {
         adaptive: overrides.adaptive ?? adaptiveNoise() ?? true,
         environment: (mode === "anc" && parameter >= 100 && parameter !== 0xff
           ? parameter
-          : overrides.environment ?? noiseEnvironment() ?? 102) as NoiseEnvironment,
+          : overrides.environment ?? noiseEnvironment() ?? defaultEnvironment()) as NoiseEnvironment,
         level: overrides.level ?? (mode === "anc" && parameter < 100
           ? parameter
           : noiseLevel() ?? 3),
@@ -124,7 +129,7 @@ export function createListeningController(dependencies: Dependencies) {
     },
     async setAdaptiveNoise(enabled: boolean) {
       if (dependencies.mode() === "anc") {
-        await apply("anc", enabled ? noiseEnvironment() ?? 102 : noiseLevel() ?? 3, {
+        await apply("anc", enabled ? noiseEnvironment() ?? defaultEnvironment() : noiseLevel() ?? 3, {
           adaptive: enabled,
         });
       }

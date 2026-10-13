@@ -2,7 +2,7 @@ import { requestToggle } from "../lib/confirmedToggle";
 /**
  * Home — model-supported noise, spatial and feature controls
  */
-import { Component, Show } from "solid-js";
+import { Component, For, JSX, Show } from "solid-js";
 import type { BatteryData } from "../lib/battery";
 import type { AncMode, NoiseEnvironment, SpatialMode, TransparencyMode } from "../lib/device";
 import type { LinkHealth } from "../lib/ble";
@@ -53,6 +53,7 @@ interface Props {
   noiseMaxLevel: number;
   noiseSupported: boolean;
   adaptiveSupported: boolean;
+  noiseEnvironments: number[];
   transparencyVoiceSupported: boolean;
   gameSupported: boolean;
   eqSupported: boolean;
@@ -109,16 +110,30 @@ interface Props {
   onSpatialMode: (m: SpatialMode) => void;
 }
 
+/** NoiseReduceDataModel.f environment IDs; each profile lists its own subset. */
+const ENVIRONMENT_CARDS: Record<NoiseEnvironment, { icon: (size: number) => JSX.Element; title: string; hint: string }> = {
+  104: { icon: (size) => <IconAnc size={size} />, title: "home.autoAdaptive", hint: "home.autoAdaptiveHint" },
+  102: { icon: (size) => <IconOffice size={size} />, title: "home.indoor", hint: "home.homeOffice" },
+  103: { icon: (size) => <IconOutdoor size={size} />, title: "home.outdoor", hint: "home.streetPark" },
+  101: { icon: (size) => <IconTransit size={size} />, title: "home.commuting", hint: "home.subwayBus" },
+  108: { icon: (size) => <IconFlight size={size} />, title: "home.inTransit", hint: "home.planeTrain" },
+};
+
 const AdaptiveEnvironmentCards = (props: {
+  environments: number[];
   selected: NoiseEnvironment | null;
   disabled?: boolean;
   onSelect: (value: NoiseEnvironment) => void;
 }) => (
   <div class="noise-environments noise-environments-card">
-    <button type="button" disabled={props.disabled} class={props.selected === 102 ? "active" : ""} aria-pressed={props.selected === 102} onClick={() => props.onSelect(102)}><IconOffice size={24} /><span><strong>{t("home.indoor")}</strong><small>{t("home.homeOffice")}</small></span></button>
-    <button type="button" disabled={props.disabled} class={props.selected === 103 ? "active" : ""} aria-pressed={props.selected === 103} onClick={() => props.onSelect(103)}><IconOutdoor size={24} /><span><strong>{t("home.outdoor")}</strong><small>{t("home.streetPark")}</small></span></button>
-    <button type="button" disabled={props.disabled} class={props.selected === 101 ? "active" : ""} aria-pressed={props.selected === 101} onClick={() => props.onSelect(101)}><IconTransit size={24} /><span><strong>{t("home.commuting")}</strong><small>{t("home.subwayBus")}</small></span></button>
-    <button type="button" disabled={props.disabled} class={props.selected === 108 ? "active" : ""} aria-pressed={props.selected === 108} onClick={() => props.onSelect(108)}><IconFlight size={24} /><span><strong>{t("home.inTransit")}</strong><small>{t("home.planeTrain")}</small></span></button>
+    <For each={props.environments.filter((value): value is NoiseEnvironment => value in ENVIRONMENT_CARDS)}>
+      {(value) => (
+        <button type="button" disabled={props.disabled} class={props.selected === value ? "active" : ""} aria-pressed={props.selected === value} onClick={() => props.onSelect(value)}>
+          {ENVIRONMENT_CARDS[value].icon(24)}
+          <span><strong>{t(ENVIRONMENT_CARDS[value].title)}</strong><small>{t(ENVIRONMENT_CARDS[value].hint)}</small></span>
+        </button>
+      )}
+    </For>
   </div>
 );
 
@@ -265,7 +280,7 @@ const HomePanel: Component<Props> = (props) => {
               <div class="noise-levels"><div class="noise-level-heading"><span>{t("home.noiseLevel")}</span><strong>{props.noiseLevel === null ? "—" : `${props.noiseLevel}/${props.noiseMaxLevel}`}</strong></div><div class="noise-level-buttons">{Array.from({ length: props.noiseMaxLevel }, (_, i) => i + 1).map((level) => <button type="button" disabled={props.ancPending} class={props.noiseLevel === level ? "active" : ""} aria-pressed={props.noiseLevel === level} onClick={() => props.onNoiseLevel(level)}>{level}</button>)}</div></div>
             </Show>
             <Show when={props.adaptiveNoise === true}>
-              <AdaptiveEnvironmentCards selected={props.noiseEnvironment} disabled={props.ancPending} onSelect={props.onNoiseEnvironment} />
+              <AdaptiveEnvironmentCards environments={props.noiseEnvironments} selected={props.noiseEnvironment} disabled={props.ancPending} onSelect={props.onNoiseEnvironment} />
             </Show>
           </div>
         </Show>

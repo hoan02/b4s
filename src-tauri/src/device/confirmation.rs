@@ -23,7 +23,6 @@ pub enum ExpectedState {
     EqIndex(u8),
     Game(bool),
     Bass(u8),
-    SpatialEnabled(bool),
     SpatialMode(crate::protocol::SpatialMode),
     Ldac(bool),
     Hearing {
@@ -93,9 +92,10 @@ impl ExpectedState {
         }
         match (self, observation.opcode, &observation.event) {
             (Self::Battery, 0x02, DeviceEvent::Battery(_)) => true,
+            // AA34 is only the write status; noise state comes from the AA33 readback.
             (
                 Self::Anc { mode, parameter },
-                0x33 | 0x34,
+                0x33,
                 DeviceEvent::Anc {
                     mode: actual_mode,
                     parameter: actual_parameter,
@@ -105,9 +105,6 @@ impl ExpectedState {
                 expected.to_byte() == *actual
             }
             (Self::EqIndex(expected), 0x30, DeviceEvent::EqIndex(actual)) => expected == actual,
-            (Self::SpatialEnabled(expected), 0x42, DeviceEvent::SpatialEnabled(actual)) => {
-                expected == actual
-            }
             (Self::SpatialMode(expected), 0x42, DeviceEvent::SpatialMode(actual)) => {
                 expected == actual
             }
@@ -153,6 +150,30 @@ impl ExpectedState {
             _ => false,
         }
     }
+
+    /// Device-side rejection code for this transaction, if the observation is
+    /// the write result and it is not success (`01` in every app consumer).
+    pub fn rejection(&self, session: SessionToken, observation: &StateObservation) -> Option<u8> {
+        if session != observation.session {
+            return None;
+        }
+        let code = match (self, observation.opcode, &observation.event) {
+            (Self::Anc { .. }, 0x34, DeviceEvent::WriteStatus { code, .. })
+            | (Self::WindNoise(_), 0x52, DeviceEvent::WriteStatus { code, .. })
+            | (Self::RestoreResult(_), 0x37, DeviceEvent::RestoreResult(code)) => *code,
+            _ => return None,
+        };
+        (code != RESULT_SUCCESS).then_some(code)
+    }
+}
+
+/// Success code shared by AA34, AA37 and AA52 (NoiseReduceManger.s,
+/// EarPhoneSettingActivity receiver, HeadPhoneMainActivity.ResultHandle.i).
+pub const RESULT_SUCCESS: u8 = 0x01;
+
+/// Stable marker the frontend maps to a localized EarSetFailedUtil reason.
+pub fn rejection_message(code: u8) -> String {
+    format!("Device rejected the command [device-code:{code:02X}]")
 }
 
 /// Caller owns the transaction deadline/cancellation and subscribes before TX.
@@ -166,6 +187,9 @@ pub async fn await_state(
             .recv()
             .await
             .map_err(|error| format!("State readback lost: {error}"))?;
+        if let Some(code) = expected.rejection(session, &observation) {
+            return Err(rejection_message(code));
+        }
         if expected.matches(session, &observation) {
             return Ok(observation);
         }
@@ -292,35 +316,25 @@ mod tests {
         assert!(!ExpectedState::Battery.matches(epoch.token(), &observation));
     }
     #[test]
-    fn spatial_enable_requires_query_state_not_ack_or_other_session() {
+    fn spatial_confirmation_requires_the_exact_selected_mode_from_aa42() {
+        use crate::protocol::SpatialMode;
         let mut epoch = SessionEpoch::default();
         let session = epoch.token();
         let mut observation = StateObservation {
-            session,
-            opcode: 0x42,
-            event: DeviceEvent::SpatialEnabled(true),
-        };
-        assert!(ExpectedState::SpatialEnabled(true).matches(session, &observation));
-        assert!(!ExpectedState::SpatialEnabled(false).matches(session, &observation));
-        observation.opcode = 0x43;
-        assert!(!ExpectedState::SpatialEnabled(true).matches(session, &observation));
-        observation.opcode = 0x42;
-        epoch.invalidate();
-        assert!(!ExpectedState::SpatialEnabled(true).matches(epoch.token(), &observation));
-    }
-
-    #[test]
-    fn ultra_spatial_confirmation_requires_the_exact_selected_mode() {
-        use crate::protocol::SpatialMode;
-        let session = SessionEpoch::default().token();
-        let observation = StateObservation {
             session,
             opcode: 0x42,
             event: DeviceEvent::SpatialMode(SpatialMode::Music),
         };
         assert!(ExpectedState::SpatialMode(SpatialMode::Music).matches(session, &observation));
         assert!(!ExpectedState::SpatialMode(SpatialMode::Cinema).matches(session, &observation));
-        assert!(!ExpectedState::SpatialEnabled(true).matches(session, &observation));
+        // AA43 is the write acknowledgement, never state.
+        observation.opcode = 0x43;
+        assert!(!ExpectedState::SpatialMode(SpatialMode::Music).matches(session, &observation));
+        observation.opcode = 0x42;
+        epoch.invalidate();
+        assert!(
+            !ExpectedState::SpatialMode(SpatialMode::Music).matches(epoch.token(), &observation)
+        );
     }
 
     #[tokio::test]
@@ -395,22 +409,34 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn anc_write_waits_for_state_notification_without_speculative_query() {
-        let session = SessionEpoch::default().token();
-        let expected = StateObservation {
+    fn status(session: SessionToken, opcode: u8, code: u8) -> StateObservation {
+        StateObservation {
             session,
-            opcode: 0x34,
+            opcode,
+            event: DeviceEvent::WriteStatus { opcode, code },
+        }
+    }
+
+    #[tokio::test]
+    async fn anc_write_confirms_only_from_the_aa33_readback_after_the_status() {
+        let session = SessionEpoch::default().token();
+        let readback = StateObservation {
+            session,
+            opcode: 0x33,
             event: DeviceEvent::Anc {
                 mode: AncMode::Transparency,
                 parameter: 0xFF,
             },
         };
-        let transport = FakeTransport::new([ScriptedWrite::Reply(expected)]);
-        let found = write_and_observe(
+        let transport = FakeTransport::new([
+            ScriptedWrite::Reply(status(session, 0x34, 0x01)),
+            ScriptedWrite::Reply(readback),
+        ]);
+        let found = write_and_confirm(
             &transport,
             session,
             &[0xBA, 0x34, 0x02, 0xFF],
+            &[0xBA, 0x33],
             ExpectedState::Anc {
                 mode: AncMode::Transparency,
                 parameter: 0xFF,
@@ -418,7 +444,7 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(found.opcode, 0x34);
+        assert_eq!(found.opcode, 0x33);
         assert!(!ExpectedState::Anc {
             mode: AncMode::Transparency,
             parameter: 1,
@@ -426,7 +452,43 @@ mod tests {
         .matches(session, &found));
         assert_eq!(
             *transport.writes.lock().unwrap(),
-            vec![vec![0xBA, 0x34, 0x02, 0xFF]]
+            vec![vec![0xBA, 0x34, 0x02, 0xFF], vec![0xBA, 0x33]]
+        );
+    }
+
+    #[tokio::test]
+    async fn rejected_write_status_fails_fast_with_the_device_code() {
+        let session = SessionEpoch::default().token();
+        let transport = FakeTransport::new([ScriptedWrite::Reply(status(session, 0x34, 0x0C))]);
+        let error = write_and_confirm(
+            &transport,
+            session,
+            &[0xBA, 0x34, 0x01, 0x68],
+            &[0xBA, 0x33],
+            ExpectedState::Anc {
+                mode: AncMode::Anc,
+                parameter: 0x68,
+            },
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(error, rejection_message(0x0C));
+        assert!(error.contains("[device-code:0C]"));
+
+        let wind = ExpectedState::WindNoise(true);
+        assert_eq!(
+            wind.rejection(session, &status(session, 0x52, 0x0A)),
+            Some(0x0A)
+        );
+        assert_eq!(wind.rejection(session, &status(session, 0x52, 0x01)), None);
+        // A status for another opcode or session never rejects this write.
+        assert_eq!(wind.rejection(session, &status(session, 0x34, 0x00)), None);
+        let mut epoch = SessionEpoch::default();
+        let old = epoch.token();
+        epoch.invalidate();
+        assert_eq!(
+            wind.rejection(epoch.token(), &status(old, 0x52, 0x0A)),
+            None
         );
     }
 
@@ -519,14 +581,20 @@ mod tests {
         let mut restore = StateObservation {
             session,
             opcode: 0x37,
-            event: DeviceEvent::RestoreResult(0),
+            event: DeviceEvent::RestoreResult(RESULT_SUCCESS),
         };
-        assert!(ExpectedState::RestoreResult(0).matches(session, &restore));
+        let expected = ExpectedState::RestoreResult(RESULT_SUCCESS);
+        assert!(expected.matches(session, &restore));
+        assert_eq!(expected.rejection(session, &restore), None);
         restore.event = DeviceEvent::RestoreResult(0x0C);
-        assert!(!ExpectedState::RestoreResult(0).matches(session, &restore));
-        restore.event = DeviceEvent::RestoreResult(0);
+        assert!(!expected.matches(session, &restore));
+        assert_eq!(expected.rejection(session, &restore), Some(0x0C));
+        // 00 is not success on the settings screens these models use.
+        restore.event = DeviceEvent::RestoreResult(0x00);
+        assert_eq!(expected.rejection(session, &restore), Some(0x00));
+        restore.event = DeviceEvent::RestoreResult(RESULT_SUCCESS);
         restore.opcode = 0x36;
-        assert!(!ExpectedState::RestoreResult(0).matches(session, &restore));
+        assert!(!expected.matches(session, &restore));
 
         let mut adaptive = StateObservation {
             session,

@@ -131,8 +131,20 @@ pub async fn mock_connect(app: AppHandle, device_id: String) -> Result<BleDevice
         state
             .snapshot
             .observe(0x27, &DeviceEvent::Battery(battery), now_ms());
+        // Answer-gated cards (AA51/AA74) need a demo observation to appear.
+        let capabilities = &device.device_profile.capabilities;
+        if capabilities.wind_noise {
+            state
+                .snapshot
+                .observe(0x51, &DeviceEvent::WindNoise(false), now_ms());
+        }
+        if capabilities.ldac {
+            state
+                .snapshot
+                .observe(0x74, &DeviceEvent::Ldac(false), now_ms());
+        }
         state.snapshot.observe(
-            0x34,
+            0x33,
             &DeviceEvent::Anc {
                 mode: AncMode::Anc,
                 parameter: 0xFF,

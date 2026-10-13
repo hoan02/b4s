@@ -12,6 +12,15 @@ use crate::protocol::Frame;
 /// model-specific GATT configuration before being considered supported.
 pub struct Bp1ProAnc;
 
+/// How a family reports the transparency sub-mode in AA33.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NoiseLayout {
+    /// `HeadPhoneMainActivity`/`NoiseReduceManger`: one transparency mode.
+    SingleTransparency,
+    /// `EarPodNewActivity`/`NoiseReduceManger2`: type1 selects full or voice.
+    SelectableTransparency,
+}
+
 impl Bp1ProAnc {
     /// Decode a notification frame into a high-level event.
     pub fn decode_frame(
@@ -35,25 +44,27 @@ impl Bp1ProAnc {
             // Case battery: AA 27 [case%] [charging]
             0x27 => Self::decode_case(&frame.payload),
 
-            // Do NOT map 0x32/0x33 → ANC. Those opcodes appear in other features;
-            // false positives forced UI back to "Giảm ồn" when user picked Normal/Ambient.
+            // Noise state: AA 33 [mode] [type] [type1] [type2]
+            // (NoiseReduceManger.u). The BP1 Pro family has a single
+            // transparency mode, so the retained type1 selector is not state.
+            0x33 => Self::decode_noise_state(&frame.payload, NoiseLayout::SingleTransparency),
 
-            // ANC set/query reply: AA 34 [mode] [level?]
-            // Wire modes match BA34: 00=Off, 01=ANC, 02=Transparency (docs + encode_command)
-            0x34 => match Self::resolve_anc_state(&frame.payload) {
-                Some((mode, parameter)) => Ok(DeviceEvent::Anc { mode, parameter }),
-                None => Err(DecodeError::UnknownOpcode(0x34)),
-            },
+            // AA 34 [status] is only the BA34 result (NoiseReduceManger.s):
+            // 01 success (the app then re-queries BA33), 00/other = rejected.
+            0x34 | 0x52 => Self::decode_write_status(frame),
 
-            // APK 2.17.0.1: AA30 is dictSort; AA42 is spatial-related state.
+            // APK 2.17.0.1: AA30 is dictSort.
             0x30 => match frame.payload.as_slice() {
                 [index] => Ok(DeviceEvent::EqIndex(*index)),
                 _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
             },
 
+            // PanoramicSoundViewModel.x: selected mode, optionally followed by
+            // the retained mode. 00 off, 01 music, 02 cinema, 03 game.
             0x42 => match frame.payload.as_slice() {
-                [0] => Ok(DeviceEvent::SpatialEnabled(false)),
-                [1] => Ok(DeviceEvent::SpatialEnabled(true)),
+                [mode @ 0..=3] | [mode @ 0..=3, 0..=3] => {
+                    Ok(DeviceEvent::SpatialMode(Self::spatial_mode(*mode)))
+                }
                 _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
             },
             0x53 => Self::bass_level_from_payload(&frame.payload)
@@ -65,19 +76,20 @@ impl Bp1ProAnc {
                 [1] => Ok(DeviceEvent::InEar(true)),
                 _ => Err(DecodeError::UnknownOpcode(0x25)),
             },
-            // Multipoint (dual-connection) state: AA 57 [00|01]. AA58 is the set reply.
-            0x57 => match frame.payload.as_slice() {
-                [0] => Ok(DeviceEvent::Multipoint(false)),
-                [1] => Ok(DeviceEvent::Multipoint(true)),
-                _ => Err(DecodeError::UnknownOpcode(0x57)),
-            },
+            // Multipoint (dual-connection) state: AA 57 [..] [00|01]. The app
+            // reads the trailing byte (endsWith "01"). AA58 is the set reply.
+            0x57 => Self::trailing_flag(&frame.payload)
+                .map(DeviceEvent::Multipoint)
+                .ok_or(DecodeError::UnknownOpcode(0x57)),
             // Restore-defaults availability: AA 36 [00|01] (BleCommandUtil.e == 1).
             0x36 => match frame.payload.as_slice() {
                 [0] => Ok(DeviceEvent::RestoreAvailable(false)),
                 [1] => Ok(DeviceEvent::RestoreAvailable(true)),
                 _ => Err(DecodeError::UnknownOpcode(0x36)),
             },
-            // Restore-defaults result: AA 37 [code]; 00 success, 0C/0D conflict.
+            // Restore-defaults result: AA 37 [code]. EarPhoneSettingActivity and
+            // EarPhoneSettingV2Activity treat 01 as success; 0C dual connection
+            // and 0D in-call are rejections.
             0x37 => match frame.payload.as_slice() {
                 [code, ..] => Ok(DeviceEvent::RestoreResult(*code)),
                 _ => Err(DecodeError::UnknownOpcode(0x37)),
@@ -88,12 +100,16 @@ impl Bp1ProAnc {
                 [1] => Ok(DeviceEvent::AdaptiveLr(true)),
                 _ => Err(DecodeError::UnknownOpcode(0x3F)),
             },
-            // Wind-noise reduction state: AA 51 [00|01] (ResultHandle.h/j reads the trailing byte).
-            // AA52 is the set reply/error and never creates state.
-            0x51 => match frame.payload.as_slice() {
-                [0] => Ok(DeviceEvent::WindNoise(false)),
-                [1] => Ok(DeviceEvent::WindNoise(true)),
-                _ => Err(DecodeError::UnknownOpcode(0x51)),
+            // Wind-noise reduction state: AA 51 [..] [00|01] (ResultHandle.h/j
+            // reads the trailing byte). AA52 is only the set status.
+            0x51 => Self::trailing_flag(&frame.payload)
+                .map(DeviceEvent::WindNoise)
+                .ok_or(DecodeError::UnknownOpcode(0x51)),
+            // Gesture contract selector pushed by firmware (GestureSettingViewModel,
+            // HeadPhoneMainActivity, EarPodNewActivity): AA 8B 01 means V2.
+            0x8B => match frame.payload.as_slice() {
+                [flag @ 0..=1, ..] => Ok(DeviceEvent::GestureProtocolV2(*flag == 1)),
+                _ => Err(DecodeError::UnknownOpcode(0x8B)),
             },
             // Gesture v1 configuration: AA 21 [layout] [left] [right].
             0x21 => match frame.payload.as_slice() {
@@ -104,9 +120,10 @@ impl Bp1ProAnc {
                 }),
                 _ => Err(DecodeError::UnknownOpcode(0x21)),
             },
+            // LdacSettingActivity: switch.setChecked(AA74 byte == "01").
             0x74 => match frame.payload.as_slice() {
-                [0] => Ok(DeviceEvent::Ldac(true)),
-                [1] => Ok(DeviceEvent::Ldac(false)),
+                [1] => Ok(DeviceEvent::Ldac(true)),
+                [0] => Ok(DeviceEvent::Ldac(false)),
                 _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
             },
             // App 2.17.0.1 consumes AA93 + enabled + level as state. AA94 is
@@ -135,27 +152,60 @@ impl Bp1ProAnc {
         }
     }
 
-    /// Resolve AA 34 noise-mode state notification.
+    /// Decode the AA33 noise report shared by both families.
     ///
-    /// Official write: `BA 34 <mode> <level>` with mode `00|01|02`.
-    /// Many firmwares echo the same; some only send a 1-byte "ok" (`01`).
-    /// A one-byte success ACK is not state. Preserve the returned parameter so
-    /// command confirmation can match ANC level or transparency submode too.
-    pub fn resolve_anc_state(payload: &[u8]) -> Option<(AncMode, u8)> {
-        if payload.len() != 2 {
-            return None;
-        }
-        let parameter = *payload.get(1)?;
-        let mode = match payload[0] {
-            0 => AncMode::Off,
-            1 => AncMode::Anc,
-            2 => AncMode::Transparency,
-            _ => return None,
+    /// `mode, type, type1, type2`: the firmware retains the inactive selectors,
+    /// so the parameter is normalized for the active mode. Shorter replies are
+    /// accepted as the app does (`NoiseReduceManger.u` defaults missing bytes).
+    /// Canonical B4S transparency parameters are FF (full) and 01 (voice).
+    pub fn decode_noise_state(
+        payload: &[u8],
+        layout: NoiseLayout,
+    ) -> Result<DeviceEvent, DecodeError> {
+        let (mode, parameter) = match (payload, layout) {
+            ([0, _, ..], _) => (AncMode::Off, 0xFF),
+            ([1, parameter, ..], _) => (AncMode::Anc, *parameter),
+            ([2, _, ..], NoiseLayout::SingleTransparency) => (AncMode::Transparency, 0xFF),
+            // Ultra's selector is 01 full / 02 voice on the wire.
+            ([2, _, 1, ..], NoiseLayout::SelectableTransparency) => (AncMode::Transparency, 0xFF),
+            ([2, _, 2, ..], NoiseLayout::SelectableTransparency) => (AncMode::Transparency, 1),
+            _ => return Err(DecodeError::UnknownOpcode(0x33)),
         };
-        Some((mode, parameter))
+        Ok(DeviceEvent::Anc { mode, parameter })
     }
 
-    /// Some firmwares encode charging as high bit (0x80 | pct). Strip for display.
+    /// One-byte set status (AA34, AA52). Longer payloads are not this reply.
+    fn decode_write_status(frame: &Frame) -> Result<DeviceEvent, DecodeError> {
+        match frame.payload.as_slice() {
+            [code] => Ok(DeviceEvent::WriteStatus {
+                opcode: frame.cmd,
+                code: *code,
+            }),
+            _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
+        }
+    }
+
+    /// Switch state carried in the trailing byte (`endsWith("01")` in the app).
+    fn trailing_flag(payload: &[u8]) -> Option<bool> {
+        match payload.last() {
+            Some(0) => Some(false),
+            Some(1) => Some(true),
+            _ => None,
+        }
+    }
+
+    pub fn spatial_mode(mode: u8) -> SpatialMode {
+        match mode {
+            0 => SpatialMode::Off,
+            1 => SpatialMode::Music,
+            2 => SpatialMode::Cinema,
+            _ => SpatialMode::Game,
+        }
+    }
+
+    /// Unverified: no APK consumer reads a charging bit (`BleUtils.d` and the
+    /// case handler take the raw value). Kept from the original BP1 Pro notes
+    /// until a capture settles it; values above 100 never show above 100%.
     fn pct_and_charge(b: u8) -> (u8, bool) {
         if b > 100 {
             ((b & 0x7F).min(100), b & 0x80 != 0)
@@ -205,13 +255,7 @@ impl Bp1ProAnc {
                 got: 0,
             });
         }
-        if !Self::is_pct_byte(payload[0]) {
-            return Err(DecodeError::PayloadTooShort {
-                opcode: 0x27,
-                need: 1,
-                got: payload.len(),
-            });
-        }
+        // EarBatteryManger.g clamps the raw case value to 0..100.
         let (case, ch_hi) = Self::pct_and_charge(payload[0]);
         let case_charging = payload.get(1).copied().unwrap_or(0) != 0 || ch_hi;
         Ok(DeviceEvent::Battery(BatteryState {
@@ -274,8 +318,8 @@ impl Bp1ProAnc {
         crate::protocol::encode_command(Command::SetGameMode(on))
     }
 
-    pub fn cmd_find_buds(start: bool) -> Vec<u8> {
-        crate::protocol::encode_command(Command::FindBuds(start))
+    pub fn cmd_find_buds(side: FindSide, start: bool) -> Vec<u8> {
+        crate::protocol::encode_command(Command::FindBuds { side, start })
     }
 }
 
@@ -334,6 +378,15 @@ mod tests {
     }
 
     #[test]
+    fn case_values_above_100_are_clamped_like_the_app() {
+        let DeviceEvent::Battery(battery) = dec(&[0xAA, 0x27, 0x6E]).unwrap() else {
+            panic!("case battery expected");
+        };
+        assert_eq!(battery.case, 100);
+        assert!(!battery.case_charging);
+    }
+
+    #[test]
     fn case_report_can_contain_only_the_percentage() {
         let ev = dec(&[0xAA, 0x27, 0x64]).unwrap();
         match ev {
@@ -355,15 +408,25 @@ mod tests {
     }
 
     #[test]
-    fn spatial_enabled_notification_is_state_while_ack_is_not() {
+    fn spatial_report_is_the_selected_mode_while_ack_is_not() {
         assert_eq!(
             dec(&[0xAA, 0x42, 0x01]).unwrap(),
-            DeviceEvent::SpatialEnabled(true)
+            DeviceEvent::SpatialMode(SpatialMode::Music)
         );
         assert_eq!(
             dec(&[0xAA, 0x42, 0x00]).unwrap(),
-            DeviceEvent::SpatialEnabled(false)
+            DeviceEvent::SpatialMode(SpatialMode::Off)
         );
+        // Cinema and the two-byte selected/retained form are state too.
+        assert_eq!(
+            dec(&[0xAA, 0x42, 0x02]).unwrap(),
+            DeviceEvent::SpatialMode(SpatialMode::Cinema)
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x42, 0x00, 0x02]).unwrap(),
+            DeviceEvent::SpatialMode(SpatialMode::Off)
+        );
+        assert!(dec(&[0xAA, 0x42, 0x04]).is_err());
         assert!(dec(&[0xAA, 0x43, 0x01]).is_err());
     }
 
@@ -378,7 +441,8 @@ mod tests {
             vec![0xAA, 0x74],
             vec![0xAA, 0x74, 2],
             vec![0xAA, 0x75, 1],
-            vec![0xAA, 0x34, 1],
+            vec![0xAA, 0x34],
+            vec![0xAA, 0x34, 1, 5],
         ] {
             assert!(dec(&packet).is_err(), "unexpected state from {packet:02X?}");
         }
@@ -398,34 +462,41 @@ mod tests {
     }
 
     #[test]
-    fn anc_state_retains_mode_and_parameter() {
-        assert_eq!(
-            Bp1ProAnc::resolve_anc_state(&[0x00, 0xFF]),
-            Some((AncMode::Off, 0xFF))
-        );
-        assert_eq!(
-            Bp1ProAnc::resolve_anc_state(&[0x02, 0x01]),
-            Some((AncMode::Transparency, 1))
-        );
-        assert_eq!(
-            Bp1ProAnc::resolve_anc_state(&[0x01, 0x05]),
-            Some((AncMode::Anc, 5))
-        );
-    }
-
-    #[test]
-    fn anc_short_ack_and_unknown_mode_never_become_confirmed_state() {
-        // AA34 01 alone is generic success, not evidence of any mode.
-        assert_eq!(Bp1ProAnc::resolve_anc_state(&[0x01]), None);
-        assert_eq!(Bp1ProAnc::resolve_anc_state(&[0x03, 0x02]), None);
-        assert_eq!(Bp1ProAnc::resolve_anc_state(&[0x01, 0x05, 0x00]), None);
-    }
-
-    #[test]
-    fn anc_no_false_aa33() {
-        // Old bug: opcode 0x33 forced ANC
+    fn aa33_reports_noise_state_for_the_active_mode() {
+        for (wire, mode, parameter) in [
+            (vec![0xAA, 0x33, 0, 104, 1, 1], AncMode::Off, 0xFF),
+            (vec![0xAA, 0x33, 1, 104, 1, 1], AncMode::Anc, 104),
+            (vec![0xAA, 0x33, 1, 3], AncMode::Anc, 3),
+            // Single-transparency family: the retained type1 is not a submode.
+            (vec![0xAA, 0x33, 2, 104, 2, 1], AncMode::Transparency, 0xFF),
+            (vec![0xAA, 0x33, 2, 0xFF], AncMode::Transparency, 0xFF),
+        ] {
+            assert_eq!(dec(&wire).unwrap(), DeviceEvent::Anc { mode, parameter });
+        }
         assert!(dec(&[0xAA, 0x33]).is_err());
+        assert!(dec(&[0xAA, 0x33, 1]).is_err());
+        assert!(dec(&[0xAA, 0x33, 3, 1]).is_err());
         assert!(dec(&[0xAA, 0x32]).is_err());
+    }
+
+    #[test]
+    fn aa34_is_only_a_write_status_never_noise_state() {
+        assert_eq!(
+            dec(&[0xAA, 0x34, 0x01]).unwrap(),
+            DeviceEvent::WriteStatus {
+                opcode: 0x34,
+                code: 0x01
+            }
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x34, 0x00]).unwrap(),
+            DeviceEvent::WriteStatus {
+                opcode: 0x34,
+                code: 0x00
+            }
+        );
+        // The old two-byte "state" layout is not an app-consumed reply.
+        assert!(dec(&[0xAA, 0x34, 0x02, 0xFF]).is_err());
     }
 
     #[test]
@@ -469,24 +540,37 @@ mod tests {
     }
 
     #[test]
-    fn find_buds_has_start_and_stop_commands() {
-        assert_eq!(Bp1ProAnc::cmd_find_buds(true), vec![0xBA, 0x10, 0x02, 0x01]);
+    fn find_buds_has_per_side_start_and_stop_commands() {
         assert_eq!(
-            Bp1ProAnc::cmd_find_buds(false),
+            Bp1ProAnc::cmd_find_buds(FindSide::Both, true),
+            vec![0xBA, 0x10, 0x02, 0x01]
+        );
+        assert_eq!(
+            Bp1ProAnc::cmd_find_buds(FindSide::Both, false),
             vec![0xBA, 0x10, 0x02, 0x00]
+        );
+        assert_eq!(
+            Bp1ProAnc::cmd_find_buds(FindSide::Left, true),
+            vec![0xBA, 0x10, 0x00, 0x01]
+        );
+        assert_eq!(
+            Bp1ProAnc::cmd_find_buds(FindSide::Right, false),
+            vec![0xBA, 0x10, 0x01, 0x00]
         );
     }
 
     #[test]
-    fn ldac_toggle_uses_ba75_inverted_flag_from_apk() {
+    fn ldac_uses_01_for_enabled_on_write_and_readback() {
         assert_eq!(
             encode_command(Command::SetLdac(true)),
-            vec![0xBA, 0x75, 0x00]
+            vec![0xBA, 0x75, 0x01]
         );
         assert_eq!(
             encode_command(Command::SetLdac(false)),
-            vec![0xBA, 0x75, 0x01]
+            vec![0xBA, 0x75, 0x00]
         );
+        assert_eq!(dec(&[0xAA, 0x74, 0x01]).unwrap(), DeviceEvent::Ldac(true));
+        assert_eq!(dec(&[0xAA, 0x74, 0x00]).unwrap(), DeviceEvent::Ldac(false));
     }
 
     #[test]
@@ -559,7 +643,7 @@ mod tests {
         assert_eq!(dec(&[0xAA, 0x30, 101]).unwrap(), DeviceEvent::EqIndex(101));
         assert_eq!(
             dec(&[0xAA, 0x42, 1]).unwrap(),
-            DeviceEvent::SpatialEnabled(true)
+            DeviceEvent::SpatialMode(SpatialMode::Music)
         );
         assert!(dec(&[0xAA, 0x43, 1]).is_err());
         assert!(dec(&[0xAA, 0x30, 1, 2]).is_err());
@@ -624,6 +708,11 @@ mod tests {
         assert!(dec(&[0xAA, 0x58, 0x01]).is_err());
         assert!(dec(&[0xAA, 0x57, 0x02]).is_err());
         assert!(dec(&[0xAA, 0x57]).is_err());
+        // The app reads the trailing byte.
+        assert_eq!(
+            dec(&[0xAA, 0x57, 0x05, 0x01]).unwrap(),
+            DeviceEvent::Multipoint(true)
+        );
         assert_eq!(encode_command(Command::QueryMultipoint), vec![0xBA, 0x57]);
         assert_eq!(
             encode_command(Command::SetMultipoint(true)),
@@ -647,8 +736,8 @@ mod tests {
         );
         assert!(dec(&[0xAA, 0x36, 0x02]).is_err());
         assert_eq!(
-            dec(&[0xAA, 0x37, 0x00]).unwrap(),
-            DeviceEvent::RestoreResult(0)
+            dec(&[0xAA, 0x37, 0x01]).unwrap(),
+            DeviceEvent::RestoreResult(1)
         );
         assert_eq!(
             dec(&[0xAA, 0x37, 0x0C]).unwrap(),
@@ -674,9 +763,18 @@ mod tests {
         );
         assert!(dec(&[0xAA, 0x51, 0x02]).is_err());
         assert!(dec(&[0xAA, 0x51]).is_err());
-        // AA52 is the set reply or an error code (0A/0B mutual exclusion) and never state.
-        assert!(dec(&[0xAA, 0x52, 0x01]).is_err());
-        assert!(dec(&[0xAA, 0x52, 0x0A]).is_err());
+        assert_eq!(
+            dec(&[0xAA, 0x51, 0x00, 0x01]).unwrap(),
+            DeviceEvent::WindNoise(true)
+        );
+        // AA52 is the set status or an error code (0A/0B/0C), never state.
+        assert_eq!(
+            dec(&[0xAA, 0x52, 0x0A]).unwrap(),
+            DeviceEvent::WriteStatus {
+                opcode: 0x52,
+                code: 0x0A
+            }
+        );
         assert_eq!(encode_command(Command::QueryWindNoise), vec![0xBA, 0x51]);
         assert_eq!(
             encode_command(Command::SetWindNoise(true)),
@@ -750,5 +848,19 @@ mod tests {
             }),
             vec![0xBA, 0x22, 0x02, 0x04, 0x04]
         );
+    }
+
+    #[test]
+    fn firmware_gesture_contract_selector_is_decoded() {
+        assert_eq!(
+            dec(&[0xAA, 0x8B, 0x01]).unwrap(),
+            DeviceEvent::GestureProtocolV2(true)
+        );
+        assert_eq!(
+            dec(&[0xAA, 0x8B, 0x00]).unwrap(),
+            DeviceEvent::GestureProtocolV2(false)
+        );
+        assert!(dec(&[0xAA, 0x8B]).is_err());
+        assert!(dec(&[0xAA, 0x8B, 0x02]).is_err());
     }
 }

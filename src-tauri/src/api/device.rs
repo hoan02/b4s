@@ -1,6 +1,6 @@
 use super::error::{ApiError, ApiErrorCode};
 use crate::{ble, catalog, device, protocol};
-use protocol::{BatteryState, EqBand, ListeningCommand, SpatialMode};
+use protocol::{BatteryState, EqBand, FindSide, ListeningCommand, SpatialMode};
 use serde::{Deserialize, Serialize};
 
 const DEVICE_COMMAND_CONTRACT_VERSION: u16 = 1;
@@ -56,6 +56,8 @@ enum DeviceCommand {
     },
     FindBuds {
         start: bool,
+        /// Omitted means both buds, the app's default dialog action.
+        side: Option<FindSide>,
     },
     SetInEar {
         enabled: bool,
@@ -217,8 +219,8 @@ pub(crate) async fn apply_device_command(
             ble::commands::send_hearing_protection(enabled, level).await?;
             DeviceCommandDisposition::DeviceStateObserved
         }
-        DeviceCommand::FindBuds { start } => {
-            ble::commands::send_find_buds(start).await?;
+        DeviceCommand::FindBuds { start, side } => {
+            ble::commands::send_find_buds(side.unwrap_or(FindSide::Both), start).await?;
             DeviceCommandDisposition::TransportAccepted
         }
         DeviceCommand::SetInEar { enabled } => {
@@ -238,8 +240,9 @@ pub(crate) async fn apply_device_command(
             DeviceCommandDisposition::DeviceStateObserved
         }
         DeviceCommand::RestoreDefaults => {
+            // Completes only on the AA37 success result.
             ble::commands::send_restore_defaults().await?;
-            DeviceCommandDisposition::TransportAccepted
+            DeviceCommandDisposition::DeviceStateObserved
         }
         DeviceCommand::SetAdaptiveLr { enabled } => {
             ble::commands::send_adaptive_lr(enabled).await?;
@@ -321,6 +324,41 @@ mod tests {
             serde_json::from_value::<DeviceCommandRequest>(serde_json::json!({
                 "contractVersion": 1,
                 "command": { "kind": "rawOpcode", "opcode": 0x34 }
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn find_buds_side_is_optional_and_closed() {
+        let request: DeviceCommandRequest = serde_json::from_value(serde_json::json!({
+            "contractVersion": 1,
+            "command": { "kind": "findBuds", "start": true }
+        }))
+        .unwrap();
+        assert!(matches!(
+            request.command,
+            DeviceCommand::FindBuds {
+                start: true,
+                side: None
+            }
+        ));
+        let request: DeviceCommandRequest = serde_json::from_value(serde_json::json!({
+            "contractVersion": 1,
+            "command": { "kind": "findBuds", "start": false, "side": "left" }
+        }))
+        .unwrap();
+        assert!(matches!(
+            request.command,
+            DeviceCommand::FindBuds {
+                start: false,
+                side: Some(FindSide::Left)
+            }
+        ));
+        assert!(
+            serde_json::from_value::<DeviceCommandRequest>(serde_json::json!({
+                "contractVersion": 1,
+                "command": { "kind": "findBuds", "start": true, "side": "middle" }
             }))
             .is_err()
         );

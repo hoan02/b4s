@@ -59,12 +59,16 @@ until they are traced to a specific model/firmware and reviewed.
 
 `BA36`/`AA36` (availability) and `BA37`/`AA37` (restore) are implemented behind the
 reviewed `restoreDefaults` capability and the Experimental opt-in, with an explicit
-confirmation dialog. Restore is treated as a transport-accepted action that waits for an
-`AA37 00` result and never becomes "confirmed device state".
+confirmation dialog. `EarPhoneSettingActivity` and `EarPhoneSettingV2Activity`, the
+screens the seven control profiles use, treat `AA37 01` as success and route every other
+code (`0C` dual connection, `0D` in a call) to `EarSetFailedUtil`. B4S waits for `AA37 01`,
+fails immediately on any other code and then re-runs the startup queries, as
+`HomeBleDataResolvePresenter` re-reads state after a restore. The `00` success check in
+`EarphoneSettingFragment` belongs to an older screen these models do not open.
 
-`BA3F`/`AA3F` (state) and `BA4A01`/`BA4A00` (set) are implemented behind the
-`adaptiveLr` capability and the Experimental opt-in. The resolved resource
-`str_left_and_right_adapter` = "Adaptive L/R Earbuds" supplies the user-facing label; the
-setter writes `BA4A` and re-queries `BA3F` for confirmation.
+`BA3F`/`AA3F` (state) and `BA4A01`/`BA4A00` (set) remain in the codec, but the APK only
+queries `BA3F` for Baseus Inspire XC1 (`DeviceManager.M0`) on `EarPhoneSettingV2Activity`.
+No current control profile enables `adaptiveLr`; BP1 Pro's earlier enablement was removed
+by the 2026-10-13 REA re-audit.
 
 The touch-lock, firmware, auto-off and phone-side call settings remain unimplemented.

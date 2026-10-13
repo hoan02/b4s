@@ -36,7 +36,10 @@ export function assertModelContracts(value: unknown): asserts value is Record<st
     eq.bands.length === 0 || eq.bands.length !== eq.qValues.length ||
     eq.qValues.some(q => typeof q !== "number" || !Number.isFinite(q) || q <= 0) ||
     !record(eq.customWrite) || !Number.isInteger(eq.customWrite.slot) ||
-    typeof eq.customWrite.ancBank !== "boolean")) {
+    typeof eq.customWrite.ancBank !== "boolean" ||
+    typeof eq.customWrite.minGain !== "number" || typeof eq.customWrite.maxGain !== "number" ||
+    !Number.isFinite(eq.customWrite.minGain) || !Number.isFinite(eq.customWrite.maxGain) ||
+    eq.customWrite.minGain >= eq.customWrite.maxGain)) {
     throw new Error("Invalid model contract: explicit EQ constraints required");
   }
 }

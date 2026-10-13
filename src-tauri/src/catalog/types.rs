@@ -113,11 +113,15 @@ pub struct EqProfile {
     pub presets: Vec<EqPresetProfile>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CustomEqWriteProfile {
     pub slot: u8,
     pub anc_bank: bool,
+    /// User-editable band range. The app clamps custom gains independently of
+    /// preset filters (DragChartLineViewV2: ±6 dB, integer steps).
+    pub min_gain: f32,
+    pub max_gain: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

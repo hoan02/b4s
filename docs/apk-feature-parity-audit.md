@@ -19,7 +19,7 @@ properties. Finding a model name or an opcode must not turn on a capability.
 | Area | APK evidence to trace | Current B4S coverage / limitation |
 | --- | --- | --- |
 | Model identity | `DeviceManager.DEVICE_MAP`, exact model branches, public catalog | 124 recognized candidates, seven experimental/verified control profiles (BP1 Pro/Ultra plus EP10 Ultra, M4s, MS1, M3s, EP10 Pro, the last five not hardware verified); extracted alias mappings are evidence, not automatically installed runtime aliases |
-| Transport and framing | `BluetoothDataWriteManager.Companion.a/b/c`, `DeviceManager.H0/Q0`, `HeadPhoneDataResolveManager` | BLE GATT with bare AA/BA and 789C framing; no Classic Bluetooth control transport |
+| Transport and framing | `BluetoothDataWriteManager.Companion.a/b/c`, `DeviceManager.H0/Q0`, `HeadPhoneDataResolveManager` | The APK controls all seven profiled models over Classic Bluetooth SPP (`H0`); B4S uses BLE GATT with bare AA/BA and 789C framing on its own hardware evidence. No Classic Bluetooth control transport in B4S |
 | Battery / device state | Headphone data decoder, model-specific state consumers | Pro/Ultra decoders and startup queries exist; no universal layout for all models |
 | ANC / transparency | `NoiseReduceDataModel`, `NoiseReduceManger2`, `EarPodNewActivity` | Two reviewed layouts; Ultra AA33 differs from Pro; voice write/read normalization implemented, Ultra voice hardware transition still pending |
 | EQ preset / custom | `EarEqSelfDefinePresenter`, `EqRegulationConstant`, model params | Pro reviewed preset/filter schema; schema 3 declares the current slot/bank explicitly; Ultra EQ remains disabled; not a universal EQ bank/reset contract |
@@ -124,15 +124,70 @@ establish parity with the missing APK features or acceptance on other earbuds.
 
 A second pass over the APK compared four B4S assumptions with their consumers:
 
-- **AA37 (restore defaults)**: the settings screens (`EarphoneSettingFragment`
-  receiver) treat `00` as success and `0C`/`0D` as the call/dual-connection
-  conflicts, which matches B4S. The `== 1` test in `HomeBleDataResolvePresenter`
-  is a generic home-screen handler (`BleCommandUtil.f`) that re-queries state; it
-  is not the restore result. No code change.
+- **AA37 (restore defaults)**: superseded by the REA re-audit below. The
+  `00` check belongs to `EarphoneSettingFragment`, which these models do not open;
+  their settings screens treat `01` as success.
 - **BA5E**: `PanoramicSoundViewModel.G` writes `BA5E01`/`BA5E00` to declare
   support; there is no `AA5E` consumer. The wrong "capability query" comment in
   `protocol/types.rs` was corrected. B4S does not send BA5E.
-- **LDAC polarity**: call sites disagree (activity vs ear fragment), so B4S keeps
-  the polarity read back on BP1 Ultra hardware; do not generalize it.
+- **LDAC polarity**: superseded by the REA re-audit below; the call sites agree
+  that `01` enables LDAC.
 - **`#InitState:`**: only used by the add-device flow (`SearchDevicesAddViewModel`),
   not by connected earbuds. The BP1 Ultra GATT path needs no such write.
+
+## REA re-audit (2026-10-13)
+
+The APK was re-analyzed with [REA](https://github.com/morluto/rea) 6.4.0 and its
+pinned headless JADX engine (jadx-headless-mcp 0.7.1, SHA-256
+`6e5eacf5...`), which decompiles single methods on demand and records an evidence
+ID per result. Methods JADX could not restore (`NoiseReduceDataModel.f`,
+`DeviceManager.l`) were read as smali or JADX fallback output. Five areas were
+compared against B4S: transport/framing, battery/ANC, EQ/sound, gestures and
+device settings, and per-model capability gating. Each conclusion below cites the
+consumer that decides it.
+
+Fixed in B4S:
+
+- **LDAC polarity was inverted on write and readback.** `LdacSettingActivity`'s
+  `DisTouchAbleSwitchButton` does not toggle on touch, so `m1` sends `BA75 00` to
+  turn LDAC *off*; `AA74 01` checks the switch. The fragment and
+  `HeadPhoneMainActivity.F` agree. B4S now sends `01` to enable and reads `01` as
+  enabled.
+- **AA37 success is `01`.** `EarPhoneSettingActivity`/`V2Activity` (the screens
+  all seven profiles use) report every other code as an error. B4S waited for
+  `00`, so a successful reset timed out. It now completes on `01`, fails fast on
+  other codes and re-runs the startup queries.
+- **AA34 is a write status, not noise state.** `NoiseReduceManger.s` reads byte 0
+  as `01` success / `00` failure and re-queries `BA33`; state comes from `AA33`
+  (`NoiseReduceManger.u`). The BP1 Pro family now confirms through `BA33`,
+  queries it at startup and fails fast on a rejected status.
+- **789C receive no longer invents frames.** B4S searched every CRC-valid packet
+  for a `0xAA` byte and also had a fallback layout; neither exists in
+  `HeadPhoneDataResolveManager.Companion.d/e`, and a payload or length byte equal
+  to `0xAA` produced fake frames. Sub-frames are now kept in device order instead
+  of being deduplicated by opcode.
+- **Per-model limits:** `DeviceManager.d` caps the bass slider at 3 for BP1
+  Ultra, EP10 Ultra and M4s (MS1 keeps 5). `NoiseReduceDataModel.f` gives the Pro
+  family 104/102/103/101 (no 108), the Ultra family 104/102/103/101/108 and MS1
+  only 104, each with Custom 1-5 (`DeviceManager.l`). The Pro family has one
+  transparency mode. Custom EQ gain is clamped to +/-6 dB in
+  `DragChartLineViewV2`, separately from preset filters.
+- **Over-claims removed:** BP1 Pro adaptive L/R (`BA3F` is queried only for
+  Inspire XC1) and EP10 Pro presets (copied from BP1 Pro; its server parameters
+  are not captured). Short aliases `m3s`, `m4s` and `ms1` were removed because
+  they are not `DEVICE_MAP` keys and "MS1" is also a Tuya device ID.
+- **Spatial readback:** `AA42` reports the selected mode for the BP1 Pro family
+  too, so Cinema can be confirmed.
+
+Added from the same evidence: per-side find (`BA10 00|01|02 xx`) on all seven
+profiles; wind noise for the Ultra family and LDAC for the Pro family, shown only
+after the earbuds answer `AA51`/`AA74` as the app does; AA8B gesture contract
+detection that blocks legacy `BA22` writes when firmware selects V2; one-sided
+gesture writes with `FF` for the untouched side; and localized
+`EarSetFailedUtil` reasons for rejected writes.
+
+Still open: Classic SPP transport, gesture V2 encoding and child actions
+(function 18), Ultra-family EQ, call/battery enhancement, sound balance,
+device management, OTA and AI services. The BP1 Pro `BA0500` handshake has no
+APK earbud source but is kept pending a capture. Every change above is
+source-level; none is a hardware acceptance claim.

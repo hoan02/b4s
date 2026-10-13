@@ -33,11 +33,11 @@ nombre coincida nunca activa un control por sí solo.
 | Bass BP1 Pro | Perfil revisado | ANC, transparencia y modo adaptativo, ecualizador y EQ personalizado, audio espacial, modo juego, Bass Boost, localizar auriculares |
 | Bass BP1 Ultra | Experimental, probado en Windows | Batería, ANC, modo juego, audio espacial, Bass Boost, LDAC, protección auditiva, gestos. EQ/SoundFit no disponibles |
 | Bass EP10 Ultra, Bowie M4s, Bowie MS1 | Experimental, sin probar en hardware | Los mismos controles que BP1 Ultra (adaptador compartido) |
-| Bass EP10 Pro, Bowie M3s | Experimental, sin probar en hardware | ANC, audio espacial, modo juego, Bass Boost, gestos, reducción de ruido del viento (EP10 Pro también tiene presets de EQ) |
+| Bass EP10 Pro, Bowie M3s | Experimental, sin probar en hardware | ANC, audio espacial, modo juego, Bass Boost, gestos, localizar auriculares, reducción de ruido del viento y LDAC cuando los auriculares los informan. El EQ necesita parámetros del modelo aún no capturados |
 | 117 modelos Baseus más del catálogo | Solo detección | Nombre e imagen en la lista, sin controles |
 
 Algunos controles (gestos táctiles, detección en el oído, multipunto, reducción
-de ruido del viento, L/R adaptativo, restaurar valores) se marcan como
+de ruido del viento, LDAC en la familia BP1 Pro, restaurar valores) se marcan como
 **Experimental** en la aplicación y dependen de *Settings → Experimental mode*.
 Las funciones varían según el modelo y el firmware.
 

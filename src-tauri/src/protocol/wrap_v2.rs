@@ -154,21 +154,15 @@ pub fn unwrap_notify(data: &[u8]) -> Vec<Vec<u8>> {
     out
 }
 
-/// Official 789C inner extract (one packet, includes header+CRC).
+/// Official 789C inner extract (one CRC-valid packet, header and CRC included).
+///
+/// Mirrors `HeadPhoneDataResolveManager.Companion.d/e`: no byte search and no
+/// alternate layout. Every sub-frame is kept in device order.
 fn extract_789c_inner(pkt: &[u8], out: &mut Vec<Vec<u8>>) {
     if pkt.len() < 8 {
         return;
     }
-    // Prefer literal AA if present (some firmwares embed it)
-    if let Some(pos) = pkt.iter().position(|&b| b == 0xAA) {
-        if pos + 2 <= pkt.len().saturating_sub(2) {
-            let end = pkt.len() - 2; // strip CRC
-            push_unique_aa(out, pkt[pos..end].to_vec());
-            // Don't return — also run length-prefix walk; AA may be incomplete
-        }
-    }
-
-    // bytes[5] = first content code (often type 00/01/03 OR opcode for subcontract)
+    // bytes[5] = first content code (type 00/01/03, or opcode for subcontract)
     let code = pkt[5];
     let end_excl_crc = pkt.len() - 2;
 
@@ -176,68 +170,34 @@ fn extract_789c_inner(pkt: &[u8], out: &mut Vec<Vec<u8>>) {
     if code == 0x1B || code == 0x4D {
         let mut frame = vec![0xAA];
         frame.extend_from_slice(&pkt[5..end_excl_crc]);
-        push_unique_aa(out, frame);
+        push_frame(out, frame);
         return;
     }
 
-    // Length-prefixed walk from offset 5 (official else-branch):
-    // i6 starts at 5; while i6+1 < end: len=pkt[i6+1], payload=pkt[i6+2..i6+2+len], emit AA+payload
+    // Length-prefixed walk from offset 5 (official else-branch): i6 starts at
+    // 5; len = pkt[i6+1], payload = pkt[i6+2..i6+2+len]; then i6 += len + 1,
+    // so later chunks are [len][payload] without a type byte.
     let mut i6 = 5usize;
-    let mut emitted = false;
     while i6 + 1 < end_excl_crc {
         let len = pkt[i6 + 1] as usize;
         let start = i6 + 2;
         let stop = start + len;
-        if len == 0 || stop > end_excl_crc {
+        if stop > end_excl_crc {
+            // The app's substring throws here and drops the rest.
             break;
         }
-        let payload = &pkt[start..stop];
-        // payload usually starts with opcode (e.g. 02 64 00 64 01)
+        // The app emits a bare "AA" for an empty chunk; it carries no opcode.
         let mut frame = vec![0xAA];
-        frame.extend_from_slice(payload);
-        push_unique_aa(out, frame);
-        emitted = true;
+        frame.extend_from_slice(&pkt[start..stop]);
+        push_frame(out, frame);
         i6 += len + 1;
-    }
-
-    // Fallback: type-byte frames where [4]=0x02, [5]=ty, [6]=len, [7…]=body
-    // TX wrap of BA02: 78 9C len 02 01 01 02 CRC — RX similar with longer body
-    if !emitted && pkt.len() > 9 && pkt[4] == 0x02 {
-        let ty = pkt[5];
-        if ty == 0x00 {
-            // 789C + len + 02 + substring2  (type 00 path)
-            let mut frame = vec![0xAA];
-            frame.extend_from_slice(&pkt[5..end_excl_crc]);
-            push_unique_aa(out, frame);
-        } else if end_excl_crc > 7 {
-            let len = pkt[6] as usize;
-            if len > 0 && 7 + len <= end_excl_crc {
-                let mut frame = vec![0xAA];
-                frame.extend_from_slice(&pkt[7..7 + len]);
-                push_unique_aa(out, frame);
-            }
-        }
     }
 }
 
-fn push_unique_aa(out: &mut Vec<Vec<u8>>, frame: Vec<u8>) {
-    if frame.len() < 2 || frame[0] != 0xAA {
-        return;
+fn push_frame(out: &mut Vec<Vec<u8>>, frame: Vec<u8>) {
+    if frame.len() >= 2 && frame[0] == 0xAA {
+        out.push(frame);
     }
-    if out.iter().any(|f| f == &frame) {
-        return;
-    }
-    // Prefer longer frame when same opcode prefix (avoid truncated AA02)
-    if let Some(existing) = out
-        .iter_mut()
-        .find(|f| f.len() >= 2 && f[1] == frame[1] && f[0] == 0xAA)
-    {
-        if frame.len() > existing.len() {
-            *existing = frame;
-        }
-        return;
-    }
-    out.push(frame);
 }
 
 #[cfg(test)]
@@ -266,16 +226,56 @@ mod tests {
         );
     }
 
+    fn framed(body_after_marker: &[u8]) -> Vec<u8> {
+        let mut packet = vec![0x78, 0x9C, 0, 0, 0x02];
+        packet.extend_from_slice(body_after_marker);
+        let total = (packet.len() + 2) as u16;
+        packet[2..4].copy_from_slice(&total.to_be_bytes());
+        let crc = crc16(&packet);
+        packet.extend_from_slice(&crc.to_be_bytes());
+        packet
+    }
+
     #[test]
-    fn rejects_corrupt_and_truncated_frames_with_embedded_battery() {
-        let mut body = vec![0x78, 0x9C, 0, 13, 2, 0xAA, 2, 64, 0, 64, 1];
-        let crc = crc16(&body);
-        body.extend_from_slice(&crc.to_be_bytes());
-        assert!(!unwrap_notify(&body).is_empty());
-        body[12] ^= 1;
+    fn rejects_corrupt_and_truncated_frames() {
+        let mut body = framed(&[0x01, 5, 0x02, 64, 0, 64, 1]);
+        assert_eq!(unwrap_notify(&body), vec![vec![0xAA, 0x02, 64, 0, 64, 1]]);
+        let last = body.len() - 1;
+        body[last] ^= 1;
         assert!(unwrap_notify(&body).is_empty());
         assert!(unwrap_notify(&body[..11]).is_empty());
         assert!(unwrap_notify(&[0, 0xAA, 2, 64, 0, 64, 1]).is_empty());
+    }
+
+    #[test]
+    fn payload_bytes_equal_to_aa_never_create_extra_frames() {
+        // Case battery whose payload contains 0xAA: only the walked frame exists.
+        let packet = framed(&[0x01, 3, 0x27, 0x50, 0xAA]);
+        assert_eq!(unwrap_notify(&packet), vec![vec![0xAA, 0x27, 0x50, 0xAA]]);
+        // A 170-byte frame has length field 00 AA; it must not become AA 02 ...
+        let mut long = vec![0x01, 161, 0x7F];
+        long.extend(vec![0; 160]);
+        let packet = framed(&long);
+        assert_eq!(packet[2..4], [0x00, 0xAA]);
+        let frames = unwrap_notify(&packet);
+        assert_eq!(frames.len(), 1);
+        assert_eq!(frames[0][1], 0x7F);
+    }
+
+    #[test]
+    fn walk_keeps_every_sub_frame_in_device_order() {
+        // [type][len][02 ..] then [len][27 ..] then [len][02 ..] (same opcode twice).
+        let packet = framed(&[
+            0x01, 5, 0x02, 50, 0, 60, 1, 2, 0x27, 70, 5, 0x02, 51, 0, 61, 1,
+        ]);
+        assert_eq!(
+            unwrap_notify(&packet),
+            vec![
+                vec![0xAA, 0x02, 50, 0, 60, 1],
+                vec![0xAA, 0x27, 70],
+                vec![0xAA, 0x02, 51, 0, 61, 1],
+            ]
+        );
     }
 
     #[test]

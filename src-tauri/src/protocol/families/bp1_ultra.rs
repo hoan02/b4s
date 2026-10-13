@@ -1,42 +1,25 @@
 //! BP1 Ultra state layouts from APK 2.17.0.1 and Windows hardware readbacks.
-use crate::protocol::{AncMode, Bp1ProAnc, DecodeError, DeviceEvent, Frame, SpatialMode};
+use crate::protocol::families::bp1::NoiseLayout;
+use crate::protocol::{Bp1ProAnc, DecodeError, DeviceEvent, Frame};
 
 pub struct Bp1Ultra;
 
 impl Bp1Ultra {
     pub fn decode_frame(frame: &Frame) -> Result<DeviceEvent, DecodeError> {
         match (frame.cmd, frame.payload.as_slice()) {
-            // NoiseReduceManger.u: mode, ANC type, transparency type, custom level.
-            // The inactive selectors are retained by firmware. Normalize the
-            // parameter for the active mode, never infer state from AA34 ACK.
-            (0x33, [mode @ 0..=2, anc, transparency, _custom]) => {
-                let (mode, parameter) = match mode {
-                    0 => (AncMode::Off, 0xFF),
-                    1 => (AncMode::Anc, *anc),
-                    // Canonical B4S parameters: FF full, 01 voice. Ultra's
-                    // active selector is 01 full / 02 voice on the wire.
-                    _ => (
-                        AncMode::Transparency,
-                        match transparency {
-                            1 => 0xFF,
-                            2 => 1,
-                            _ => return Err(DecodeError::UnknownOpcode(frame.cmd)),
-                        },
-                    ),
-                };
-                Ok(DeviceEvent::Anc { mode, parameter })
+            // NoiseReduceManger2.u: mode, ANC type, transparency type, custom
+            // level. Never infer state from the AA34 status.
+            (0x33, payload) => {
+                Bp1ProAnc::decode_noise_state(payload, NoiseLayout::SelectableTransparency)
             }
             // PanoramicSoundViewModel.x/u: selected mode followed by model type.
-            (0x42, [mode @ 0..=3, _retained @ 0..=3]) => Ok(DeviceEvent::SpatialMode(match mode {
-                0 => SpatialMode::Off,
-                1 => SpatialMode::Music,
-                2 => SpatialMode::Cinema,
-                _ => SpatialMode::Game,
-            })),
+            (0x42, [mode @ 0..=3, _retained @ 0..=3]) => {
+                Ok(DeviceEvent::SpatialMode(Bp1ProAnc::spatial_mode(*mode)))
+            }
             (0x53, [0, _level]) => Ok(DeviceEvent::BassBoost(0)),
             (0x53, [1, level @ 1..=5]) => Ok(DeviceEvent::BassBoost(*level)),
-            // Only the shared layouts observed for this model are delegated.
-            (0x02 | 0x27 | 0x23 | 0x30 | 0x74 | 0x93 | 0x21, _) => {
+            // Shared layouts reviewed for this family are delegated.
+            (0x02 | 0x27 | 0x23 | 0x30 | 0x34 | 0x51 | 0x52 | 0x74 | 0x8B | 0x93 | 0x21, _) => {
                 Bp1ProAnc::decode_frame(frame, None)
             }
             _ => Err(DecodeError::UnknownOpcode(frame.cmd)),
@@ -47,6 +30,7 @@ impl Bp1Ultra {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::protocol::{AncMode, SpatialMode};
 
     fn decode(bytes: &[u8]) -> Result<DeviceEvent, DecodeError> {
         Bp1Ultra::decode_frame(&Frame::decode_notify(bytes).unwrap())
@@ -63,10 +47,26 @@ mod tests {
         ] {
             assert_eq!(decode(&wire).unwrap(), DeviceEvent::Anc { mode, parameter });
         }
-        assert!(decode(&[0xAA, 0x34, 1]).is_err());
+        // AA34 is the write status; the two-byte form is not a reply.
+        assert_eq!(
+            decode(&[0xAA, 0x34, 1]).unwrap(),
+            DeviceEvent::WriteStatus {
+                opcode: 0x34,
+                code: 1
+            }
+        );
         assert!(decode(&[0xAA, 0x34, 1, 102]).is_err());
         assert!(decode(&[0xAA, 0x33, 1]).is_err());
         assert!(decode(&[0xAA, 0x33, 2, 102, 3, 5]).is_err());
+        // Shorter reports are accepted like NoiseReduceManger2.u does.
+        assert_eq!(
+            decode(&[0xAA, 0x33, 1, 104]).unwrap(),
+            DeviceEvent::Anc {
+                mode: AncMode::Anc,
+                parameter: 104
+            }
+        );
+        assert!(decode(&[0xAA, 0x33, 2, 104]).is_err());
     }
 
     #[test]
@@ -84,6 +84,7 @@ mod tests {
             DeviceEvent::BassBoost(3)
         );
         assert!(decode(&[0xAA, 0x53, 1, 6]).is_err());
+        assert_eq!(decode(&[0xAA, 0x74, 1]).unwrap(), DeviceEvent::Ldac(true));
         for opcode in [0x24, 0x43, 0x54, 0x75, 0x94, 0x22] {
             assert!(decode(&[0xAA, opcode, 1]).is_err());
         }
@@ -117,7 +118,9 @@ mod tests {
                 decode_frame(ProtocolFamily::Bp1Ultra, &frame, None).unwrap(),
                 expected
             );
-            assert!(decode_frame(ProtocolFamily::Bp1Pro, &frame, None).is_err());
         }
+        // AA33/AA42 layouts are shared, but the Ultra two-byte bass level is not.
+        let frame = Frame::decode_notify(&[0xAA, 0x53, 1, 3]).unwrap();
+        assert!(decode_frame(ProtocolFamily::Bp1Pro, &frame, None).is_err());
     }
 }

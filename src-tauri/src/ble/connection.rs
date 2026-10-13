@@ -279,25 +279,8 @@ async fn connect_one(
         state.touch_link();
     }
 
-    // Post-connect battery queries keep the canonical BA02 frame.
-    let startup_plan = device_preview
-        .as_ref()
-        .map(|device| {
-            let model = device
-                .model_id
-                .as_ref()
-                .and_then(|id| protocol::catalog_json().into_iter().find(|m| &m.id == id));
-            crate::device::initialization::plan_for(model.as_ref(), &device.device_profile)
-        })
-        .unwrap_or_default();
-    for query in startup_plan {
-        ensure_session(token).await?;
-        if matches!(query, crate::device::initialization::StartupQuery::Battery) {
-            let _ = send_battery_queries(&peripheral).await;
-        } else if let Some(command) = crate::device::initialization::command_for(query) {
-            let _ = write_command(&peripheral, command).await;
-        }
-        tokio::time::sleep(Duration::from_millis(80)).await;
+    if let Some(device) = device_preview.as_ref() {
+        run_startup_queries(&peripheral, device, token).await?;
     }
     // Publish only if this attempt has not been cancelled or superseded.
     let mut state = BLE.lock().await;
@@ -346,6 +329,30 @@ async fn connect_one(
         return Err("Connection session changed before battery polling started".into());
     }
     Ok(device)
+}
+
+/// Query every reviewed state the profile authorizes. Used after connecting and
+/// after a successful restore, where the app re-reads all state (`BA01`).
+/// Post-connect battery queries keep the canonical BA02 frame.
+pub(super) async fn run_startup_queries(
+    peripheral: &Peripheral,
+    device: &BleDevice,
+    token: crate::device::session::SessionToken,
+) -> Result<(), String> {
+    let model = device
+        .model_id
+        .as_ref()
+        .and_then(|id| protocol::catalog_json().into_iter().find(|m| &m.id == id));
+    for query in crate::device::initialization::plan_for(model.as_ref(), &device.device_profile) {
+        ensure_session(token).await?;
+        if matches!(query, crate::device::initialization::StartupQuery::Battery) {
+            let _ = send_battery_queries(peripheral).await;
+        } else if let Some(command) = crate::device::initialization::command_for(query) {
+            let _ = write_command(peripheral, command).await;
+        }
+        tokio::time::sleep(Duration::from_millis(80)).await;
+    }
+    Ok(())
 }
 
 fn publish_connected_device(
@@ -628,7 +635,14 @@ async fn apply_event(event: DeviceEvent, token: crate::device::session::SessionT
                 log::info!("ANC mode → {:?}", mode);
             }
         }
-        DeviceEvent::SpatialEnabled(_) | DeviceEvent::SpatialMode(_) => {}
+        DeviceEvent::GestureProtocolV2(v2) => {
+            if *v2 {
+                log::warn!("Firmware reports gesture contract V2; legacy BA22 writes are blocked");
+            }
+            state.gesture_v2 = Some(*v2);
+        }
+        DeviceEvent::SpatialMode(_) => {}
+        DeviceEvent::WriteStatus { .. } => {}
         DeviceEvent::EqIndex(_)
         | DeviceEvent::Eq(_)
         | DeviceEvent::GameMode(_)

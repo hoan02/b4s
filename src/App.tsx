@@ -253,9 +253,19 @@ const App: Component = () => {
   const adaptiveLrSupported = () =>
     (device()?.deviceProfile.capabilities.adaptiveLr ?? false) &&
     experimentalUnlocked("adaptiveLr");
+  // The app shows wind-noise and LDAC cards only after the earbuds answer
+  // their queries (AA51/AA74); an unanswered query means the firmware lacks it.
   const windNoiseSupported = () =>
     (device()?.deviceProfile.capabilities.windNoise ?? false) &&
+    windNoiseOn() !== null &&
     experimentalUnlocked("windNoise");
+  const ldacSupported = () =>
+    (device()?.deviceProfile.capabilities.ldac ?? false) &&
+    ldac() !== null &&
+    experimentalUnlocked("ldac");
+  const findSupported = () =>
+    (device()?.deviceProfile.capabilities.findBuds ?? false) &&
+    experimentalUnlocked("findBuds");
 
   const findController = createFindBudsController(notify);
 
@@ -479,8 +489,8 @@ const App: Component = () => {
           <section class="section section-scroll">
             <EqPanel
               frequencies={modelEq()?.bands ?? []}
-              minGain={modelEq()?.minGain ?? -12}
-              maxGain={modelEq()?.maxGain ?? 12}
+              minGain={modelEq()?.customWrite.minGain ?? -6}
+              maxGain={modelEq()?.customWrite.maxGain ?? 6}
               customSupported={device()?.deviceProfile.capabilities.customEq ?? false}
               presets={(modelEq()?.presets ?? []).map((preset) => ({ ...preset, sub: preset.description }))}
               eqActive={equalizer.active()}
@@ -504,7 +514,7 @@ const App: Component = () => {
             <MorePanel
               bassSupported={device()?.deviceProfile.capabilities.bassBoost ?? false}
               bassMaxLevel={device()?.deviceProfile.sound?.maxBassLevel ?? 0}
-              ldacSupported={device()?.deviceProfile.capabilities.ldac ?? false}
+              ldacSupported={ldacSupported()}
               pending={sound.pending()}
               error={sound.error()}
               hearingSupported={device()?.deviceProfile.capabilities.hearingProtection ?? false}
@@ -577,6 +587,7 @@ const App: Component = () => {
                 noiseMaxLevel={listening.noiseProfile().maxLevel}
                 noiseSupported={(noiseCaps()?.maxCustomLevel ?? 0) > 0}
                 adaptiveSupported={noiseCaps()?.supportsAdaptive ?? false}
+                noiseEnvironments={noiseCaps()?.environments ?? []}
                 transparencyVoiceSupported={noiseCaps()?.supportsTransparencyVoice ?? false}
                 gameMode={gameOn()}
                 gamePending={gameModeController.pending()}
@@ -585,7 +596,7 @@ const App: Component = () => {
                 spatialSupported={device()?.deviceProfile.capabilities.spatial ?? false}
                 gameSupported={device()?.deviceProfile.capabilities.gameMode ?? false}
                 eqSupported={device()?.deviceProfile.capabilities.eq ?? false}
-                findSupported={device()?.deviceProfile.capabilities.findBuds ?? false}
+                findSupported={findSupported()}
                 gestureSupported={gestureSupported()}
                 inEarSupported={inEarSupported()}
                 inEarOn={inEarOn()}
@@ -607,7 +618,7 @@ const App: Component = () => {
                 windNoisePending={gestures.pending()}
                 windNoiseError={gestures.error()}
                 experimentalFeatures={device()?.deviceProfile.experimentalFeatures ?? []}
-                moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || device()?.deviceProfile.capabilities.ldac || device()?.deviceProfile.capabilities.hearingProtection)}
+                moreSupported={Boolean(device()?.deviceProfile.capabilities.bassBoost || ldacSupported() || device()?.deviceProfile.capabilities.hearingProtection)}
                 spatialPending={spatialController.pending()}
                 spatialError={spatialController.error()}
                 spatialOn={spatialOn()}
@@ -671,7 +682,21 @@ const App: Component = () => {
           onCancel={findController.closeConfirmation}
           onEscape={() => findController.dialogMode() === "active" ? findController.stop() : findController.closeConfirmation()}
           onConfirm={() => (findController.dialogMode() === "active" ? findController.stop() : findController.start())}
-        />
+        >
+          <div class="home-seg find-side" role="group" aria-label={t("find.side")}>
+            {(["left", "both", "right"] as const).map((value) => (
+              <button
+                type="button"
+                disabled={findController.active()}
+                class={findController.side() === value ? "active" : ""}
+                aria-pressed={findController.side() === value}
+                onClick={() => findController.selectSide(value)}
+              >
+                {t(`find.${value}`)}
+              </button>
+            ))}
+          </div>
+        </ConfirmDialog>
       </Show>
     </div>
   );

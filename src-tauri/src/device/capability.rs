@@ -4,10 +4,27 @@
 use crate::{catalog::ControlTransport, protocol::DeviceProfile};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[cfg(not(test))]
 static EXPERIMENTAL_MODE: AtomicBool = AtomicBool::new(false);
 
+// Tests run in parallel threads; a process-wide flag made gate assertions race.
+#[cfg(test)]
+thread_local! {
+    static EXPERIMENTAL_MODE: AtomicBool = const { AtomicBool::new(false) };
+}
+
 pub(crate) fn set_experimental_mode(enabled: bool) {
+    #[cfg(not(test))]
     EXPERIMENTAL_MODE.store(enabled, Ordering::Relaxed);
+    #[cfg(test)]
+    EXPERIMENTAL_MODE.with(|mode| mode.store(enabled, Ordering::Relaxed));
+}
+
+fn experimental_mode() -> bool {
+    #[cfg(not(test))]
+    return EXPERIMENTAL_MODE.load(Ordering::Relaxed);
+    #[cfg(test)]
+    EXPERIMENTAL_MODE.with(|mode| mode.load(Ordering::Relaxed))
 }
 
 pub use crate::catalog::features::Feature;
@@ -25,7 +42,7 @@ pub fn authorize_control(profile: &DeviceProfile) -> Result<(), String> {
         .as_deref()
         .and_then(crate::catalog::profile_for)
         .is_some_and(|reviewed| reviewed.support == "experimental");
-    if !profile.verified && !(EXPERIMENTAL_MODE.load(Ordering::Relaxed) && experimental_profile) {
+    if !profile.verified && !(experimental_mode() && experimental_profile) {
         return Err(
             "Experimental control is disabled; model evidence must be reviewed first".into(),
         );
@@ -55,7 +72,7 @@ pub fn authorize(profile: &DeviceProfile, feature: Feature) -> Result<(), String
                 .experimental_features
                 .iter()
                 .any(|feature| feature == key)
-            && !EXPERIMENTAL_MODE.load(Ordering::Relaxed)
+            && !experimental_mode()
         {
             return Err(format!(
                 "{feature:?} is implemented from source/replay evidence and requires Experimental mode"

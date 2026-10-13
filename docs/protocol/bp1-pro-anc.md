@@ -31,11 +31,12 @@ that framing.
 
 | Action | Bytes | Evidence boundary |
 |--------|-------|-------------------|
-| Handshake | `BA 05 00` | Exact profile handshake; no alternate value is attempted |
+| Handshake | `BA 05 00` | Exact profile handshake; no alternate value is attempted. APK 2.17.0.1 sends `BA0500` only to the T1/T2/T3 trackers (`DeviceManager.o`), not to earbuds; it is kept because the reviewed BP1 Pro path was accepted with it, pending a capture without it |
 | Battery query | `BA 02` | Reviewed startup/query command |
-| ANC Off | `BA 34 00 FF` | Source packet form; device state comes from notification |
+| ANC Off | `BA 34 00 FF` | Source packet form; state comes from the `BA33` readback |
 | ANC On | `BA 34 01 <level>` | Model constraints are profile-scoped |
-| Transparency | `BA 34 02 <mode>` | Mode must be explicit and supported |
+| Transparency | `BA 34 02 FF` | The Pro family has one transparency mode (no voice selector in `NoiseReduceManger`) |
+| Noise state query | `BA 33` | Sent at startup and after every `BA34` |
 | EQ / spatial | `BA 43 <value>` | Shared opcode; state decoder and capability decide interpretation |
 | EQ query | `BA 42` | Query/readback path |
 | Case battery query | `BA 27` | Query is implemented; physical hardware confirmation remains open |
@@ -51,7 +52,8 @@ that framing.
 |-------|-------|----------------|
 | Battery L/R | `AA 02 <L%> 00 <R%> 01` | Nullable readings; zero is valid |
 | Case battery | `AA 27 <case%> <charging>` | First payload byte is percentage |
-| ANC | `AA 34 <mode> <parameter>` | B4S accepts the exact two-byte state payload and confirms a command only when both mode and parameter match; one-byte ACK and unknown layouts do not update state |
+| Noise write status | `AA 34 <status>` | `01` success, `00` rejected (wear both buds / dual connection), other values are `EarSetFailedUtil` codes. Never state (`NoiseReduceManger.s`) |
+| Noise state | `AA 33 <mode> <type> <type1> <type2>` | `NoiseReduceManger.u`: mode 00/01/02, `type` is the ANC parameter (environment 101-104 or custom level 1-5). B4S confirms a write only when mode and parameter match |
 | EQ query/state | `AA 42 …` / `AA 43 …` | A write ACK alone does not confirm requested state |
 | Game state | `AA 23 <00|01>` | State query observation |
 | Hearing protection | `AA 93 <enabled> <level>` | The only accepted confirmed-state opcode; `AA 94` is ACK/error only |

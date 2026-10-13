@@ -4,8 +4,7 @@
   "displayName": "Baseus Bowie MS1",
   "aliases": [
     "baseus bowie ms1",
-    "bowie ms1",
-    "ms1"
+    "bowie ms1"
   ],
   "support": "experimental",
   "protocolFamily": "bp1Ultra",
@@ -18,15 +17,14 @@
     "bassBoost": true,
     "ldac": true,
     "hearingProtection": true,
-    "gesture": true
+    "gesture": true,
+    "findBuds": true,
+    "windNoise": true
   },
   "noise": {
     "supportsAdaptive": true,
     "environments": [
-      101,
-      102,
-      103,
-      108
+      104
     ],
     "maxCustomLevel": 5,
     "supportsTransparencyVoice": true
@@ -111,12 +109,12 @@
   },
   "sound": {
     "maxBassLevel": 5,
-    "provenance": "Bass level bound inherited from the reviewed Ultra command contract; docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists"
+    "provenance": "DeviceManager.d returns the default 5 for this model (CommonLevelSeekBar coerceIn(1, 5)); not hardware verified"
   },
   "featureEvidence": {
     "anc": {
       "status": "implemented",
-      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
+      "provenance": "APK 2.17.0.1 (REA re-audit): EarPodNewActivity/NoiseReduceManger2 path; NoiseReduceDataModel.f gives this model only 104 self-adaptive plus Custom (DeviceManager.l range 1-5); AA34 01 success then BA33 -> AA33 readback; not hardware verified",
       "firmwareVersions": []
     },
     "eq": {
@@ -146,7 +144,7 @@
     },
     "ldac": {
       "status": "implemented",
-      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists",
+      "provenance": "Source-reviewed for this exact model name (function-set type 16, ANC range 1-5, LDAC/listening groups, gesture asset); not hardware verified. docs/apk-feature-parity-audit.md (cross-check 2026-10-07); APK 2.17.0.1 DeviceManager exact-name guards, app_device_ble_config dictionary and assets/gesture lists. Polarity corrected by the REA re-audit: LdacSettingActivity.m1 sends BA75 00 while the non-toggling switch is ON (to disable) and AA74 01 checks it, so 01 = enabled.",
       "firmwareVersions": []
     },
     "hearingProtection": {
@@ -155,8 +153,8 @@
       "firmwareVersions": []
     },
     "findBuds": {
-      "status": "unknown",
-      "provenance": "",
+      "status": "implemented",
+      "provenance": "APK 2.17.0.1: EarPhoneSettingV2Activity always shows the find row (rl_find_ear); FindEarPhoneActivity.e sends BA10 <00 left|01 right|02 both> <01 start|00 stop>; not hardware verified",
       "firmwareVersions": []
     },
     "gesture": {
@@ -225,9 +223,12 @@
       "firmwareVersions": []
     },
     "windNoise": {
-      "status": "unknown",
-      "provenance": "",
+      "status": "implemented",
+      "provenance": "APK 2.17.0.1: EarPodNewActivity.r7 queries BA51 for every model and ResultHandle.j shows the card only after an AA51 reply (trailing byte 01 = on); BA5201/BA5200 set, AA52 01 success. B4S shows the control only after AA51 is observed; not hardware verified",
       "firmwareVersions": []
     }
+  },
+  "windNoise": {
+    "provenance": "APK 2.17.0.1: EarPodNewActivity.r7 queries BA51 for every model and ResultHandle.j shows the card only after an AA51 reply (trailing byte 01 = on); BA5201/BA5200 set, AA52 01 success. B4S shows the control only after AA51 is observed; not hardware verified"
   }
 }

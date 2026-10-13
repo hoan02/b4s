@@ -1,4 +1,4 @@
-import { Component, onCleanup, onMount } from "solid-js";
+import { Component, JSX, onCleanup, onMount } from "solid-js";
 import { t } from "../lib/i18n";
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
   confirmLabel?: string;
   cancelLabel?: string;
   showCancel?: boolean;
+  /** Optional controls shown between the message and the actions. */
+  children?: JSX.Element;
 }
 
 const ConfirmDialog: Component<Props> = (props) => {
@@ -65,6 +67,7 @@ const ConfirmDialog: Component<Props> = (props) => {
         <div class="confirm-dialog-icon" aria-hidden="true">♫</div>
         <h2 id="confirm-title">{props.title}</h2>
         <p id="confirm-description">{props.message}</p>
+        {props.children}
         <div class={`confirm-dialog-actions ${props.showCancel === false ? "single" : ""}`}>
           {props.showCancel !== false && <button type="button" class="confirm-btn secondary" onClick={props.onCancel}>{props.cancelLabel ?? t("dialog.cancel")}</button>}
           <button type="button" class="confirm-btn primary" onClick={props.onConfirm}>{props.confirmLabel ?? t("dialog.turnOffContinue")}</button>

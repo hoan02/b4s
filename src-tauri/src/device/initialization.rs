@@ -31,10 +31,9 @@ pub fn plan_for(model: Option<&ModelInfo>, profile: &DeviceProfile) -> Vec<Start
     }
     use super::capability::{authorize, Feature};
     plan.push(StartupQuery::Battery);
-    // AA33 is reviewed for Ultra; keep the Pro startup behavior unchanged.
-    if profile.protocol == crate::protocol::ProtocolFamily::Bp1Ultra
-        && authorize(profile, Feature::Listening).is_ok()
-    {
+    // Both families read noise state from BA33/AA33 at startup
+    // (NoiseReduceDataModel.l/m, NoiseReduceManger(2).u).
+    if authorize(profile, Feature::Listening).is_ok() {
         plan.push(StartupQuery::Anc);
     }
     if authorize(profile, Feature::Game).is_ok() {
@@ -111,14 +110,15 @@ mod tests {
             plan_for(Some(&model), &profile),
             vec![
                 StartupQuery::Battery,
+                StartupQuery::Anc,
                 StartupQuery::Game,
                 StartupQuery::Eq,
                 StartupQuery::Bass,
                 StartupQuery::Spatial,
+                StartupQuery::Ldac,
                 StartupQuery::InEar,
                 StartupQuery::Multipoint,
                 StartupQuery::RestoreSupport,
-                StartupQuery::AdaptiveLr,
                 StartupQuery::WindNoise,
                 StartupQuery::Gesture(0),
                 StartupQuery::Gesture(1),
@@ -152,6 +152,7 @@ mod tests {
                 StartupQuery::Spatial,
                 StartupQuery::Ldac,
                 StartupQuery::HearingProtection,
+                StartupQuery::WindNoise,
                 StartupQuery::Gesture(0),
                 StartupQuery::Gesture(1),
                 StartupQuery::Gesture(2),

@@ -829,6 +829,13 @@ BP1 Ultra firmware, Android version/HCI export, Windows version/Bluetooth adapte
 - The pairing list marks the entry advertising the reviewed control service with a **Control** tag (five locales) and sorts it first, so duplicate same-name entries can be told apart. The troubleshooting guide documents the duplicate-entry flow and the scan-only transport gate.
 - `cargo check` and 142 Rust library tests pass; `npx tsc --noEmit`, five-locale parity (293/293) and `npm run build` pass. This is diagnostics only and does not change the control transport.
 
+## Increment 129 — REA re-audit of APK 2.17.0.1
+
+- Installed REA 6.4.0 with the audited jadx-headless-mcp 0.7.1 engine (SHA-256 matched) and re-traced transport/framing, ANC/battery, EQ/sound, gestures/settings and per-model gating; findings and evidence are summarized in the [parity audit](apk-feature-parity-audit.md#rea-re-audit-2026-10-13).
+- Fixed LDAC polarity, the `AA37 01` restore result (followed by a full state re-query), `AA34` as write status with `AA33` readback for the BP1 Pro family, and the 789C decoder's byte search/fallback/dedup. Rejected `AA34`/`AA52`/`AA37` writes now fail immediately with a localized `EarSetFailedUtil` reason.
+- Profiles: per-model noise environments (104 added; no 108 on the Pro family; MS1 104 only), bass 1-3 on BP1 Ultra/EP10 Ultra/M4s, a separate custom EQ gain range (+/-6 dB), single transparency mode on the Pro family, BP1 Pro adaptive L/R and EP10 Pro copied presets removed, short aliases dropped. Per-side find on all seven profiles; Ultra-family wind noise and Pro-family LDAC shown only after the state query is answered; `AA8B` blocks legacy gesture writes on V2 firmware.
+- Experimental-mode state is thread-local under `cfg(test)`, so the Rust suite no longer needs serial execution. 171 Rust tests (parallel, three consecutive runs), `tsc --noEmit`, `bun run build`, five-locale parity (324/324) and all six frontend suites pass; the support matrix is regenerated. No new hardware acceptance is claimed; LDAC and restore transitions need re-testing on BP1 Ultra/Pro hardware.
+
 ## Release 0.1.3 — 2026-10-07
 
 The schema-3 catalog now embeds 124 headphones: BP1 Pro/Ultra retain existing control profiles and 122 models remain recognition-only. Canonical IDs, APK-style product metadata and local image caching are implemented. Historical milestone entries above retain their original scope. See [identity/presentation](model-identity-presentation.md), [cache](product-image-cache.md) and [changelog](../CHANGELOG.md).

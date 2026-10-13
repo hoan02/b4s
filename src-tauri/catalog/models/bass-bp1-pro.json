@@ -16,26 +16,26 @@
     "gameMode": true,
     "bassBoost": true,
     "spatial": true,
-    "ldac": false,
+    "ldac": true,
     "hearingProtection": false,
     "findBuds": true,
     "gesture": true,
     "inEar": true,
     "multipoint": true,
     "restoreDefaults": true,
-    "adaptiveLr": true,
+    "adaptiveLr": false,
     "windNoise": true
   },
   "noise": {
     "supportsAdaptive": true,
     "environments": [
-      101,
+      104,
       102,
       103,
-      108
+      101
     ],
     "maxCustomLevel": 5,
-    "supportsTransparencyVoice": true
+    "supportsTransparencyVoice": false
   },
   "eq": {
     "qValues": [
@@ -416,7 +416,9 @@
     ],
     "customWrite": {
       "slot": 101,
-      "ancBank": false
+      "ancBank": false,
+      "minGain": -6,
+      "maxGain": 6
     }
   },
   "image": "default_ear_pic",
@@ -480,18 +482,15 @@
     "provenance": "EarphoneFunctionShowFragmentNewUI each-connect handlers and EarHeadSetViewModel.T (BA57/BA58); second-device/codec behavior not verified, experimental-only"
   },
   "restoreDefaults": {
-    "provenance": "EarphoneSettingFragment/EarPhoneSettingV2Activity (BA36 availability, BA37 restore); destructive action not verified on hardware, experimental-only"
-  },
-  "adaptiveLr": {
-    "provenance": "EarPhoneSettingV2Activity n2/o2 and resolved string str_left_and_right_adapter = 'Adaptive L/R Earbuds' (BA3F query/state, BA4A set); effect not verified, experimental-only"
+    "provenance": "EarPhoneSettingActivity (BA36 availability, BA37 restore; AA37 01 success, 0C dual connection, 0D in call) then HomeBleDataResolvePresenter re-reads state; destructive action not verified on hardware, experimental-only"
   },
   "experimentalFeatures": [
     "gesture",
     "inEar",
     "multipoint",
     "restoreDefaults",
-    "adaptiveLr",
-    "windNoise"
+    "windNoise",
+    "ldac"
   ],
   "schemaVersion": 3,
   "connection": {
@@ -516,7 +515,7 @@
   "featureEvidence": {
     "anc": {
       "status": "implemented",
-      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "provenance": "APK 2.17.0.1 (REA re-audit): HeadPhoneMainActivity/NoiseReduceManger path. BA34 <mode> <parameter>; AA34 01 is only success (00/other rejected) and state is re-read with BA33 -> AA33 mode,type,type1,type2 (NoiseReduceManger.s/u). NoiseReduceDataModel.f lists 104 self-adaptive, 102 indoor, 103 outdoor, 101 commute and Custom (DeviceManager.l range 1-5); no voice transparency selector; not hardware verified",
       "firmwareVersions": []
     },
     "eq": {
@@ -526,7 +525,7 @@
     },
     "customEq": {
       "status": "implemented",
-      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "provenance": "EarEqSelfDefinePresenter.C/E/F (BA31 slot 101, 100-10k Hz, Q 1, filter 1) and DragChartLineViewV2.onTouchEvent (custom gain clamped to +/-6 dB, integer)",
       "firmwareVersions": []
     },
     "gameMode": {
@@ -545,8 +544,8 @@
       "firmwareVersions": []
     },
     "ldac": {
-      "status": "unknown",
-      "provenance": "",
+      "status": "implemented",
+      "provenance": "APK 2.17.0.1: HeadPhoneMainActivity adds the LDAC card only after an AA74 reply and LdacSettingActivity.f1 lists this model; BA74 query, BA75 01 enable / 00 disable, AA74 01 = enabled. B4S shows the control only after AA74 is observed; not hardware verified, experimental-only",
       "firmwareVersions": []
     },
     "hearingProtection": {
@@ -556,7 +555,7 @@
     },
     "findBuds": {
       "status": "implemented",
-      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "provenance": "APK 2.17.0.1: EarFunctionManager.D (function-set type 17) adds the find card unconditionally; FindEarPhoneActivity.e sends BA10 <00 left|01 right|02 both> <01 start|00 stop>; not hardware verified",
       "firmwareVersions": []
     },
     "gesture": {
@@ -576,12 +575,12 @@
     },
     "restoreDefaults": {
       "status": "implemented",
-      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "provenance": "EarPhoneSettingActivity (BA36 availability, BA37 restore; AA37 01 success, 0C dual connection, 0D in call) then HomeBleDataResolvePresenter re-reads state; destructive action not verified on hardware, experimental-only",
       "firmwareVersions": []
     },
     "adaptiveLr": {
-      "status": "implemented",
-      "provenance": "Existing runtime implementation; see model provenance and docs/apk-feature-parity-audit.md",
+      "status": "unsupported",
+      "provenance": "APK 2.17.0.1: BA3F is only queried for Baseus Inspire XC1 (DeviceManager.M0) on EarPhoneSettingV2Activity; BP1 Pro opens EarPhoneSettingActivity, which has no AA3F/BA4A handling",
       "firmwareVersions": []
     },
     "callEnhancement": {
@@ -626,11 +625,11 @@
     },
     "windNoise": {
       "status": "implemented",
-      "provenance": "APK 2.17.0.1: HeadPhoneMainActivity.ResultHandle.h/i and EarPodNewActivity.ResultHandle.j/k (BA51 query, AA51 state with trailing byte 01 = on, BA5201/BA5200 set, AA52 reply or error 0A/0B/0C); function-set type 17 lists the wind-noise card for this exact model; not hardware verified, experimental-only",
+      "provenance": "APK 2.17.0.1: HeadPhoneMainActivity.B5 queries BA51 for every model and shows the wind-noise card only after an AA51 reply (trailing byte 01 = on); BA5201/BA5200 set, AA52 01 success or an EarSetFailedUtil code (0A/0B/0C...). B4S shows the control only after AA51 is observed; not hardware verified, experimental-only",
       "firmwareVersions": []
     }
   },
   "windNoise": {
-    "provenance": "APK 2.17.0.1: HeadPhoneMainActivity.ResultHandle.h/i and EarPodNewActivity.ResultHandle.j/k (BA51 query, AA51 state with trailing byte 01 = on, BA5201/BA5200 set, AA52 reply or error 0A/0B/0C); function-set type 17 lists the wind-noise card for this exact model; not hardware verified, experimental-only"
+    "provenance": "APK 2.17.0.1: HeadPhoneMainActivity.B5 queries BA51 for every model and shows the wind-noise card only after an AA51 reply (trailing byte 01 = on); BA5201/BA5200 set, AA52 01 success or an EarSetFailedUtil code (0A/0B/0C...). B4S shows the control only after AA51 is observed; not hardware verified, experimental-only"
   }
 }

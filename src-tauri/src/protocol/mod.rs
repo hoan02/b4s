@@ -70,18 +70,20 @@ pub fn encode_command(cmd: Command) -> Vec<u8> {
         Command::QueryBassBoost => Frame::write(0x53, &[]).encode_write(),
         Command::SetBassBoost(level) => Frame::write(0x54, &[level]).encode_write(),
         Command::SetLdac(enabled) => {
-            // LdacSettingActivity.K0: BA75 + 00 when enabled, 01 when disabled.
-            Frame::write(0x75, &[if enabled { 0x00 } else { 0x01 }]).encode_write()
+            // LdacSettingActivity.m1 sends BA75 00 while the (non-toggling)
+            // switch still shows ON, i.e. to turn LDAC off; AA74 01 checks it.
+            // EarphoneFunctionShowFragmentNewUI and HeadPhoneMainActivity.F agree:
+            // 01 enables, 00 disables.
+            Frame::write(0x75, &[if enabled { 0x01 } else { 0x00 }]).encode_write()
         }
         Command::SetHearingProtection { enabled, level } => {
             Frame::write(0x94, &[if enabled { 0x01 } else { 0x00 }, level]).encode_write()
         }
         Command::QueryLdac => Frame::write(0x74, &[]).encode_write(),
         Command::QueryHearingProtection => Frame::write(0x93, &[]).encode_write(),
-        Command::FindBuds(start) => {
-            // Official app 2.14.1: BA100201 starts both buds; the same command
-            // with the final flag cleared stops the alert.
-            Frame::write(0x10, &[0x02, if start { 0x01 } else { 0x00 }]).encode_write()
+        Command::FindBuds { side, start } => {
+            // FindEarPhoneActivity.e: BA10 <00 left|01 right|02 both> <01 start|00 stop>.
+            Frame::write(0x10, &[side.to_byte(), if start { 0x01 } else { 0x00 }]).encode_write()
         }
         Command::QueryInEar => Frame::write(0x25, &[]).encode_write(),
         Command::SetInEar(enabled) => {
