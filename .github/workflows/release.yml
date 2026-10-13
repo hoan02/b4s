@@ -69,17 +69,30 @@ jobs:
       - name: Install frontend deps
         run: bun install --frozen-lockfile
 
+      # A tag like v0.1.5-beta.1 publishes a pre-release of app version 0.1.5:
+      # Windows installers only accept numeric versions, so the suffix stays
+      # in the tag/release name, never in the app version.
       - name: Sync version from tag
         shell: bash
         run: |
+          PRERELEASE="${{ inputs.prerelease || false }}"
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VER="${GITHUB_REF_NAME#v}"
+            TAG="$GITHUB_REF_NAME"
+            VER="${TAG#v}"
+            if [[ "$VER" == *-* ]]; then
+              PRERELEASE=true
+              VER="${VER%%-*}"
+            fi
           elif [[ -n "${{ inputs.tag }}" ]]; then
             VER="${{ inputs.tag }}"
+            TAG="v$VER"
           else
             VER=$(bun -p "require('./package.json').version")
+            TAG="v$VER"
           fi
           echo "VERSION=$VER" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "PRERELEASE=$PRERELEASE" >> "$GITHUB_ENV"
           bun scripts/bump-version.mjs "$VER"
 
       - name: Validate updater signing key
@@ -96,10 +109,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: bun run tauri
-          tagName: v${{ env.VERSION }}
-          releaseName: B4S v${{ env.VERSION }}
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: B4S ${{ env.RELEASE_TAG }}
           releaseBody: |
-            ## B4S v${{ env.VERSION }}
+            ## B4S ${{ env.RELEASE_TAG }}
 
             Unofficial desktop companion for multi-model earbuds (BLE).
 
@@ -110,9 +123,9 @@ jobs:
 
             Auto-update uses `latest.json` from this release (signed).
           releaseDraft: false
-          # Tag pushes stay full releases; a manual run can publish a beta that
-          # the updater's releases/latest endpoint ignores.
-          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease }}
+          # Pre-releases are never "latest", so the updater's releases/latest
+          # endpoint keeps serving the previous stable latest.json.
+          prerelease: ${{ env.PRERELEASE == 'true' }}
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}

@@ -89,17 +89,20 @@ bun run release patch --no-push   # commit + tag local only
 
 ### Beta (pre-release)
 
-Merge the version bump through a pull request, then run the Release workflow
-manually with `prerelease` enabled instead of pushing a tag:
+Merge the version bump through a pull request, then tag the merged `main`
+commit with a `-beta` suffix:
 
 ```bash
-gh workflow run release.yml --ref main -f tag=0.1.5 -f prerelease=true
+git tag v0.1.5-beta.1
+git push origin v0.1.5-beta.1
 ```
 
-The action tags the merged `main` commit. A pre-release is never GitHub's
-"latest" release, so the updater endpoint below keeps serving the previous
-stable `latest.json`. Promote it later with
-`gh release edit vX.Y.Z --prerelease=false --latest`.
+Any tag with a suffix (`vX.Y.Z-...`) publishes a GitHub pre-release whose app
+version is `X.Y.Z`; Windows installers only accept numeric versions. A
+pre-release is never GitHub's "latest" release, so the updater endpoint below
+keeps serving the previous stable `latest.json`. To ship the same version as
+stable later, push `vX.Y.Z` on the same commit (or run the workflow manually
+with `prerelease` off). Manual runs accept `-f prerelease=true` too.
 
 ### Manual (equivalent)
 
