@@ -15,6 +15,7 @@
   "nav.settings": "Cài đặt",
   "pair.title": "Kết nối",
   "pair.reconnecting": "Đang tìm {{name}}…",
+  "pair.autoReconnectFailed": "Chưa kết nối được tai nghe. Hãy bật tai nghe và để gần máy, rồi quét lại.",
   "pair.bluetoothOff": "Bật Bluetooth để quét",
   "pair.demoSub": "Demo — thiết bị giả",
   "pair.nearby": "Tai nghe ở gần / mở nắp hộp",

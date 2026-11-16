@@ -15,6 +15,7 @@
   "settings.identifier": "标识符",
   "pair.title": "连接",
   "pair.reconnecting": "正在查找 {{name}}…",
+  "pair.autoReconnectFailed": "暂时无法连接耳机。请确认耳机已开启并在附近，然后重新扫描。",
   "pair.bluetoothOff": "开启蓝牙以扫描",
   "pair.demoSub": "演示 — 模拟设备",
   "pair.nearby": "附近的耳机 / 打开充电盒",

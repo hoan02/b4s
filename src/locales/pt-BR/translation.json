@@ -15,6 +15,7 @@
   "settings.identifier": "Identificador",
   "pair.title": "Conectar",
   "pair.reconnecting": "Procurando {{name}}…",
+  "pair.autoReconnectFailed": "Ainda não foi possível conectar aos seus fones. Verifique se estão ligados e por perto e procure novamente.",
   "pair.bluetoothOff": "Ative o Bluetooth para procurar",
   "pair.demoSub": "Demonstração — dispositivo simulado",
   "pair.nearby": "Fones próximos / abra o estojo",
