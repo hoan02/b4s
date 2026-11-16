@@ -57,7 +57,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec![desktop::AUTOSTART_ARG]),
         ));
 
     builder
@@ -108,6 +108,14 @@ pub fn run() {
                         false
                     }
                 };
+
+                desktop::refresh_autostart_entry(app.handle());
+                if tray_available && desktop::launched_by_autostart() {
+                    // Login launches stay in the tray; Bluetooth and audio are often not ready yet.
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                }
 
                 if let Some(window) = app.get_webview_window("main") {
                     let close_window = window.clone();

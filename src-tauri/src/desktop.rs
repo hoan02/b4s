@@ -8,6 +8,28 @@ use tauri::{
 
 struct TrayStatus(MenuItem<Wry>);
 
+/// Argument registered with the OS login entry so a login launch can start hidden.
+pub const AUTOSTART_ARG: &str = "--autostart";
+
+pub fn launched_by_autostart() -> bool {
+    std::env::args().any(|arg| arg == AUTOSTART_ARG)
+}
+
+/// Entries written by older builds lack the argument; rewrite an enabled entry once per launch.
+pub fn refresh_autostart_entry(app: &AppHandle) {
+    use tauri_plugin_autostart::ManagerExt;
+    let manager = app.autolaunch();
+    match manager.is_enabled() {
+        Ok(true) => {
+            if let Err(error) = manager.enable() {
+                log::warn!("Could not refresh the start-at-login entry: {error}");
+            }
+        }
+        Ok(false) => {}
+        Err(error) => log::warn!("Could not read the start-at-login entry: {error}"),
+    }
+}
+
 pub fn install_tray(app: &mut tauri::App) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open B4S", true, None::<&str>)?;
     let status = MenuItem::with_id(

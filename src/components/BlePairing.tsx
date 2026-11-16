@@ -27,6 +27,15 @@ interface Props {
   onAutoReconnectAttempt: () => void;
 }
 
+const AUTO_RECONNECT_DELAYS_MS = [0, 5_000, 10_000, 20_000];
+
+const sleep = (ms: number, signal: AbortSignal) => new Promise<void>((resolve) => {
+  if (signal.aborted) { resolve(); return; }
+  const done = () => { clearTimeout(timer); signal.removeEventListener("abort", done); resolve(); };
+  const timer = setTimeout(done, ms);
+  signal.addEventListener("abort", done, { once: true });
+});
+
 const BlePairing: Component<Props> = (props) => {
   const [scanning, setScanning] = createSignal(false);
   const [devices, setDevices] = createSignal<BleDevice[]>([]);
@@ -164,18 +173,36 @@ const BlePairing: Component<Props> = (props) => {
     stopScan().catch(() => {});
   });
 
+  // After a login launch Bluetooth, audio endpoints and the earbuds may not be ready yet,
+  // so retry quietly and only report once every attempt has failed.
   const runAutomaticReconnect = async () => {
     if (!savedDevice) return;
+    const signal = reconnectAbort.signal;
+    const stopped = () => disposed || signal.aborted;
+    let lastError: unknown = null;
     try {
-      const candidate = await findReconnectTarget(savedDevice, {
-        checkAdapter, startScan, stopScan, getScanStatus, onScanStatus, getAudioTarget, prepareAudioTarget,
-      }, reconnectAbort.signal);
-      if (!disposed && !reconnectAbort.signal.aborted && candidate) {
-        setAutoSearching(false);
-        await handleConnect(candidate.device, candidate.audioEndpointId);
+      for (const delay of AUTO_RECONNECT_DELAYS_MS) {
+        if (delay) await sleep(delay, signal);
+        if (stopped()) return;
+        try {
+          const candidate = await findReconnectTarget(savedDevice, {
+            checkAdapter, startScan, stopScan, getScanStatus, onScanStatus, getAudioTarget, prepareAudioTarget,
+          }, signal);
+          if (stopped()) return;
+          if (!candidate) continue;
+          setAutoSearching(false);
+          if (await handleConnect(candidate.device, candidate.audioEndpointId, true)) return;
+          if (stopped()) return;
+          setAutoSearching(true);
+        } catch (e) {
+          lastError = e;
+          console.warn("Automatic reconnect attempt failed", e);
+        }
       }
-    } catch (e) {
-      if (!disposed && !reconnectAbort.signal.aborted) setError(formatError(e));
+      if (!stopped()) {
+        if (lastError) console.warn("Automatic reconnect gave up", lastError);
+        setError(t("pair.autoReconnectFailed"));
+      }
     } finally {
       if (!disposed) setAutoSearching(false);
     }
@@ -220,10 +247,11 @@ const BlePairing: Component<Props> = (props) => {
     }
   };
 
-  const handleConnect = async (device: BleDevice, audioEndpointId?: string) => {
-    if (connectingId()) return;
+  /** Returns true when connected. `quiet` (automatic reconnect) logs failures instead of showing them. */
+  const handleConnect = async (device: BleDevice, audioEndpointId?: string, quiet = false): Promise<boolean> => {
+    if (connectingId()) return false;
     if (autoSearching()) await cancelAutoReconnect();
-    if (disposed || connectingId()) return;
+    if (disposed || connectingId()) return false;
     setError(null);
     setConnectingId(device.id);
     try {
@@ -231,15 +259,18 @@ const BlePairing: Component<Props> = (props) => {
       if (!isMock) {
         const ok = await checkAdapter();
         if (!ok) {
-          setError(t("pair.bluetoothDisabled"));
+          if (!quiet) setError(t("pair.bluetoothDisabled"));
           setConnectingId(null);
-          return;
+          return false;
         }
       }
       props.onConnected(await connect(device.id, isMock, audioEndpointId));
+      return true;
     } catch (e) {
-      setError(formatError(e));
+      if (quiet) console.warn("Automatic reconnect failed", e);
+      else setError(formatError(e));
       setConnectingId(null);
+      return false;
     }
   };
 

@@ -15,6 +15,7 @@
   "settings.identifier": "Identificador",
   "pair.title": "Conectar",
   "pair.reconnecting": "Buscando {{name}}…",
+  "pair.autoReconnectFailed": "Aún no se pudo conectar con tus auriculares. Asegúrate de que estén encendidos y cerca, y vuelve a buscar.",
   "pair.bluetoothOff": "Activa Bluetooth para buscar",
   "pair.demoSub": "Demo — dispositivo simulado",
   "pair.nearby": "Auriculares cercanos / abre el estuche",

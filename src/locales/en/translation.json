@@ -5,6 +5,7 @@
   "nav.settings": "Settings",
   "pair.title": "Connect",
   "pair.reconnecting": "Looking for {{name}}…",
+  "pair.autoReconnectFailed": "Couldn't reach your earbuds yet. Make sure they're on and nearby, then scan again.",
   "pair.bluetoothOff": "Turn on Bluetooth to scan",
   "pair.demoSub": "Demo — simulated device",
   "pair.nearby": "Nearby earbuds / open the case",
